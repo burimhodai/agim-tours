@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
@@ -34,12 +35,23 @@ async function bootstrap() {
     credentials: true,
   });
 
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('Agim Tours API')
+    .setDescription('API documentation for Agim Tours booking system')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api/docs', app, document);
+
   const port = configService.get('PORT') || 3000;
   const host = configService.get('HOST') || '0.0.0.0';
 
   await app.listen(port, host);
 
   logger.log(`🚀 Application is running on: http://${host}:${port}/api/v1`);
+  logger.log(`📚 Swagger docs available at: http://${host}:${port}/api/docs`);
   logger.log(`📊 Environment: ${configService.get('NODE_ENV')}`);
   logger.log(
     `🗄️  Database: ${configService.get('database.uri') ? 'Connected' : 'Not configured'}`,
