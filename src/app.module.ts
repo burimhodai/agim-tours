@@ -9,6 +9,10 @@ import { EventHotelModule } from './modules/eventHotelModule/eventHotel.module';
 import { PlaneModule } from './modules/planeModule/plane.module';
 import { UserModule } from './modules/userModule/user.module';
 import { MongooseModule } from '@nestjs/mongoose';
+import { AgencySchema } from './models/agency.model';
+import { TransactionSchema } from './models/transaction.model';
+import { TransactionControllerController } from './transactions/transaction-controller.controller';
+import { TransactionServiceService } from './transactions/transaction-service.service';
 
 @Module({
   imports: [
@@ -21,6 +25,11 @@ import { MongooseModule } from '@nestjs/mongoose';
         return { uri: dbUrl };
       },
     }),
+
+    MongooseModule.forFeature([
+      { name: 'Agency', schema: AgencySchema },
+      { name: 'Transaction', schema: TransactionSchema },
+    ]),
 
     ConfigModule.forRoot({
       isGlobal: true,
@@ -39,7 +48,7 @@ import { MongooseModule } from '@nestjs/mongoose';
     PlaneModule,
     UserModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [AppController, TransactionControllerController],
+  providers: [AppService, TransactionServiceService],
 })
-export class AppModule {}
+export class AppModule { }

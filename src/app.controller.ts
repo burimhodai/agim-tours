@@ -1,17 +1,18 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Post, Body } from '@nestjs/common';
 import { AppService } from './app.service';
+import { CreateAgencyDto } from './shared/DTO/agency.dto';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(private readonly appService: AppService) { }
 
-  @Get('health')
-  getHealth() {
-    return this.appService.getHealth();
+  @Post('agencies')
+  async createAgency(@Body() createAgencyDto: CreateAgencyDto) {
+    return await this.appService.createAgency(createAgencyDto);
   }
 
-  @Get()
-  getWelcome() {
-    return this.appService.getWelcome();
+  @Get('agencies')
+  async getAllAgencies() {
+    return await this.appService.getAllAgencies();
   }
 }

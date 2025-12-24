@@ -5,8 +5,9 @@ import { TicketTypes } from 'src/shared/types/ticket.types';
 
 export const TicketSchema = new mongoose.Schema({
     ticket_type: { type: String, enum: Object.values(TicketTypes) },
-    booking_reference: { type: String },
-    
+    booking_reference: { type: String, lowercase: true },
+    original_booking_reference: { type: String, lowercase: true },
+
     price: { type: Number, required: true },
     currency: { type: String, enum: Object.values(CurrencyTypes), default: CurrencyTypes.MKD },
 
@@ -24,25 +25,25 @@ export const TicketSchema = new mongoose.Schema({
 
     departure_location: { type: String, required: true },
     destination_location: { type: String, required: true },
-    
+
 
     employee: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    logs:[{
+    logs: [{
         title: String,
         description: String,
-        employee: { type: mongoose.Schema.Types.ObjectId, ref: 'User'},
+        employee: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         created_at: { type: Date, default: Date.now }
     }],
 
     agency: { type: mongoose.Schema.Types.ObjectId, ref: 'Agency' },
-    operator: {type: String},
+    operator: { type: String },
 
     passengers: [{
         first_name: { type: String },
         last_name: { type: String },
         phone: { type: String },
         passport_number: { type: String, required: true },
-        luggage:[{
+        luggage: [{
             type: String,
             weight_in_kg: Number,
             price: Number,
@@ -50,9 +51,9 @@ export const TicketSchema = new mongoose.Schema({
     }],
 
     checked_in: { type: Boolean, default: false },
+    is_deleted: { type: Boolean, default: false },
     note: { type: String },
     route_number: { type: String },
-   
 }, {
     timestamps: true
 });

@@ -1,26 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { IAgency } from './shared/types/agency.types';
+import { CreateAgencyDto } from './shared/DTO/agency.dto';
 
 @Injectable()
 export class AppService {
-  constructor(private configService: ConfigService) {}
+  constructor(
+    @InjectModel('Agency') private agencyModel: Model<IAgency>,
+  ) { }
 
-  getHealth() {
-    return {
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      environment: this.configService.get('nodeEnv'),
-      uptime: process.uptime(),
-      memory: process.memoryUsage(),
-    };
+  async createAgency(createAgencyDto: CreateAgencyDto): Promise<IAgency> {
+    const newAgency = new this.agencyModel(createAgencyDto);
+    return await newAgency.save();
   }
 
-  getWelcome() {
-    return {
-      message: 'Buli osht tu ngarend',
-      version: '1.0.0',
-      documentation: '/api/v1/docs',
-      health: '/api/v1/health',
-    };
+  async getAllAgencies(): Promise<IAgency[]> {
+    return await this.agencyModel.find().sort({ createdAt: -1 }).exec();
   }
 }
