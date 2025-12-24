@@ -2,10 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
-import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
-import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
-import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -16,35 +13,22 @@ async function bootstrap() {
 
   const configService = app.get(ConfigService);
 
-  // Global prefix for all routes
   app.setGlobalPrefix('api/v1');
 
-  // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // Strip properties that don't have decorators
-      forbidNonWhitelisted: true, // Throw error if non-whitelisted properties exist
-      transform: true, // Automatically transform payloads to DTO instances
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
       transformOptions: {
-        enableImplicitConversion: true, // Enable implicit type conversion
+        enableImplicitConversion: true,
       },
       disableErrorMessages: configService.get('NODE_ENV') === 'production',
     }),
   );
 
-  // Global exception filters (order matters: specific to general)
-  app.useGlobalFilters(
-    new HttpExceptionFilter(),
-    new AllExceptionsFilter(),
-  );
+  app.useGlobalInterceptors(new LoggingInterceptor());
 
-  // Global interceptors
-  app.useGlobalInterceptors(
-    new LoggingInterceptor(),
-    new TransformInterceptor(),
-  );
-
-  // CORS configuration
   app.enableCors({
     origin: configService.get('CORS_ORIGIN') || '*',
     credentials: true,
@@ -57,7 +41,9 @@ async function bootstrap() {
 
   logger.log(`🚀 Application is running on: http://${host}:${port}/api/v1`);
   logger.log(`📊 Environment: ${configService.get('NODE_ENV')}`);
-  logger.log(`🗄️  Database: ${configService.get('database.uri') ? 'Connected' : 'Not configured'}`);
+  logger.log(
+    `🗄️  Database: ${configService.get('database.uri') ? 'Connected' : 'Not configured'}`,
+  );
 }
 
 bootstrap();

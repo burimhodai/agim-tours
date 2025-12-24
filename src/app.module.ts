@@ -1,29 +1,43 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import configuration from './config/configuration';
+import { BusModule } from './modules/busModule/bus.module';
+import { EventModule } from './modules/eventModule/event.module';
+import { EventHotelModule } from './modules/eventHotelModule/eventHotel.module';
+import { PlaneModule } from './modules/planeModule/plane.module';
+import { UserModule } from './modules/userModule/user.module';
+import { MongooseModule } from '@nestjs/mongoose';
 
 @Module({
   imports: [
-    // Config Module - Must be first
-    ConfigModule.forRoot({
-      isGlobal: true, // Makes ConfigService available everywhere
-      load: [configuration], // Load custom configuration
-      validationOptions: {
-        allowUnknown: true, // Allow unknown env variables
-        abortEarly: false, // Show all validation errors
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        const dbUrl = configService.get<string>('DATABASE_URL');
+
+        return { uri: dbUrl };
       },
-      envFilePath: ['.env.local', '.env'], // Load env files in order
-      cache: true, // Cache config for performance
     }),
 
-    // Database Module
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [configuration],
+      validationOptions: {
+        allowUnknown: true,
+        abortEarly: false,
+      },
+      envFilePath: ['.env.local', '.env'],
+      cache: true,
+    }),
 
-    // Feature Modules (will be added here)
-    // AuthModule,
-    // UsersModule,
-    // PermissionsModule,
+    BusModule,
+    EventModule,
+    EventHotelModule,
+    PlaneModule,
+    UserModule,
   ],
   controllers: [AppController],
   providers: [AppService],
