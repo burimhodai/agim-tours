@@ -21,6 +21,14 @@ export class CreateTransactionDto {
 
     @IsOptional()
     @IsString()
+    to?: string;
+
+    @IsOptional()
+    @IsString()
+    description?: string;
+
+    @IsOptional()
+    @IsString()
     ticket?: string;
 
     @IsOptional()
@@ -55,4 +63,17 @@ export class TransactionQueryDto {
     @IsOptional()
     @IsString()
     user?: string;
+
+    @IsOptional()
+    @IsString()
+    to?: string;
+
+    @IsOptional()
+    @IsString()
+    description?: string;
+
+    @IsOptional()
+    @IsString()
+    ticket?: string;
+
 }

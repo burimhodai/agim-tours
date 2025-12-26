@@ -10,8 +10,11 @@ export const TransactionSchema = new mongoose.Schema(
         user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         ticket: { type: mongoose.Schema.Types.ObjectId, ref: 'Ticket' },
         type: { type: String, enum: Object.values(TransactionTypes), default: TransactionTypes.INCOME },
+        to: { type: String },
+        description: { type: String }
     },
     {
         timestamps: true,
     },
 );
+

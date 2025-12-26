@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agim Tours - Reports Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <link rel="stylesheet" href="reports.css">
+</head>
+
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Reports Dashboard</h1>
+            <p class="subtitle">Comprehensive transaction reports for Bus and Plane modules</p>
+        </header>
+
+        <div class="filters-card">
+            <h2>Report Filters</h2>
+            <form id="reportForm" class="filters-grid">
+                <div class="form-group">
+                    <label for="period">Period</label>
+                    <select id="period" name="period" required>
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly" selected>Monthly</option>
+                        <option value="yearly">Yearly</option>
+                        <option value="custom">Custom Date Range</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="module">Module</label>
+                    <select id="module" name="module">
+                        <option value="">All Modules</option>
+                        <option value="bus">Bus</option>
+                        <option value="plane">Plane</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="agency">Agency</label>
+                    <input type="text" id="agency" name="agency" placeholder="Agency ID (optional)">
+                </div>
+
+                <div class="form-group">
+                    <label for="employee">Employee</label>
+                    <input type="text" id="employee" name="employee" placeholder="Employee ID (optional)">
+                </div>
+
+                <div class="form-group" id="specificDateGroup">
+                    <label for="specific_date">Specific Date</label>
+                    <input type="date" id="specific_date" name="specific_date">
+                </div>
+
+                <div class="form-group hidden" id="dateFromGroup">
+                    <label for="date_from">Date From</label>
+                    <input type="date" id="date_from" name="date_from">
+                </div>
+
+                <div class="form-group hidden" id="dateToGroup">
+                    <label for="date_to">Date To</label>
+                    <input type="date" id="date_to" name="date_to">
+                </div>
+
+                <div class="form-group buttons-group">
+                    <button type="submit" class="btn btn-primary">Generate Report</button>
+                    <button type="button" id="exportPdfBtn" class="btn btn-secondary" disabled>Export PDF</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="loadingSpinner" class="loading hidden">
+            <div class="spinner"></div>
+            <p>Generating report...</p>
+        </div>
+
+        <div id="reportResults" class="hidden">
+            <div class="report-header">
+                <div class="report-info">
+                    <h3 id="reportTitle"></h3>
+                    <p id="reportDateRange"></p>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">
+                    <h2>Income Transactions</h2>
+                    <button class="btn btn-icon" id="incomeSettingsBtn" title="Column Settings">
+                        ⚙️
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table id="incomeTable" class="data-table">
+                        <thead>
+                            <tr id="incomeTableHeader"></tr>
+                        </thead>
+                        <tbody id="incomeTableBody"></tbody>
+                        <tfoot id="incomeTableFooter"></tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">
+                    <h2>Outcome Transactions</h2>
+                    <button class="btn btn-icon" id="outcomeSettingsBtn" title="Column Settings">
+                        ⚙️
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table id="outcomeTable" class="data-table">
+                        <thead>
+                            <tr id="outcomeTableHeader"></tr>
+                        </thead>
+                        <tbody id="outcomeTableBody"></tbody>
+                        <tfoot id="outcomeTableFooter"></tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="columnSettingsModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Column Settings</h3>
+                <button class="btn btn-icon close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Select which columns to display:</p>
+                <div id="columnCheckboxes" class="checkbox-group"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary close-modal-btn">Cancel</button>
+                <button class="btn btn-primary apply-columns-btn">Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="reports.js"></script>
+</body>
+
+</html>

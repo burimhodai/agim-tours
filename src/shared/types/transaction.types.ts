@@ -13,6 +13,8 @@ export interface ITransaction extends Document {
     user?: Types.ObjectId;
     ticket?: Types.ObjectId;
     type?: TransactionTypes;
+    to: string;
+    description: string;
     createdAt?: Date;
     updatedAt?: Date;
 }
