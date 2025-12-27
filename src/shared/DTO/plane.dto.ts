@@ -11,6 +11,7 @@ import {
 import { Type } from 'class-transformer';
 import { CurrencyTypes } from '../types/currency.types';
 import { PaymentStatusTypes } from '../types/payment.types';
+import { PaymentChunkDto } from './payment-chunk.dto';
 
 export class PlaneLuggageDto {
     @IsOptional()
@@ -60,6 +61,12 @@ export class CreatePlaneTicketDto {
     @IsOptional()
     @IsEnum(PaymentStatusTypes)
     payment_status?: PaymentStatusTypes;
+
+    @IsOptional()
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => PaymentChunkDto)
+    payment_chunks?: PaymentChunkDto[];
 
     @Type(() => Date)
     @IsDate()
@@ -131,6 +138,12 @@ export class UpdatePlaneTicketDto {
     @IsOptional()
     @IsEnum(PaymentStatusTypes)
     payment_status?: PaymentStatusTypes;
+
+    @IsOptional()
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => PaymentChunkDto)
+    payment_chunks?: PaymentChunkDto[];
 
     @IsOptional()
     @Type(() => Date)

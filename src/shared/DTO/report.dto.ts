@@ -72,6 +72,12 @@ export class ReportTransactionItem {
         passengers?: any[];
         operator?: string;
         price: number;
+        payment_status?: string;
+        payment_chunks?: {
+            amount: number;
+            currency: string;
+            payment_date?: Date;
+        }[];
     };
 }
 

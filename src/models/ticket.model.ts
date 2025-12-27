@@ -17,6 +17,12 @@ export const TicketSchema = new mongoose.Schema({
         default: PaymentStatusTypes.UNPAID,
     },
 
+    payment_chunks: [{
+        amount: { type: Number, required: true },
+        currency: { type: String, enum: Object.values(CurrencyTypes), required: true },
+        payment_date: { type: Date, default: Date.now }
+    }],
+
     departure_date: { type: Date, required: true },
     arrival_date: { type: Date, required: true },
 

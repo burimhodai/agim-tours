@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { ITransaction, TransactionTypes } from 'src/shared/types/transaction.types';
 import { ReportQueryDto, ReportResponseDto, ReportPeriod, CurrencySummary, ReportTransactionItem } from 'src/shared/DTO/report.dto';
+import { PaymentStatusTypes } from 'src/shared/types/payment.types';
 
 @Injectable()
 export class ReportsService {
@@ -43,6 +44,11 @@ export class ReportsService {
                 return ticket && ticket.ticket_type === module;
             });
         }
+
+        allTransactions = allTransactions.filter(transaction => {
+            const ticket = transaction.ticket as any;
+            return ticket && ticket.payment_status === PaymentStatusTypes.PAID;
+        });
 
         const incomeTransactions = allTransactions.filter(t => t.type === TransactionTypes.INCOME);
         const outcomeTransactions = allTransactions.filter(t => t.type === TransactionTypes.OUTCOME);
@@ -159,6 +165,8 @@ export class ReportsService {
                     passengers: ticket.passengers,
                     operator: ticket.operator,
                     price: ticket.price,
+                    payment_status: ticket.payment_status,
+                    payment_chunks: ticket.payment_chunks || [],
                 } : undefined,
             };
         });

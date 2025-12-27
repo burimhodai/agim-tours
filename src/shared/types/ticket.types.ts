@@ -28,6 +28,12 @@ export interface IPassenger {
     luggage?: ILuggage[];
 }
 
+export interface IPaymentChunk {
+    amount: number;
+    currency: CurrencyTypes;
+    payment_date?: Date;
+}
+
 export interface ITicket extends Document {
     ticket_type?: TicketTypes;
     booking_reference?: string;
@@ -37,6 +43,7 @@ export interface ITicket extends Document {
     currency?: CurrencyTypes;
 
     payment_status?: PaymentStatusTypes;
+    payment_chunks?: IPaymentChunk[];
 
     departure_date: Date;
     arrival_date: Date;
