@@ -254,6 +254,10 @@ export class BusTicketQueryDto {
     route_number?: string;
 
     @IsOptional()
+    @IsString()
+    agency?: string;
+
+    @IsOptional()
     @IsNumber()
     page?: number;
 

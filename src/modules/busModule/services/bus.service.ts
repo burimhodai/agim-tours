@@ -65,6 +65,7 @@ export class BusService {
             checked_in,
             operator,
             route_number,
+            agency,
             page = 1,
             limit = 10,
         } = query;
@@ -103,6 +104,10 @@ export class BusService {
 
         if (route_number) {
             filter.route_number = route_number;
+        }
+
+        if (agency) {
+            filter.agency = new Types.ObjectId(agency);
         }
 
         const skip = (page - 1) * limit;

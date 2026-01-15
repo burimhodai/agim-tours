@@ -4,6 +4,7 @@ import { Model } from 'mongoose';
 import { ITransaction, TransactionTypes } from 'src/shared/types/transaction.types';
 import { ITicket, TicketTypes } from 'src/shared/types/ticket.types';
 import { CurrencyTypes } from 'src/shared/types/currency.types';
+import { PaymentStatusTypes } from 'src/shared/types/payment.types';
 
 @Injectable()
 export class SeedDataService {
@@ -75,6 +76,7 @@ export class SeedDataService {
                 operator: route.operator,
                 passengers,
                 checked_in: false,
+                payment_status: PaymentStatusTypes.PAID,
             });
 
             const savedTicket = await ticket.save();
@@ -126,9 +128,56 @@ export class SeedDataService {
         console.log(`   - Mixed currencies: EURO, MKD, CHF`);
         console.log(`   - Both BUS and PLANE tickets`);
 
+        // Also create some standalone transactions (without tickets) for today
+        const standaloneTransactions = [
+            {
+                amount: 150,
+                currency: CurrencyTypes.EURO,
+                type: TransactionTypes.INCOME,
+                description: 'Shërbim konsulence',
+                to: 'Klienti A',
+            },
+            {
+                amount: 75.50,
+                currency: CurrencyTypes.EURO,
+                type: TransactionTypes.INCOME,
+                description: 'Pagesë për rezervim',
+                to: 'Klienti B',
+            },
+            {
+                amount: 250,
+                currency: CurrencyTypes.CHF,
+                type: TransactionTypes.INCOME,
+                description: 'Komision agjensie',
+                to: 'Partneri Swiss',
+            },
+            {
+                amount: 45,
+                currency: CurrencyTypes.EURO,
+                type: TransactionTypes.OUTCOME,
+                description: 'Materiale zyre',
+                to: 'Furnitori',
+            },
+            {
+                amount: 120,
+                currency: CurrencyTypes.EURO,
+                type: TransactionTypes.OUTCOME,
+                description: 'Pagesa e shërbimeve',
+                to: 'Kompania X',
+            },
+        ];
+
+        for (const tx of standaloneTransactions) {
+            const transaction = new this.transactionModel(tx);
+            await transaction.save();
+        }
+
+        console.log(`   - Created ${standaloneTransactions.length} standalone transactions for today`);
+
         return {
             message: 'Seed data created successfully',
             ticketsCreated: createdTickets.length,
+            standaloneTransactions: standaloneTransactions.length,
         };
     }
 

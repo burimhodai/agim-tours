@@ -38,6 +38,7 @@ export class ReportsService {
             .sort({ createdAt: -1 })
             .exec();
 
+        // Filter by module if specified (only applies to ticket-based transactions)
         if (module) {
             allTransactions = allTransactions.filter(transaction => {
                 const ticket = transaction.ticket as any;
@@ -45,9 +46,15 @@ export class ReportsService {
             });
         }
 
+        // Include transactions that either:
+        // 1. Have no ticket (standalone income/expense entries)
+        // 2. Have a ticket with payment_status === 'paid'
         allTransactions = allTransactions.filter(transaction => {
             const ticket = transaction.ticket as any;
-            return ticket && ticket.payment_status === PaymentStatusTypes.PAID;
+            // If no ticket, include the transaction (standalone entry)
+            if (!ticket) return true;
+            // If has ticket, only include if paid
+            return ticket.payment_status === PaymentStatusTypes.PAID;
         });
 
         const incomeTransactions = allTransactions.filter(t => t.type === TransactionTypes.INCOME);
