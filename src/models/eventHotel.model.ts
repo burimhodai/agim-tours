@@ -1,45 +1,95 @@
 import mongoose from 'mongoose';
 import { CurrencyTypes } from 'src/shared/types/currency.types';
+import { PaymentStatusTypes } from 'src/shared/types/payment.types';
 
-// duhet te centriret
+// Event Bus Schema - for buses assigned to an event
+export const EventBusSchema = new mongoose.Schema({
+    name: { type: String, required: true }, // Bus identification name
+    plates: { type: String },
+    model: { type: String },
+    drivers: [{ type: String }],
+    capacity: { type: Number },
+    agency: { type: mongoose.Schema.Types.ObjectId, ref: 'Agency' },
+}, {
+    timestamps: true
+});
 
+// Traveler/Passenger schema for events
+const EventTravelerSchema = new mongoose.Schema({
+    first_name: { type: String },
+    last_name: { type: String },
+    phone: { type: String },
+    passport_number: { type: String },
+
+    // Which lists to show this traveler in
+    show_in_hotel_list: { type: Boolean, default: true },
+    show_in_border_list: { type: Boolean, default: true },
+    show_in_guide_list: { type: Boolean, default: true },
+
+    // Room and hotel assignment
+    room_type: { type: mongoose.Schema.Types.ObjectId, ref: 'RoomType' },
+    hotel: { type: mongoose.Schema.Types.ObjectId, ref: 'PartnerHotel' },
+
+    // Bus assignment
+    bus: { type: mongoose.Schema.Types.ObjectId, ref: 'EventBus' },
+
+    // Room group assignment (family grouping)
+    room_group_id: { type: String },
+
+    note: { type: String },
+});
+
+// Main Event Hotel Schema
 export const EventHotelSchema = new mongoose.Schema({
-    name: { type: String },
-    date: { type: Date },
+    uid: { type: String, unique: true, sparse: true },
+    name: { type: String, required: true },
+    location: { type: String, required: true },
+    date: { type: Date, required: true }, // Data e nisjes
+    return_date: { type: Date }, // Data e kthimit (opsionale)
+
     price: { type: Number },
     currency: { type: String, enum: Object.values(CurrencyTypes), default: CurrencyTypes.EURO },
-    
-    passengers: [{
-        first_name: { type: String },
-        last_name: { type: String },
-        phone: { type: String },
-        passport_number: { type: String, required: true },
+
+    payment_status: {
+        type: String,
+        enum: Object.values(PaymentStatusTypes),
+        default: PaymentStatusTypes.UNPAID,
+    },
+
+    travelers: [EventTravelerSchema],
+
+    // Room groups - each group represents people sharing a room
+    room_groups: [{
+        group_id: { type: String, required: true }, // Unique identifier for the group
+        room_type: { type: mongoose.Schema.Types.ObjectId, ref: 'RoomType' },
+        hotel: { type: mongoose.Schema.Types.ObjectId, ref: 'PartnerHotel' },
+        room_number: { type: String },
     }],
 
-    has_hotel: { type: Boolean, default: false },
-    has_transportation: { type: Boolean, default: true },
-    
-    departure_date: { type: Date, required: true },
-    arrival_date: { type: Date, required: true },
+    // Primary hotel for this event
+    hotel: { type: mongoose.Schema.Types.ObjectId, ref: 'PartnerHotel' },
 
-    return_date: { type: Date },
-    return_arrival_date: { type: Date },
+    // Assigned buses for this event
+    buses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'EventBus' }],
 
-    departure_location: { type: String, required: true },
-    destination_location: { type: String, required: true },
-    
+    // Print column settings
+    print_columns: {
+        hotel_list: { type: [String], default: ['first_name', 'last_name', 'passport_number', 'room_type', 'hotel'] },
+        border_list: { type: [String], default: ['first_name', 'last_name', 'passport_number'] },
+        guide_list: { type: [String], default: ['first_name', 'last_name', 'phone'] },
+        bus_list: { type: [String], default: ['first_name', 'last_name', 'passport_number', 'phone'] },
+    },
 
     employee: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    logs:[{
+    logs: [{
         title: String,
         description: String,
-        employee: { type: mongoose.Schema.Types.ObjectId, ref: 'User'},
+        employee: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         created_at: { type: Date, default: Date.now }
     }],
     agency: { type: mongoose.Schema.Types.ObjectId, ref: 'Agency' },
 
-
-
+    is_deleted: { type: Boolean, default: false },
 }, {
     timestamps: true
 });
