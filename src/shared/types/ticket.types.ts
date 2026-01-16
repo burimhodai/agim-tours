@@ -24,7 +24,7 @@ export interface IPassenger {
     first_name?: string;
     last_name?: string;
     phone?: string;
-    passport_number: string;
+    passport_number?: string;
     luggage?: ILuggage[];
 }
 
@@ -35,6 +35,7 @@ export interface IPaymentChunk {
 }
 
 export interface ITicket extends Document {
+    uid?: string;
     ticket_type?: TicketTypes;
     booking_reference?: string;
     original_booking_reference?: string;
@@ -46,7 +47,7 @@ export interface ITicket extends Document {
     payment_chunks?: IPaymentChunk[];
 
     departure_date: Date;
-    arrival_date: Date;
+    arrival_date?: Date;
 
     return_date?: Date;
     return_arrival_date?: Date;

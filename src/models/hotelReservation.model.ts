@@ -14,6 +14,14 @@ export const HotelReservationSchema = new mongoose.Schema({
     },
     notes: { type: String },
 
+    // Room groups - each group represents people sharing a room
+    room_groups: [{
+        group_id: { type: String, required: true }, // Unique identifier for the group
+        room_type_id: { type: mongoose.Schema.Types.ObjectId, ref: 'RoomType' }, // Reference to RoomType from DB
+        room_type_name: { type: String }, // Cached room type name for display
+        room_number: { type: String }, // Optional room number assignment
+    }],
+
     travelers: [{
         full_name: { type: String, required: true },
         passport_number: { type: String, required: true },
@@ -24,6 +32,7 @@ export const HotelReservationSchema = new mongoose.Schema({
             enum: Object.values(RoomTypes),
             default: RoomTypes.DOUBLE
         },
+        room_group_id: { type: String }, // Links traveler to a room group
         departure_place: { type: String, required: true },
         show_in_hotel_list: { type: Boolean, default: true },
         show_in_border_list: { type: Boolean, default: true },

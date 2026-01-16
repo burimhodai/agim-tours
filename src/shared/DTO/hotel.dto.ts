@@ -174,6 +174,31 @@ export class TravelerDto {
     @IsOptional()
     @IsString()
     bus_assignment?: string;
+
+    @IsOptional()
+    @IsString()
+    room_group_id?: string;
+}
+
+// ===================================
+// ROOM GROUP DTOs
+// ===================================
+
+export class RoomGroupDto {
+    @IsString()
+    group_id: string;
+
+    @IsOptional()
+    @IsString()
+    room_type_id?: string;
+
+    @IsOptional()
+    @IsString()
+    room_type_name?: string;
+
+    @IsOptional()
+    @IsString()
+    room_number?: string;
 }
 
 // ===================================
@@ -210,6 +235,12 @@ export class CreateHotelReservationDto {
     @ValidateNested({ each: true })
     @Type(() => TravelerDto)
     travelers: TravelerDto[];
+
+    @IsOptional()
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => RoomGroupDto)
+    room_groups?: RoomGroupDto[];
 
     @IsOptional()
     @IsString()
@@ -255,6 +286,12 @@ export class UpdateHotelReservationDto {
     @ValidateNested({ each: true })
     @Type(() => TravelerDto)
     travelers?: TravelerDto[];
+
+    @IsOptional()
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => RoomGroupDto)
+    room_groups?: RoomGroupDto[];
 }
 
 export class AddReservationLogDto {

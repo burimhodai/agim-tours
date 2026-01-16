@@ -4,6 +4,7 @@ import { PaymentStatusTypes } from 'src/shared/types/payment.types';
 import { TicketTypes } from 'src/shared/types/ticket.types';
 
 export const TicketSchema = new mongoose.Schema({
+    uid: { type: String, unique: true, sparse: true },
     ticket_type: { type: String, enum: Object.values(TicketTypes) },
     booking_reference: { type: String, lowercase: true },
     original_booking_reference: { type: String, lowercase: true },
@@ -24,7 +25,7 @@ export const TicketSchema = new mongoose.Schema({
     }],
 
     departure_date: { type: Date, required: true },
-    arrival_date: { type: Date, required: true },
+    arrival_date: { type: Date },
 
     return_date: { type: Date },
     return_arrival_date: { type: Date },
@@ -48,7 +49,7 @@ export const TicketSchema = new mongoose.Schema({
         first_name: { type: String },
         last_name: { type: String },
         phone: { type: String },
-        passport_number: { type: String, required: true },
+        passport_number: { type: String },
         luggage: [{
             type: String,
             weight_in_kg: Number,

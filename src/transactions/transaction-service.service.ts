@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { ITransaction } from 'src/shared/types/transaction.types';
-import { CreateTransactionDto, TransactionQueryDto } from 'src/shared/DTO/transaction.dto';
+import { ITransaction, TransactionStatus, TransactionTypes } from 'src/shared/types/transaction.types';
+import { CreateTransactionDto, TransactionQueryDto, UpdateTransactionDto } from 'src/shared/DTO/transaction.dto';
 
 @Injectable()
 export class TransactionServiceService {
@@ -28,8 +28,59 @@ export class TransactionServiceService {
         return await newTransaction.save();
     }
 
+    async update(id: string, updateTransactionDto: UpdateTransactionDto): Promise<ITransaction> {
+        if (!Types.ObjectId.isValid(id)) {
+            throw new BadRequestException('Invalid transaction ID');
+        }
+
+        const transaction = await this.transactionModel
+            .findByIdAndUpdate(id, { $set: updateTransactionDto }, { new: true })
+            .populate('agency')
+            .populate('user', 'email first_name last_name')
+            .populate('ticket')
+            .exec();
+
+        if (!transaction) {
+            throw new NotFoundException('Transaction not found');
+        }
+
+        return transaction;
+    }
+
+    async findByTicket(ticketId: string): Promise<ITransaction | null> {
+        if (!Types.ObjectId.isValid(ticketId)) {
+            return null;
+        }
+
+        return await this.transactionModel
+            .findOne({ ticket: new Types.ObjectId(ticketId) })
+            .exec();
+    }
+
+    async updateByTicket(ticketId: string, updateData: UpdateTransactionDto): Promise<ITransaction | null> {
+        if (!Types.ObjectId.isValid(ticketId)) {
+            return null;
+        }
+
+        return await this.transactionModel
+            .findOneAndUpdate(
+                { ticket: new Types.ObjectId(ticketId) },
+                { $set: updateData },
+                { new: true }
+            )
+            .exec();
+    }
+
+    async settleDebt(ticketId: string): Promise<ITransaction | null> {
+        // Convert debt to income when ticket is paid
+        return await this.updateByTicket(ticketId, {
+            type: TransactionTypes.INCOME,
+            status: TransactionStatus.SETTLED,
+        });
+    }
+
     async findAll(query: TransactionQueryDto): Promise<ITransaction[]> {
-        const { date, date_from, date_to, type, agency, user } = query;
+        const { date, date_from, date_to, type, status, agency, user } = query;
 
         const filter: any = {};
 
@@ -55,6 +106,10 @@ export class TransactionServiceService {
 
         if (type) {
             filter.type = type;
+        }
+
+        if (status) {
+            filter.status = status;
         }
 
         if (agency) {
@@ -92,4 +147,18 @@ export class TransactionServiceService {
 
         return transaction;
     }
+
+    async getDebtsSummary(agencyId: string): Promise<{ total: number; count: number }> {
+        const debts = await this.transactionModel
+            .find({
+                agency: new Types.ObjectId(agencyId),
+                type: TransactionTypes.DEBT,
+                status: TransactionStatus.PENDING,
+            })
+            .exec();
+
+        const total = debts.reduce((sum, debt) => sum + (debt.amount || 0), 0);
+        return { total, count: debts.length };
+    }
 }
+

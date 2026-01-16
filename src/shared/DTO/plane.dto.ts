@@ -40,8 +40,9 @@ export class PlanePassengerDto {
   @IsString()
   phone?: string;
 
+  @IsOptional()
   @IsString()
-  passport_number: string;
+  passport_number?: string;
 
   @IsOptional()
   @IsArray()
@@ -72,9 +73,10 @@ export class CreatePlaneTicketDto {
   @IsDate()
   departure_date: Date;
 
+  @IsOptional()
   @Type(() => Date)
   @IsDate()
-  arrival_date: Date;
+  arrival_date?: Date;
 
   @IsOptional()
   @Type(() => Date)

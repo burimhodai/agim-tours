@@ -1,7 +1,7 @@
 import { IsDate, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CurrencyTypes } from '../types/currency.types';
-import { TransactionTypes } from '../types/transaction.types';
+import { TransactionTypes, TransactionStatus } from '../types/transaction.types';
 
 export class CreateTransactionDto {
     @IsNumber()
@@ -34,6 +34,28 @@ export class CreateTransactionDto {
     @IsOptional()
     @IsEnum(TransactionTypes)
     type?: TransactionTypes;
+
+    @IsOptional()
+    @IsEnum(TransactionStatus)
+    status?: TransactionStatus;
+}
+
+export class UpdateTransactionDto {
+    @IsOptional()
+    @IsNumber()
+    amount?: number;
+
+    @IsOptional()
+    @IsEnum(TransactionTypes)
+    type?: TransactionTypes;
+
+    @IsOptional()
+    @IsEnum(TransactionStatus)
+    status?: TransactionStatus;
+
+    @IsOptional()
+    @IsString()
+    description?: string;
 }
 
 export class TransactionQueryDto {
@@ -57,6 +79,10 @@ export class TransactionQueryDto {
     type?: TransactionTypes;
 
     @IsOptional()
+    @IsEnum(TransactionStatus)
+    status?: TransactionStatus;
+
+    @IsOptional()
     @IsString()
     agency?: string;
 
@@ -77,3 +103,4 @@ export class TransactionQueryDto {
     ticket?: string;
 
 }
+

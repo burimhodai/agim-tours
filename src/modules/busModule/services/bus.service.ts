@@ -13,7 +13,7 @@ import {
     BusTicketQueryDto,
 } from 'src/shared/DTO/bus.dto';
 import { PaymentStatusTypes } from 'src/shared/types/payment.types';
-import { TransactionTypes } from 'src/shared/types/transaction.types';
+import { TransactionTypes, TransactionStatus } from 'src/shared/types/transaction.types';
 import { TransactionServiceService } from 'src/transactions/transaction-service.service';
 
 @Injectable()
@@ -23,9 +23,19 @@ export class BusService {
         private transactionService: TransactionServiceService,
     ) { }
 
+    private generateBusUid(): string {
+        // Generate random 5-6 digit number
+        const numDigits = Math.random() < 0.5 ? 5 : 6;
+        const min = Math.pow(10, numDigits - 1);
+        const max = Math.pow(10, numDigits) - 1;
+        const randomNum = Math.floor(Math.random() * (max - min + 1)) + min;
+        return `B${randomNum}`;
+    }
+
     async create(createBusTicketDto: CreateBusTicketDto): Promise<ITicket> {
         const ticketData = {
             ...createBusTicketDto,
+            uid: this.generateBusUid(),
             ticket_type: TicketTypes.BUS,
             agency: createBusTicketDto.agency
                 ? new Types.ObjectId(createBusTicketDto.agency)
@@ -38,13 +48,18 @@ export class BusService {
         const newTicket = new this.ticketModel(ticketData);
         const savedTicket = await newTicket.save();
 
+        // Determine transaction type based on payment status
+        const isUnpaid = createBusTicketDto.payment_status === PaymentStatusTypes.UNPAID;
+
         await this.transactionService.create({
             amount: createBusTicketDto.price,
             currency: createBusTicketDto.currency,
-            type: TransactionTypes.INCOME,
+            type: isUnpaid ? TransactionTypes.DEBT : TransactionTypes.INCOME,
+            status: isUnpaid ? TransactionStatus.PENDING : TransactionStatus.SETTLED,
             ticket: savedTicket._id.toString(),
             agency: createBusTicketDto.agency,
             user: createBusTicketDto.employee,
+            description: isUnpaid ? 'Borxh - Biletë autobusi e papaguar' : 'Biletë autobusi',
         });
 
         return savedTicket;
@@ -156,6 +171,12 @@ export class BusService {
             throw new BadRequestException('Invalid ticket ID');
         }
 
+        // Get the current ticket to check payment status change
+        const currentTicket = await this.ticketModel.findById(id).exec();
+        if (!currentTicket) {
+            throw new NotFoundException('Bus ticket not found');
+        }
+
         const updateData: any = { ...updateBusTicketDto };
 
         if (updateBusTicketDto.agency) {
@@ -174,6 +195,26 @@ export class BusService {
 
         if (!ticket) {
             throw new NotFoundException('Bus ticket not found');
+        }
+
+        // Handle payment status change - update transaction
+        if (updateBusTicketDto.payment_status &&
+            updateBusTicketDto.payment_status !== currentTicket.payment_status) {
+
+            const isPaidNow = updateBusTicketDto.payment_status === PaymentStatusTypes.PAID;
+            const wasUnpaid = currentTicket.payment_status === PaymentStatusTypes.UNPAID;
+
+            if (isPaidNow && wasUnpaid) {
+                // Debt is being settled - convert to income
+                await this.transactionService.settleDebt(id);
+            } else if (updateBusTicketDto.payment_status === PaymentStatusTypes.UNPAID) {
+                // Changing to unpaid - update transaction to debt
+                await this.transactionService.updateByTicket(id, {
+                    type: TransactionTypes.DEBT,
+                    status: TransactionStatus.PENDING,
+                    description: 'Borxh - Biletë autobusi e papaguar',
+                });
+            }
         }
 
         return ticket;

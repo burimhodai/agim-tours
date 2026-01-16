@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { CurrencyTypes } from 'src/shared/types/currency.types';
-import { TransactionTypes } from 'src/shared/types/transaction.types';
+import { TransactionTypes, TransactionStatus } from 'src/shared/types/transaction.types';
 
 export const TransactionSchema = new mongoose.Schema(
     {
@@ -10,6 +10,7 @@ export const TransactionSchema = new mongoose.Schema(
         user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         ticket: { type: mongoose.Schema.Types.ObjectId, ref: 'Ticket' },
         type: { type: String, enum: Object.values(TransactionTypes), default: TransactionTypes.INCOME },
+        status: { type: String, enum: Object.values(TransactionStatus), default: TransactionStatus.SETTLED },
         to: { type: String },
         description: { type: String }
     },
@@ -17,4 +18,5 @@ export const TransactionSchema = new mongoose.Schema(
         timestamps: true,
     },
 );
+
 
