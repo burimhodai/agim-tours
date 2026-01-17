@@ -5,4 +5,6 @@ export enum UserPermissions {
     EVENT_HOTEL = 'event_hotel',
     EVENT = 'event',
     REPORTS = 'reports',
+    TRANSACTIONS = 'transactions',
+    BUSES = 'buses',
 }

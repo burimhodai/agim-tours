@@ -10,6 +10,8 @@ import { PlaneModule } from './modules/planeModule/plane.module';
 import { UserModule } from './modules/userModule/user.module';
 import { ReportsModule } from './modules/reportsModule/reports.module';
 import { HotelModule } from './modules/hotelModule/hotel.module';
+import { SearchModule } from './modules/searchModule/search.module';
+import { LoyalCustomerModule } from './modules/loyalCustomerModule/loyal-customer.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AgencySchema } from './models/agency.model';
 import { TransactionSchema } from './models/transaction.model';
@@ -51,6 +53,8 @@ import { TransactionServiceService } from './transactions/transaction-service.se
     UserModule,
     ReportsModule,
     HotelModule,
+    SearchModule,
+    LoyalCustomerModule,
   ],
   controllers: [AppController, TransactionControllerController],
   providers: [AppService, TransactionServiceService],
