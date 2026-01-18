@@ -18,4 +18,16 @@ export class AppService {
   async getAllAgencies(): Promise<IAgency[]> {
     return await this.agencyModel.find().sort({ createdAt: -1 }).exec();
   }
+
+  async updateAgency(id: string, data: Partial<CreateAgencyDto>): Promise<IAgency> {
+    const agency = await this.agencyModel.findByIdAndUpdate(id, data, { new: true }).exec();
+    if (!agency) {
+      throw new Error('Agency not found');
+    }
+    return agency as IAgency;
+  }
+
+  async deleteAgency(id: string): Promise<void> {
+    await this.agencyModel.findByIdAndDelete(id).exec();
+  }
 }
