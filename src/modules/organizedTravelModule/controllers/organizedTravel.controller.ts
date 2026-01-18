@@ -1,0 +1,111 @@
+import {
+    Controller,
+    Get,
+    Post,
+    Put,
+    Delete,
+    Body,
+    Param,
+    Query,
+} from '@nestjs/common';
+import { OrganizedTravelService } from '../services/organizedTravel.service';
+import {
+    CreateOrganizedTravelDto,
+    UpdateOrganizedTravelDto,
+    OrganizedTravelQueryDto,
+    AddOrganizedTravelersDto,
+    AssignOrganizedBusDto,
+    OrganizedTravelerDto,
+    OrganizedPrintColumnsDto,
+} from 'src/shared/DTO/organizedTravel.dto';
+
+@Controller('organized-travel')
+export class OrganizedTravelController {
+    constructor(private readonly travelService: OrganizedTravelService) { }
+
+    @Post()
+    async create(@Body() createDto: CreateOrganizedTravelDto) {
+        return await this.travelService.create(createDto);
+    }
+
+    @Get()
+    async findAll(@Query() query: OrganizedTravelQueryDto) {
+        return await this.travelService.findAll(query);
+    }
+
+    @Get(':id')
+    async findOne(@Param('id') id: string) {
+        return await this.travelService.findOne(id);
+    }
+
+    @Put(':id')
+    async update(@Param('id') id: string, @Body() updateDto: UpdateOrganizedTravelDto) {
+        return await this.travelService.update(id, updateDto);
+    }
+
+    @Delete(':id')
+    async delete(@Param('id') id: string) {
+        return await this.travelService.delete(id);
+    }
+
+    // Traveler endpoints
+    @Post(':id/travelers')
+    async addTravelers(
+        @Param('id') id: string,
+        @Body() addTravelersDto: AddOrganizedTravelersDto,
+    ) {
+        return await this.travelService.addTravelers(id, addTravelersDto);
+    }
+
+    @Put(':id/travelers/:travelerId')
+    async updateTraveler(
+        @Param('id') travelId: string,
+        @Param('travelerId') travelerId: string,
+        @Body() travelerData: OrganizedTravelerDto,
+    ) {
+        return await this.travelService.updateTraveler(travelId, travelerId, travelerData);
+    }
+
+    @Delete(':id/travelers/:travelerId')
+    async removeTraveler(
+        @Param('id') travelId: string,
+        @Param('travelerId') travelerId: string,
+    ) {
+        return await this.travelService.removeTraveler(travelId, travelerId);
+    }
+
+    // Bus assignment
+    @Post(':id/assign-bus')
+    async assignBus(
+        @Param('id') travelId: string,
+        @Body() assignBusDto: AssignOrganizedBusDto,
+    ) {
+        return await this.travelService.assignBus(travelId, assignBusDto);
+    }
+
+    // Get travelers grouped by bus
+    @Get(':id/travelers-by-bus')
+    async getTravelersByBus(@Param('id') travelId: string) {
+        return await this.travelService.getTravelersByBus(travelId);
+    }
+
+    // Get filtered lists
+    @Get(':id/border-list')
+    async getBorderList(@Param('id') travelId: string) {
+        return await this.travelService.getBorderList(travelId);
+    }
+
+    @Get(':id/guide-list')
+    async getGuideList(@Param('id') travelId: string) {
+        return await this.travelService.getGuideList(travelId);
+    }
+
+    // Update print columns
+    @Put(':id/print-columns')
+    async updatePrintColumns(
+        @Param('id') travelId: string,
+        @Body() printColumns: OrganizedPrintColumnsDto,
+    ) {
+        return await this.travelService.updatePrintColumns(travelId, printColumns);
+    }
+}

@@ -6,6 +6,7 @@ import configuration from './config/configuration';
 import { BusModule } from './modules/busModule/bus.module';
 import { EventModule } from './modules/eventModule/event.module';
 import { EventHotelModule } from './modules/eventHotelModule/eventHotel.module';
+import { OrganizedTravelModule } from './modules/organizedTravelModule/organizedTravel.module';
 import { PlaneModule } from './modules/planeModule/plane.module';
 import { UserModule } from './modules/userModule/user.module';
 import { ReportsModule } from './modules/reportsModule/reports.module';
@@ -49,6 +50,7 @@ import { TransactionServiceService } from './transactions/transaction-service.se
     BusModule,
     EventModule,
     EventHotelModule,
+    OrganizedTravelModule,
     PlaneModule,
     UserModule,
     ReportsModule,
