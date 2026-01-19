@@ -3,6 +3,7 @@ import {
     Get,
     Post,
     Put,
+    Patch,
     Delete,
     Body,
     Param,
@@ -18,6 +19,7 @@ import {
     EventTravelerDto,
     PrintColumnsDto,
 } from 'src/shared/DTO/eventHotel.dto';
+import { PaymentStatusTypes } from 'src/shared/types/payment.types';
 
 @Controller('events')
 export class EventHotelController {
@@ -72,6 +74,22 @@ export class EventHotelController {
         @Param('travelerId') travelerId: string,
     ) {
         return await this.eventService.removeTraveler(eventId, travelerId);
+    }
+
+    // Update traveler payment status
+    @Patch(':id/travelers/:travelerId/payment-status')
+    async updateTravelerPaymentStatus(
+        @Param('id') eventId: string,
+        @Param('travelerId') travelerId: string,
+        @Body('payment_status') paymentStatus: PaymentStatusTypes,
+        @Body('paid_amount') paidAmount?: number,
+    ) {
+        return await this.eventService.updateTravelerPaymentStatus(
+            eventId,
+            travelerId,
+            paymentStatus,
+            paidAmount,
+        );
     }
 
     // Bus assignment

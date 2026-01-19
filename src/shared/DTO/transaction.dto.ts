@@ -32,6 +32,18 @@ export class CreateTransactionDto {
     ticket?: string;
 
     @IsOptional()
+    @IsString()
+    event?: string;
+
+    @IsOptional()
+    @IsString()
+    organizedTravel?: string;
+
+    @IsOptional()
+    @IsString()
+    travelerId?: string;
+
+    @IsOptional()
     @IsEnum(TransactionTypes)
     type?: TransactionTypes;
 

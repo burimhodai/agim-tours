@@ -12,6 +12,9 @@ import {
     AddTravelerDto,
     AssignBusDto,
 } from 'src/shared/DTO/eventHotel.dto';
+import { PaymentStatusTypes } from 'src/shared/types/payment.types';
+import { TransactionTypes, TransactionStatus } from 'src/shared/types/transaction.types';
+import { TransactionServiceService } from 'src/transactions/transaction-service.service';
 
 export interface IEventHotel {
     _id: Types.ObjectId;
@@ -40,6 +43,7 @@ export interface IEventHotel {
 export class EventHotelService {
     constructor(
         @InjectModel('EventHotel') private eventModel: Model<IEventHotel>,
+        private transactionService: TransactionServiceService,
     ) { }
 
     private generateEventUid(): string {
@@ -192,7 +196,88 @@ export class EventHotelService {
         }));
 
         event.travelers.push(...processedTravelers);
-        return await event.save();
+        const savedEvent = await event.save();
+
+        // Create transactions for each traveler with a price
+        for (const traveler of savedEvent.travelers.slice(-processedTravelers.length)) {
+            if (traveler.price && traveler.price > 0) {
+                await this.createTravelerTransaction(
+                    savedEvent._id.toString(),
+                    traveler._id.toString(),
+                    traveler,
+                    savedEvent.agency?.toString(),
+                    savedEvent.name,
+                );
+            }
+        }
+
+        return savedEvent;
+    }
+
+    private async createTravelerTransaction(
+        eventId: string,
+        travelerId: string,
+        traveler: any,
+        agencyId?: string,
+        eventName?: string,
+    ): Promise<void> {
+        const isUnpaid = traveler.payment_status === PaymentStatusTypes.UNPAID;
+        const isPartiallyPaid = traveler.payment_status === PaymentStatusTypes.PARTIALLY_PAID;
+        const isPaid = traveler.payment_status === PaymentStatusTypes.PAID;
+
+        const travelerName = `${traveler.first_name || ''} ${traveler.last_name || ''}`.trim();
+
+        if (isPaid) {
+            // Fully paid - create income transaction
+            await this.transactionService.create({
+                amount: traveler.price,
+                currency: traveler.currency,
+                type: TransactionTypes.INCOME,
+                status: TransactionStatus.SETTLED,
+                event: eventId,
+                travelerId: travelerId,
+                agency: agencyId,
+                description: `Ngjarje: ${eventName} - Udhëtar: ${travelerName}`,
+            });
+        } else if (isPartiallyPaid && traveler.paid_amount > 0) {
+            // Partially paid - create income for paid amount and debt for remaining
+            await this.transactionService.create({
+                amount: traveler.paid_amount,
+                currency: traveler.currency,
+                type: TransactionTypes.INCOME,
+                status: TransactionStatus.SETTLED,
+                event: eventId,
+                travelerId: travelerId,
+                agency: agencyId,
+                description: `Ngjarje: ${eventName} - Udhëtar: ${travelerName} (Pagesa e pjesshme)`,
+            });
+
+            const remainingAmount = traveler.price - traveler.paid_amount;
+            if (remainingAmount > 0) {
+                await this.transactionService.create({
+                    amount: remainingAmount,
+                    currency: traveler.currency,
+                    type: TransactionTypes.DEBT,
+                    status: TransactionStatus.PENDING,
+                    event: eventId,
+                    travelerId: `${travelerId}_debt`,
+                    agency: agencyId,
+                    description: `Borxh - Ngjarje: ${eventName} - Udhëtar: ${travelerName}`,
+                });
+            }
+        } else if (isUnpaid) {
+            // Unpaid - create debt transaction
+            await this.transactionService.create({
+                amount: traveler.price,
+                currency: traveler.currency,
+                type: TransactionTypes.DEBT,
+                status: TransactionStatus.PENDING,
+                event: eventId,
+                travelerId: travelerId,
+                agency: agencyId,
+                description: `Borxh - Ngjarje: ${eventName} - Udhëtar: ${travelerName}`,
+            });
+        }
     }
 
     async updateTraveler(eventId: string, travelerId: string, travelerData: EventTravelerDto): Promise<IEventHotel> {
@@ -208,8 +293,9 @@ export class EventHotelService {
             throw new NotFoundException('Udhëtari nuk u gjet');
         }
 
+        const oldTraveler = event.travelers[travelerIndex].toObject();
         const updatedTraveler = {
-            ...event.travelers[travelerIndex].toObject(),
+            ...oldTraveler,
             ...travelerData,
             room_type: travelerData.room_type
                 ? new Types.ObjectId(travelerData.room_type)
@@ -223,7 +309,154 @@ export class EventHotelService {
         };
 
         event.travelers[travelerIndex] = updatedTraveler;
-        return await event.save();
+        const savedEvent = await event.save();
+
+        // Handle payment status change
+        if (travelerData.payment_status && travelerData.payment_status !== oldTraveler.payment_status) {
+            await this.handlePaymentStatusChange(
+                eventId,
+                travelerId,
+                oldTraveler,
+                updatedTraveler,
+                event.agency?.toString(),
+                event.name,
+            );
+        }
+
+        return savedEvent;
+    }
+
+    private async handlePaymentStatusChange(
+        eventId: string,
+        travelerId: string,
+        oldTraveler: any,
+        newTraveler: any,
+        agencyId?: string,
+        eventName?: string,
+    ): Promise<void> {
+        const oldStatus = oldTraveler.payment_status;
+        const newStatus = newTraveler.payment_status;
+        const travelerName = `${newTraveler.first_name || ''} ${newTraveler.last_name || ''}`.trim();
+
+        // If changing from unpaid/partial to paid, settle the debt and record income
+        if (newStatus === PaymentStatusTypes.PAID) {
+            if (oldStatus === PaymentStatusTypes.UNPAID) {
+                // Delete existing debt transaction and create income
+                await this.transactionService.deleteByEventTraveler(eventId, travelerId);
+                await this.transactionService.create({
+                    amount: newTraveler.price,
+                    currency: newTraveler.currency,
+                    type: TransactionTypes.INCOME,
+                    status: TransactionStatus.SETTLED,
+                    event: eventId,
+                    travelerId: travelerId,
+                    agency: agencyId,
+                    description: `Ngjarje: ${eventName} - Udhëtar: ${travelerName} (Paguar)`,
+                });
+            } else if (oldStatus === PaymentStatusTypes.PARTIALLY_PAID) {
+                // Delete debt portion and create income for remaining
+                await this.transactionService.deleteByEventTraveler(eventId, `${travelerId}_debt`);
+                const remainingAmount = newTraveler.price - (oldTraveler.paid_amount || 0);
+                if (remainingAmount > 0) {
+                    await this.transactionService.create({
+                        amount: remainingAmount,
+                        currency: newTraveler.currency,
+                        type: TransactionTypes.INCOME,
+                        status: TransactionStatus.SETTLED,
+                        event: eventId,
+                        travelerId: `${travelerId}_final`,
+                        agency: agencyId,
+                        description: `Ngjarje: ${eventName} - Udhëtar: ${travelerName} (Pagesa finale)`,
+                    });
+                }
+            }
+        } else if (newStatus === PaymentStatusTypes.PARTIALLY_PAID) {
+            const paidAmount = newTraveler.paid_amount || 0;
+            const previousPaidAmount = oldTraveler.paid_amount || 0;
+
+            if (paidAmount > previousPaidAmount) {
+                // New payment received
+                const newPayment = paidAmount - previousPaidAmount;
+                await this.transactionService.create({
+                    amount: newPayment,
+                    currency: newTraveler.currency,
+                    type: TransactionTypes.INCOME,
+                    status: TransactionStatus.SETTLED,
+                    event: eventId,
+                    travelerId: `${travelerId}_payment_${Date.now()}`,
+                    agency: agencyId,
+                    description: `Ngjarje: ${eventName} - Udhëtar: ${travelerName} (Pagesa e pjesshme)`,
+                });
+
+                // Update remaining debt
+                const remainingDebt = newTraveler.price - paidAmount;
+                await this.transactionService.updateByEventTraveler(eventId, `${travelerId}_debt`, {
+                    amount: remainingDebt,
+                    description: `Borxh - Ngjarje: ${eventName} - Udhëtar: ${travelerName} (Mbetja: ${remainingDebt})`,
+                });
+            }
+        } else if (newStatus === PaymentStatusTypes.UNPAID && oldStatus !== PaymentStatusTypes.UNPAID) {
+            // Changing to unpaid - delete all related transactions and create new debt
+            await this.transactionService.deleteByEventTraveler(eventId, travelerId);
+            await this.transactionService.deleteByEventTraveler(eventId, `${travelerId}_debt`);
+
+            await this.transactionService.create({
+                amount: newTraveler.price,
+                currency: newTraveler.currency,
+                type: TransactionTypes.DEBT,
+                status: TransactionStatus.PENDING,
+                event: eventId,
+                travelerId: travelerId,
+                agency: agencyId,
+                description: `Borxh - Ngjarje: ${eventName} - Udhëtar: ${travelerName}`,
+            });
+        }
+    }
+
+    async updateTravelerPaymentStatus(
+        eventId: string,
+        travelerId: string,
+        paymentStatus: PaymentStatusTypes,
+        paidAmount?: number,
+    ): Promise<IEventHotel> {
+        const event = await this.eventModel.findById(eventId);
+
+        if (!event) {
+            throw new NotFoundException('Ngjarja nuk u gjet');
+        }
+
+        const travelerIndex = event.travelers.findIndex((t: any) => t._id.toString() === travelerId);
+
+        if (travelerIndex === -1) {
+            throw new NotFoundException('Udhëtari nuk u gjet');
+        }
+
+        const oldTraveler = event.travelers[travelerIndex].toObject();
+        event.travelers[travelerIndex].payment_status = paymentStatus;
+
+        if (paidAmount !== undefined) {
+            event.travelers[travelerIndex].paid_amount = paidAmount;
+        }
+
+        // Auto-calculate paid_amount based on status
+        if (paymentStatus === PaymentStatusTypes.PAID) {
+            event.travelers[travelerIndex].paid_amount = event.travelers[travelerIndex].price || 0;
+        } else if (paymentStatus === PaymentStatusTypes.UNPAID) {
+            event.travelers[travelerIndex].paid_amount = 0;
+        }
+
+        const savedEvent = await event.save();
+
+        await this.handlePaymentStatusChange(
+            eventId,
+            travelerId,
+            oldTraveler,
+            event.travelers[travelerIndex].toObject(),
+            event.agency?.toString(),
+            event.name,
+        );
+
+        return savedEvent;
     }
 
     async removeTraveler(eventId: string, travelerId: string): Promise<IEventHotel> {
@@ -232,6 +465,10 @@ export class EventHotelService {
         if (!event) {
             throw new NotFoundException('Ngjarja nuk u gjet');
         }
+
+        // Delete related transactions
+        await this.transactionService.deleteByEventTraveler(eventId, travelerId);
+        await this.transactionService.deleteByEventTraveler(eventId, `${travelerId}_debt`);
 
         event.travelers = event.travelers.filter((t: any) => t._id.toString() !== travelerId);
         return await event.save();

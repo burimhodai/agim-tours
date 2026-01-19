@@ -22,6 +22,13 @@ export class TransactionServiceService {
             ticket: createTransactionDto.ticket
                 ? new Types.ObjectId(createTransactionDto.ticket)
                 : undefined,
+            event: createTransactionDto.event
+                ? new Types.ObjectId(createTransactionDto.event)
+                : undefined,
+            organizedTravel: createTransactionDto.organizedTravel
+                ? new Types.ObjectId(createTransactionDto.organizedTravel)
+                : undefined,
+            travelerId: createTransactionDto.travelerId,
         };
 
         const newTransaction = new this.transactionModel(transactionData);
@@ -77,6 +84,119 @@ export class TransactionServiceService {
             type: TransactionTypes.INCOME,
             status: TransactionStatus.SETTLED,
         });
+    }
+
+    // Find transaction by event and traveler
+    async findByEventTraveler(eventId: string, travelerId: string): Promise<ITransaction | null> {
+        if (!Types.ObjectId.isValid(eventId)) {
+            return null;
+        }
+
+        return await this.transactionModel
+            .findOne({
+                event: new Types.ObjectId(eventId),
+                travelerId: travelerId,
+            })
+            .exec();
+    }
+
+    // Find transaction by organized travel and traveler
+    async findByOrganizedTravelTraveler(organizedTravelId: string, travelerId: string): Promise<ITransaction | null> {
+        if (!Types.ObjectId.isValid(organizedTravelId)) {
+            return null;
+        }
+
+        return await this.transactionModel
+            .findOne({
+                organizedTravel: new Types.ObjectId(organizedTravelId),
+                travelerId: travelerId,
+            })
+            .exec();
+    }
+
+    // Update transaction by event and traveler
+    async updateByEventTraveler(eventId: string, travelerId: string, updateData: UpdateTransactionDto): Promise<ITransaction | null> {
+        if (!Types.ObjectId.isValid(eventId)) {
+            return null;
+        }
+
+        return await this.transactionModel
+            .findOneAndUpdate(
+                {
+                    event: new Types.ObjectId(eventId),
+                    travelerId: travelerId,
+                },
+                { $set: updateData },
+                { new: true }
+            )
+            .exec();
+    }
+
+    // Update transaction by organized travel and traveler
+    async updateByOrganizedTravelTraveler(organizedTravelId: string, travelerId: string, updateData: UpdateTransactionDto): Promise<ITransaction | null> {
+        if (!Types.ObjectId.isValid(organizedTravelId)) {
+            return null;
+        }
+
+        return await this.transactionModel
+            .findOneAndUpdate(
+                {
+                    organizedTravel: new Types.ObjectId(organizedTravelId),
+                    travelerId: travelerId,
+                },
+                { $set: updateData },
+                { new: true }
+            )
+            .exec();
+    }
+
+    // Settle debt for event traveler - creates new income transaction
+    async settleEventTravelerDebt(eventId: string, travelerId: string, amount: number): Promise<ITransaction | null> {
+        return await this.updateByEventTraveler(eventId, travelerId, {
+            type: TransactionTypes.INCOME,
+            status: TransactionStatus.SETTLED,
+            amount: amount,
+        });
+    }
+
+    // Settle debt for organized travel traveler - creates new income transaction
+    async settleOrganizedTravelTravelerDebt(organizedTravelId: string, travelerId: string, amount: number): Promise<ITransaction | null> {
+        return await this.updateByOrganizedTravelTraveler(organizedTravelId, travelerId, {
+            type: TransactionTypes.INCOME,
+            status: TransactionStatus.SETTLED,
+            amount: amount,
+        });
+    }
+
+    // Delete transaction by traveler
+    async deleteByEventTraveler(eventId: string, travelerId: string): Promise<boolean> {
+        if (!Types.ObjectId.isValid(eventId)) {
+            return false;
+        }
+
+        const result = await this.transactionModel
+            .deleteOne({
+                event: new Types.ObjectId(eventId),
+                travelerId: travelerId,
+            })
+            .exec();
+
+        return result.deletedCount > 0;
+    }
+
+    async deleteByOrganizedTravelTraveler(organizedTravelId: string, travelerId: string): Promise<boolean> {
+        if (!Types.ObjectId.isValid(organizedTravelId)) {
+            return false;
+        }
+
+        const result = await this.transactionModel
+            .deleteOne({
+                organizedTravel: new Types.ObjectId(organizedTravelId),
+                travelerId: travelerId,
+            })
+            .exec();
+
+        return result.deletedCount > 0;
     }
 
     async findAll(query: TransactionQueryDto): Promise<ITransaction[]> {

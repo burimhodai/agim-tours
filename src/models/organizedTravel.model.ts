@@ -9,6 +9,16 @@ const OrganizedTravelerSchema = new mongoose.Schema({
     phone: { type: String },
     passport_number: { type: String },
 
+    // Payment tracking for this traveler
+    price: { type: Number },
+    paid_amount: { type: Number, default: 0 },
+    currency: { type: String, enum: Object.values(CurrencyTypes), default: CurrencyTypes.EURO },
+    payment_status: {
+        type: String,
+        enum: Object.values(PaymentStatusTypes),
+        default: PaymentStatusTypes.UNPAID,
+    },
+
     // Which lists to show this traveler in (no hotel list for organized travel)
     show_in_border_list: { type: Boolean, default: true },
     show_in_guide_list: { type: Boolean, default: true },

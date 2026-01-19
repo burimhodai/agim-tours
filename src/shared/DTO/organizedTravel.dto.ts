@@ -31,6 +31,22 @@ export class OrganizedTravelerDto {
     passport_number?: string;
 
     @IsOptional()
+    @IsNumber()
+    price?: number;
+
+    @IsOptional()
+    @IsNumber()
+    paid_amount?: number;
+
+    @IsOptional()
+    @IsEnum(CurrencyTypes)
+    currency?: CurrencyTypes;
+
+    @IsOptional()
+    @IsEnum(PaymentStatusTypes)
+    payment_status?: PaymentStatusTypes;
+
+    @IsOptional()
     @IsBoolean()
     show_in_border_list?: boolean;
 

@@ -18,6 +18,9 @@ export interface ITransaction extends Document {
     agency?: Types.ObjectId;
     user?: Types.ObjectId;
     ticket?: Types.ObjectId;
+    event?: Types.ObjectId;
+    organizedTravel?: Types.ObjectId;
+    travelerId?: string;
     type?: TransactionTypes;
     status?: TransactionStatus;
     to: string;
