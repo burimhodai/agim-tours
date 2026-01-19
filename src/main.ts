@@ -49,14 +49,13 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document);
 
-  const port = configService.get('PORT') || 3000;
-  const host = configService.get('HOST') || '0.0.0.0';
+  const port = parseInt(process.env.PORT || configService.get('PORT') || '3000', 10);
 
-  await app.listen(port, host);
+  await app.listen(port, '0.0.0.0');
 
-  logger.log(`🚀 Application is running on: http://${host}:${port}/api/v1`);
-  logger.log(`📚 Swagger docs available at: http://${host}:${port}/api/docs`);
-  logger.log(`📊 Reports dashboard at: http://${host}:${port}/reports.html`);
+  logger.log(`🚀 Application is running on port: ${port}`);
+  logger.log(`📚 Swagger docs available at: /api/docs`);
+  logger.log(`📊 Reports dashboard at: /reports.html`);
   logger.log(`📊 Environment: ${configService.get('NODE_ENV')}`);
   logger.log(
     `🗄️  Database: ${configService.get('database.uri') ? 'Connected' : 'Not configured'}`,
