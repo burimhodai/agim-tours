@@ -25,6 +25,9 @@ export interface IPassenger {
     last_name?: string;
     phone?: string;
     passport_number?: string;
+    birthdate?: Date;
+    passport_expiry_date?: Date;
+    nationality?: string;
     luggage?: ILuggage[];
 }
 

@@ -50,6 +50,9 @@ export const TicketSchema = new mongoose.Schema({
         last_name: { type: String },
         phone: { type: String },
         passport_number: { type: String },
+        birthdate: { type: Date },
+        passport_expiry_date: { type: Date },
+        nationality: { type: String },
         luggage: [{
             type: String,
             weight_in_kg: Number,
