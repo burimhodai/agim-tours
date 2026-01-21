@@ -1,7 +1,5 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
-@Module({
-  
-})
+@Module({})
 export class EventModule {}

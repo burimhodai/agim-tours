@@ -7,14 +7,14 @@ import { TransactionSchema } from 'src/models/transaction.model';
 import { TransactionServiceService } from 'src/transactions/transaction-service.service';
 
 @Module({
-    imports: [
-        MongooseModule.forFeature([
-            { name: 'Ticket', schema: TicketSchema },
-            { name: 'Transaction', schema: TransactionSchema },
-        ]),
-    ],
-    controllers: [PlaneController],
-    providers: [PlaneService, TransactionServiceService],
-    exports: [PlaneService],
+  imports: [
+    MongooseModule.forFeature([
+      { name: 'Ticket', schema: TicketSchema },
+      { name: 'Transaction', schema: TransactionSchema },
+    ]),
+  ],
+  controllers: [PlaneController],
+  providers: [PlaneService, TransactionServiceService],
+  exports: [PlaneService],
 })
-export class PlaneModule { }
+export class PlaneModule {}

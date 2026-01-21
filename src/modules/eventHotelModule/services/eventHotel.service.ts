@@ -1,562 +1,740 @@
-import {
-    Injectable,
-    NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import {
-    CreateEventDto,
-    UpdateEventDto,
-    EventQueryDto,
-    EventTravelerDto,
-    AddTravelerDto,
-    AssignBusDto,
+  CreateEventDto,
+  UpdateEventDto,
+  EventQueryDto,
+  EventTravelerDto,
+  AddTravelerDto,
+  AssignBusDto,
 } from 'src/shared/DTO/eventHotel.dto';
 import { PaymentStatusTypes } from 'src/shared/types/payment.types';
-import { TransactionTypes, TransactionStatus } from 'src/shared/types/transaction.types';
+import {
+  TransactionTypes,
+  TransactionStatus,
+} from 'src/shared/types/transaction.types';
 import { TransactionServiceService } from 'src/transactions/transaction-service.service';
 
 export interface IEventHotel {
-    _id: Types.ObjectId;
-    uid?: string;
-    name: string;
-    location: string;
-    date: Date;
-    return_date?: Date;
-    price?: number;
-    currency?: string;
-    payment_status?: string;
-    travelers: any[];
-    room_groups: any[];
-    buses: Types.ObjectId[];
-    hotel?: Types.ObjectId;
-    print_columns?: any;
-    employee?: Types.ObjectId;
-    agency?: Types.ObjectId;
-    logs?: any[];
-    is_deleted?: boolean;
-    createdAt?: Date;
-    updatedAt?: Date;
+  _id: Types.ObjectId;
+  uid?: string;
+  name: string;
+  location: string;
+  date: Date;
+  return_date?: Date;
+  price?: number;
+  currency?: string;
+  payment_status?: string;
+  travelers: any[];
+  room_groups: any[];
+  buses: Types.ObjectId[];
+  hotel?: Types.ObjectId;
+  print_columns?: any;
+  employee?: Types.ObjectId;
+  agency?: Types.ObjectId;
+  logs?: any[];
+  is_deleted?: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 @Injectable()
 export class EventHotelService {
-    constructor(
-        @InjectModel('EventHotel') private eventModel: Model<IEventHotel>,
-        private transactionService: TransactionServiceService,
-    ) { }
+  constructor(
+    @InjectModel('EventHotel') private eventModel: Model<IEventHotel>,
+    private transactionService: TransactionServiceService,
+  ) { }
 
-    private generateEventUid(): string {
-        const numDigits = Math.random() < 0.5 ? 5 : 6;
-        const min = Math.pow(10, numDigits - 1);
-        const max = Math.pow(10, numDigits) - 1;
-        const randomNum = Math.floor(Math.random() * (max - min + 1)) + min;
-        return `E${randomNum}`;
+  private generateEventUid(): string {
+    const numDigits = Math.random() < 0.5 ? 5 : 6;
+    const min = Math.pow(10, numDigits - 1);
+    const max = Math.pow(10, numDigits) - 1;
+    const randomNum = Math.floor(Math.random() * (max - min + 1)) + min;
+    return `E${randomNum}`;
+  }
+
+  async create(createEventDto: CreateEventDto): Promise<IEventHotel> {
+    const eventData = {
+      ...createEventDto,
+      uid: this.generateEventUid(),
+      agency: createEventDto.agency
+        ? new Types.ObjectId(createEventDto.agency)
+        : undefined,
+      hotel: createEventDto.hotel
+        ? new Types.ObjectId(createEventDto.hotel)
+        : undefined,
+      employee: createEventDto.employee
+        ? new Types.ObjectId(createEventDto.employee)
+        : undefined,
+      buses: createEventDto.buses?.map((id) => new Types.ObjectId(id)) || [],
+    };
+
+    const newEvent = new this.eventModel(eventData);
+    return await newEvent.save();
+  }
+
+  async findAll(query: EventQueryDto): Promise<{
+    events: IEventHotel[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
+    const { agency, search, page = 1, limit = 20 } = query;
+
+    const filter: any = { is_deleted: { $ne: true } };
+
+    if (agency) {
+      filter.agency = new Types.ObjectId(agency);
     }
 
-    async create(createEventDto: CreateEventDto): Promise<IEventHotel> {
-        const eventData = {
-            ...createEventDto,
-            uid: this.generateEventUid(),
-            agency: createEventDto.agency
-                ? new Types.ObjectId(createEventDto.agency)
-                : undefined,
-            hotel: createEventDto.hotel
-                ? new Types.ObjectId(createEventDto.hotel)
-                : undefined,
-            employee: createEventDto.employee
-                ? new Types.ObjectId(createEventDto.employee)
-                : undefined,
-            buses: createEventDto.buses?.map((id) => new Types.ObjectId(id)) || [],
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { location: { $regex: search, $options: 'i' } },
+        { uid: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const skip = (page - 1) * limit;
+    const total = await this.eventModel.countDocuments(filter);
+    const totalPages = Math.ceil(total / limit);
+
+    const events = await this.eventModel
+      .find(filter)
+      .sort({ date: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate('agency')
+      .populate('employee')
+      .populate('hotel')
+      .populate('buses')
+      .populate('travelers.room_type')
+      .populate('travelers.hotel')
+      .populate('travelers.bus')
+      .populate('room_groups.room_type')
+      .populate('room_groups.hotel')
+      .exec();
+
+    return { events, total, page, totalPages };
+  }
+
+  async findOne(id: string): Promise<IEventHotel> {
+    const event = await this.eventModel
+      .findById(id)
+      .populate('agency')
+      .populate('employee')
+      .populate('hotel')
+      .populate('buses')
+      .populate('travelers.room_type')
+      .populate('travelers.hotel')
+      .populate('travelers.bus')
+      .populate('room_groups.room_type')
+      .populate('room_groups.hotel')
+      .exec();
+
+    if (!event || event.is_deleted) {
+      throw new NotFoundException('Ngjarja nuk u gjet');
+    }
+
+    return event;
+  }
+
+  async update(
+    id: string,
+    updateEventDto: UpdateEventDto,
+  ): Promise<IEventHotel> {
+    const updateData: any = { ...updateEventDto };
+
+    if (updateEventDto.buses) {
+      updateData.buses = updateEventDto.buses.map(
+        (busId) => new Types.ObjectId(busId),
+      );
+    }
+
+    if (updateEventDto.room_groups) {
+      updateData.room_groups = updateEventDto.room_groups.map((group) => {
+        // Extract ID from populated object or use string directly
+        const roomTypeId = typeof group.room_type === 'object' && group.room_type !== null
+          ? (group.room_type as any)._id
+          : group.room_type;
+        const hotelId = typeof group.hotel === 'object' && group.hotel !== null
+          ? (group.hotel as any)._id
+          : group.hotel;
+
+        return {
+          ...group,
+          room_type:
+            roomTypeId && roomTypeId !== ''
+              ? new Types.ObjectId(roomTypeId)
+              : undefined,
+          hotel:
+            hotelId && hotelId !== ''
+              ? new Types.ObjectId(hotelId)
+              : undefined,
         };
-
-        const newEvent = new this.eventModel(eventData);
-        return await newEvent.save();
+      });
     }
 
-    async findAll(query: EventQueryDto): Promise<{
-        events: IEventHotel[];
-        total: number;
-        page: number;
-        totalPages: number;
-    }> {
-        const { agency, search, page = 1, limit = 20 } = query;
+    const event = await this.eventModel
+      .findByIdAndUpdate(id, { $set: updateData }, { new: true })
+      .populate('agency')
+      .populate('employee')
+      .populate('hotel')
+      .populate('buses')
+      .populate('travelers.room_type')
+      .populate('travelers.hotel')
+      .populate('travelers.bus')
+      .populate('room_groups.room_type')
+      .populate('room_groups.hotel')
+      .exec();
 
-        const filter: any = { is_deleted: { $ne: true } };
-
-        if (agency) {
-            filter.agency = new Types.ObjectId(agency);
-        }
-
-        if (search) {
-            filter.$or = [
-                { name: { $regex: search, $options: 'i' } },
-                { location: { $regex: search, $options: 'i' } },
-                { uid: { $regex: search, $options: 'i' } },
-            ];
-        }
-
-        const skip = (page - 1) * limit;
-        const total = await this.eventModel.countDocuments(filter);
-        const totalPages = Math.ceil(total / limit);
-
-        const events = await this.eventModel
-            .find(filter)
-            .sort({ date: -1 })
-            .skip(skip)
-            .limit(limit)
-            .populate('agency')
-            .populate('employee')
-            .populate('hotel')
-            .populate('buses')
-            .populate('travelers.room_type')
-            .populate('travelers.hotel')
-            .populate('travelers.bus')
-            .populate('room_groups.room_type')
-            .populate('room_groups.hotel')
-            .exec();
-
-        return { events, total, page, totalPages };
+    if (!event) {
+      throw new NotFoundException('Ngjarja nuk u gjet');
     }
 
-    async findOne(id: string): Promise<IEventHotel> {
-        const event = await this.eventModel
-            .findById(id)
-            .populate('agency')
-            .populate('employee')
-            .populate('hotel')
-            .populate('buses')
-            .populate('travelers.room_type')
-            .populate('travelers.hotel')
-            .populate('travelers.bus')
-            .populate('room_groups.room_type')
-            .populate('room_groups.hotel')
-            .exec();
+    return event;
+  }
 
-        if (!event || event.is_deleted) {
-            throw new NotFoundException('Ngjarja nuk u gjet');
-        }
+  async delete(id: string): Promise<{ message: string }> {
+    const event = await this.eventModel.findByIdAndUpdate(
+      id,
+      { $set: { is_deleted: true } },
+      { new: true },
+    );
 
-        return event;
+    if (!event) {
+      throw new NotFoundException('Ngjarja nuk u gjet');
     }
 
-    async update(id: string, updateEventDto: UpdateEventDto): Promise<IEventHotel> {
-        const updateData: any = { ...updateEventDto };
+    return { message: 'Ngjarja u fshi me sukses' };
+  }
 
-        if (updateEventDto.buses) {
-            updateData.buses = updateEventDto.buses.map((busId) => new Types.ObjectId(busId));
-        }
+  async addTravelers(
+    id: string,
+    addTravelerDto: AddTravelerDto,
+  ): Promise<IEventHotel> {
+    const event = await this.eventModel.findById(id);
 
-        const event = await this.eventModel
-            .findByIdAndUpdate(id, { $set: updateData }, { new: true })
-            .populate('agency')
-            .populate('employee')
-            .populate('hotel')
-            .populate('buses')
-            .populate('travelers.room_type')
-            .populate('travelers.hotel')
-            .populate('travelers.bus')
-            .populate('room_groups.room_type')
-            .populate('room_groups.hotel')
-            .exec();
-
-        if (!event) {
-            throw new NotFoundException('Ngjarja nuk u gjet');
-        }
-
-        return event;
+    if (!event) {
+      throw new NotFoundException('Ngjarja nuk u gjet');
     }
 
-    async delete(id: string): Promise<{ message: string }> {
-        const event = await this.eventModel.findByIdAndUpdate(
-            id,
-            { $set: { is_deleted: true } },
-            { new: true },
+    const batchGroupId = `G-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const processedTravelers = addTravelerDto.travelers.map((traveler) => ({
+      ...traveler,
+      room_group_id: traveler.room_group_id || batchGroupId,
+      room_type: traveler.room_type
+        ? new Types.ObjectId(traveler.room_type)
+        : undefined,
+      hotel: traveler.hotel ? new Types.ObjectId(traveler.hotel) : undefined,
+      bus: traveler.bus ? new Types.ObjectId(traveler.bus) : undefined,
+    }));
+
+    event.travelers.push(...processedTravelers);
+    const savedEvent = await event.save();
+
+    // Create transactions for each traveler with a price
+    for (const traveler of savedEvent.travelers.slice(
+      -processedTravelers.length,
+    )) {
+      if (traveler.price && traveler.price > 0) {
+        await this.createTravelerTransaction(
+          savedEvent._id.toString(),
+          traveler._id.toString(),
+          traveler,
+          savedEvent.agency?.toString(),
+          savedEvent.name,
         );
-
-        if (!event) {
-            throw new NotFoundException('Ngjarja nuk u gjet');
-        }
-
-        return { message: 'Ngjarja u fshi me sukses' };
+      }
     }
 
-    async addTravelers(id: string, addTravelerDto: AddTravelerDto): Promise<IEventHotel> {
-        const event = await this.eventModel.findById(id);
+    return savedEvent;
+  }
 
-        if (!event) {
-            throw new NotFoundException('Ngjarja nuk u gjet');
-        }
+  private async createTravelerTransaction(
+    eventId: string,
+    travelerId: string,
+    traveler: any,
+    agencyId?: string,
+    eventName?: string,
+  ): Promise<void> {
+    const isUnpaid = traveler.payment_status === PaymentStatusTypes.UNPAID;
+    const isPartiallyPaid =
+      traveler.payment_status === PaymentStatusTypes.PARTIALLY_PAID;
+    const isPaid = traveler.payment_status === PaymentStatusTypes.PAID;
 
-        const processedTravelers = addTravelerDto.travelers.map((traveler) => ({
-            ...traveler,
-            room_type: traveler.room_type ? new Types.ObjectId(traveler.room_type) : undefined,
-            hotel: traveler.hotel ? new Types.ObjectId(traveler.hotel) : undefined,
-            bus: traveler.bus ? new Types.ObjectId(traveler.bus) : undefined,
-        }));
+    const travelerName =
+      `${traveler.first_name || ''} ${traveler.last_name || ''}`.trim();
 
-        event.travelers.push(...processedTravelers);
-        const savedEvent = await event.save();
+    if (isPaid) {
+      // Fully paid - create income transaction
+      await this.transactionService.create({
+        amount: traveler.price,
+        currency: traveler.currency,
+        type: TransactionTypes.INCOME,
+        status: TransactionStatus.SETTLED,
+        event: eventId,
+        travelerId: travelerId,
+        agency: agencyId,
+        description: `Ngjarje: ${eventName} - Udhëtar: ${travelerName}`,
+      });
+    } else if (isPartiallyPaid && traveler.paid_amount > 0) {
+      // Partially paid - create income for paid amount and debt for remaining
+      await this.transactionService.create({
+        amount: traveler.paid_amount,
+        currency: traveler.currency,
+        type: TransactionTypes.INCOME,
+        status: TransactionStatus.SETTLED,
+        event: eventId,
+        travelerId: travelerId,
+        agency: agencyId,
+        description: `Ngjarje: ${eventName} - Udhëtar: ${travelerName} (Pagesa e pjesshme)`,
+      });
 
-        // Create transactions for each traveler with a price
-        for (const traveler of savedEvent.travelers.slice(-processedTravelers.length)) {
-            if (traveler.price && traveler.price > 0) {
-                await this.createTravelerTransaction(
-                    savedEvent._id.toString(),
-                    traveler._id.toString(),
-                    traveler,
-                    savedEvent.agency?.toString(),
-                    savedEvent.name,
-                );
-            }
-        }
+      const remainingAmount = traveler.price - traveler.paid_amount;
+      if (remainingAmount > 0) {
+        await this.transactionService.create({
+          amount: remainingAmount,
+          currency: traveler.currency,
+          type: TransactionTypes.DEBT,
+          status: TransactionStatus.PENDING,
+          event: eventId,
+          travelerId: `${travelerId}_debt`,
+          agency: agencyId,
+          description: `Borxh - Ngjarje: ${eventName} - Udhëtar: ${travelerName}`,
+        });
+      }
+    } else if (isUnpaid) {
+      // Unpaid - create debt transaction
+      await this.transactionService.create({
+        amount: traveler.price,
+        currency: traveler.currency,
+        type: TransactionTypes.DEBT,
+        status: TransactionStatus.PENDING,
+        event: eventId,
+        travelerId: travelerId,
+        agency: agencyId,
+        description: `Borxh - Ngjarje: ${eventName} - Udhëtar: ${travelerName}`,
+      });
+    }
+  }
 
-        return savedEvent;
+  async updateTravelersGroup(
+    eventId: string,
+    roomGroupId: string,
+    travelersData: EventTravelerDto[],
+  ): Promise<IEventHotel> {
+    const event = await this.eventModel.findById(eventId);
+    if (!event) throw new NotFoundException("Ngjarja nuk u gjet");
+
+    const otherTravelers = event.travelers.filter(
+      (t: any) => t.room_group_id !== roomGroupId
+    );
+    const existingGroupTravelers = event.travelers.filter(
+      (t: any) => t.room_group_id === roomGroupId
+    );
+
+    const processedTravelers = [];
+
+    for (const data of travelersData) {
+      const existing = existingGroupTravelers.find(
+        (t: any) => t._id?.toString() === data._id
+      );
+
+      const travelerData: any = {
+        ...(existing?.toObject() || {}),
+        ...data,
+        room_group_id: roomGroupId,
+        room_type:
+          data.room_type && data.room_type !== ""
+            ? new Types.ObjectId(data.room_type)
+            : existing?.room_type,
+        hotel:
+          data.hotel && data.hotel !== ""
+            ? new Types.ObjectId(data.hotel)
+            : existing?.hotel,
+        bus:
+          data.bus && data.bus !== ""
+            ? new Types.ObjectId(data.bus)
+            : existing?.bus,
+      };
+
+      processedTravelers.push(travelerData);
     }
 
-    private async createTravelerTransaction(
-        eventId: string,
-        travelerId: string,
-        traveler: any,
-        agencyId?: string,
-        eventName?: string,
-    ): Promise<void> {
-        const isUnpaid = traveler.payment_status === PaymentStatusTypes.UNPAID;
-        const isPartiallyPaid = traveler.payment_status === PaymentStatusTypes.PARTIALLY_PAID;
-        const isPaid = traveler.payment_status === PaymentStatusTypes.PAID;
+    event.travelers = [...otherTravelers, ...processedTravelers];
+    const savedEvent = await event.save();
 
-        const travelerName = `${traveler.first_name || ''} ${traveler.last_name || ''}`.trim();
+    for (const newTraveler of processedTravelers) {
+      const oldTraveler = existingGroupTravelers.find(
+        (t: any) => t._id?.toString() === newTraveler._id?.toString()
+      );
 
-        if (isPaid) {
-            // Fully paid - create income transaction
-            await this.transactionService.create({
-                amount: traveler.price,
-                currency: traveler.currency,
-                type: TransactionTypes.INCOME,
-                status: TransactionStatus.SETTLED,
-                event: eventId,
-                travelerId: travelerId,
-                agency: agencyId,
-                description: `Ngjarje: ${eventName} - Udhëtar: ${travelerName}`,
-            });
-        } else if (isPartiallyPaid && traveler.paid_amount > 0) {
-            // Partially paid - create income for paid amount and debt for remaining
-            await this.transactionService.create({
-                amount: traveler.paid_amount,
-                currency: traveler.currency,
-                type: TransactionTypes.INCOME,
-                status: TransactionStatus.SETTLED,
-                event: eventId,
-                travelerId: travelerId,
-                agency: agencyId,
-                description: `Ngjarje: ${eventName} - Udhëtar: ${travelerName} (Pagesa e pjesshme)`,
-            });
-
-            const remainingAmount = traveler.price - traveler.paid_amount;
-            if (remainingAmount > 0) {
-                await this.transactionService.create({
-                    amount: remainingAmount,
-                    currency: traveler.currency,
-                    type: TransactionTypes.DEBT,
-                    status: TransactionStatus.PENDING,
-                    event: eventId,
-                    travelerId: `${travelerId}_debt`,
-                    agency: agencyId,
-                    description: `Borxh - Ngjarje: ${eventName} - Udhëtar: ${travelerName}`,
-                });
-            }
-        } else if (isUnpaid) {
-            // Unpaid - create debt transaction
-            await this.transactionService.create({
-                amount: traveler.price,
-                currency: traveler.currency,
-                type: TransactionTypes.DEBT,
-                status: TransactionStatus.PENDING,
-                event: eventId,
-                travelerId: travelerId,
-                agency: agencyId,
-                description: `Borxh - Ngjarje: ${eventName} - Udhëtar: ${travelerName}`,
-            });
-        }
-    }
-
-    async updateTraveler(eventId: string, travelerId: string, travelerData: EventTravelerDto): Promise<IEventHotel> {
-        const event = await this.eventModel.findById(eventId);
-
-        if (!event) {
-            throw new NotFoundException('Ngjarja nuk u gjet');
-        }
-
-        const travelerIndex = event.travelers.findIndex((t: any) => t._id.toString() === travelerId);
-
-        if (travelerIndex === -1) {
-            throw new NotFoundException('Udhëtari nuk u gjet');
-        }
-
-        const oldTraveler = event.travelers[travelerIndex].toObject();
-        const updatedTraveler = {
-            ...oldTraveler,
-            ...travelerData,
-            room_type: travelerData.room_type
-                ? new Types.ObjectId(travelerData.room_type)
-                : event.travelers[travelerIndex].room_type,
-            hotel: travelerData.hotel
-                ? new Types.ObjectId(travelerData.hotel)
-                : event.travelers[travelerIndex].hotel,
-            bus: travelerData.bus
-                ? new Types.ObjectId(travelerData.bus)
-                : event.travelers[travelerIndex].bus,
-        };
-
-        event.travelers[travelerIndex] = updatedTraveler;
-        const savedEvent = await event.save();
-
-        // Handle payment status change
-        if (travelerData.payment_status && travelerData.payment_status !== oldTraveler.payment_status) {
-            await this.handlePaymentStatusChange(
-                eventId,
-                travelerId,
-                oldTraveler,
-                updatedTraveler,
-                event.agency?.toString(),
-                event.name,
-            );
-        }
-
-        return savedEvent;
-    }
-
-    private async handlePaymentStatusChange(
-        eventId: string,
-        travelerId: string,
-        oldTraveler: any,
-        newTraveler: any,
-        agencyId?: string,
-        eventName?: string,
-    ): Promise<void> {
-        const oldStatus = oldTraveler.payment_status;
-        const newStatus = newTraveler.payment_status;
-        const travelerName = `${newTraveler.first_name || ''} ${newTraveler.last_name || ''}`.trim();
-
-        // If changing from unpaid/partial to paid, settle the debt and record income
-        if (newStatus === PaymentStatusTypes.PAID) {
-            if (oldStatus === PaymentStatusTypes.UNPAID) {
-                // Delete existing debt transaction and create income
-                await this.transactionService.deleteByEventTraveler(eventId, travelerId);
-                await this.transactionService.create({
-                    amount: newTraveler.price,
-                    currency: newTraveler.currency,
-                    type: TransactionTypes.INCOME,
-                    status: TransactionStatus.SETTLED,
-                    event: eventId,
-                    travelerId: travelerId,
-                    agency: agencyId,
-                    description: `Ngjarje: ${eventName} - Udhëtar: ${travelerName} (Paguar)`,
-                });
-            } else if (oldStatus === PaymentStatusTypes.PARTIALLY_PAID) {
-                // Delete debt portion and create income for remaining
-                await this.transactionService.deleteByEventTraveler(eventId, `${travelerId}_debt`);
-                const remainingAmount = newTraveler.price - (oldTraveler.paid_amount || 0);
-                if (remainingAmount > 0) {
-                    await this.transactionService.create({
-                        amount: remainingAmount,
-                        currency: newTraveler.currency,
-                        type: TransactionTypes.INCOME,
-                        status: TransactionStatus.SETTLED,
-                        event: eventId,
-                        travelerId: `${travelerId}_final`,
-                        agency: agencyId,
-                        description: `Ngjarje: ${eventName} - Udhëtar: ${travelerName} (Pagesa finale)`,
-                    });
-                }
-            }
-        } else if (newStatus === PaymentStatusTypes.PARTIALLY_PAID) {
-            const paidAmount = newTraveler.paid_amount || 0;
-            const previousPaidAmount = oldTraveler.paid_amount || 0;
-
-            if (paidAmount > previousPaidAmount) {
-                // New payment received
-                const newPayment = paidAmount - previousPaidAmount;
-                await this.transactionService.create({
-                    amount: newPayment,
-                    currency: newTraveler.currency,
-                    type: TransactionTypes.INCOME,
-                    status: TransactionStatus.SETTLED,
-                    event: eventId,
-                    travelerId: `${travelerId}_payment_${Date.now()}`,
-                    agency: agencyId,
-                    description: `Ngjarje: ${eventName} - Udhëtar: ${travelerName} (Pagesa e pjesshme)`,
-                });
-
-                // Update remaining debt
-                const remainingDebt = newTraveler.price - paidAmount;
-                await this.transactionService.updateByEventTraveler(eventId, `${travelerId}_debt`, {
-                    amount: remainingDebt,
-                    description: `Borxh - Ngjarje: ${eventName} - Udhëtar: ${travelerName} (Mbetja: ${remainingDebt})`,
-                });
-            }
-        } else if (newStatus === PaymentStatusTypes.UNPAID && oldStatus !== PaymentStatusTypes.UNPAID) {
-            // Changing to unpaid - delete all related transactions and create new debt
-            await this.transactionService.deleteByEventTraveler(eventId, travelerId);
-            await this.transactionService.deleteByEventTraveler(eventId, `${travelerId}_debt`);
-
-            await this.transactionService.create({
-                amount: newTraveler.price,
-                currency: newTraveler.currency,
-                type: TransactionTypes.DEBT,
-                status: TransactionStatus.PENDING,
-                event: eventId,
-                travelerId: travelerId,
-                agency: agencyId,
-                description: `Borxh - Ngjarje: ${eventName} - Udhëtar: ${travelerName}`,
-            });
-        }
-    }
-
-    async updateTravelerPaymentStatus(
-        eventId: string,
-        travelerId: string,
-        paymentStatus: PaymentStatusTypes,
-        paidAmount?: number,
-    ): Promise<IEventHotel> {
-        const event = await this.eventModel.findById(eventId);
-
-        if (!event) {
-            throw new NotFoundException('Ngjarja nuk u gjet');
-        }
-
-        const travelerIndex = event.travelers.findIndex((t: any) => t._id.toString() === travelerId);
-
-        if (travelerIndex === -1) {
-            throw new NotFoundException('Udhëtari nuk u gjet');
-        }
-
-        const oldTraveler = event.travelers[travelerIndex].toObject();
-        event.travelers[travelerIndex].payment_status = paymentStatus;
-
-        if (paidAmount !== undefined) {
-            event.travelers[travelerIndex].paid_amount = paidAmount;
-        }
-
-        // Auto-calculate paid_amount based on status
-        if (paymentStatus === PaymentStatusTypes.PAID) {
-            event.travelers[travelerIndex].paid_amount = event.travelers[travelerIndex].price || 0;
-        } else if (paymentStatus === PaymentStatusTypes.UNPAID) {
-            event.travelers[travelerIndex].paid_amount = 0;
-        }
-
-        const savedEvent = await event.save();
-
+      if (
+        oldTraveler &&
+        newTraveler.payment_status &&
+        newTraveler.payment_status !== oldTraveler.payment_status
+      ) {
         await this.handlePaymentStatusChange(
+          eventId,
+          newTraveler._id.toString(),
+          oldTraveler.toObject(),
+          newTraveler,
+          event.agency?.toString(),
+          event.name
+        );
+      } else if (!oldTraveler && newTraveler.price > 0) {
+        const createdTraveler = savedEvent.travelers.find(
+          (t: any) =>
+            t.first_name === newTraveler.first_name &&
+            t.last_name === newTraveler.last_name &&
+            t.room_group_id === roomGroupId
+        );
+        if (createdTraveler) {
+          await this.createTravelerTransaction(
             eventId,
-            travelerId,
-            oldTraveler,
-            event.travelers[travelerIndex].toObject(),
+            createdTraveler._id.toString(),
+            createdTraveler,
             event.agency?.toString(),
-            event.name,
+            event.name
+          );
+        }
+      }
+    }
+
+    return savedEvent;
+  }
+
+  async updateTraveler(
+    eventId: string,
+    travelerId: string,
+    travelerData: EventTravelerDto,
+  ): Promise<IEventHotel> {
+    const event = await this.eventModel.findById(eventId);
+
+    if (!event) {
+      throw new NotFoundException('Ngjarja nuk u gjet');
+    }
+
+    const travelerIndex = event.travelers.findIndex(
+      (t: any) => t._id.toString() === travelerId,
+    );
+
+    if (travelerIndex === -1) {
+      throw new NotFoundException('Udhëtari nuk u gjet');
+    }
+
+    const oldTraveler = event.travelers[travelerIndex].toObject();
+    const updatedTraveler = {
+      ...oldTraveler,
+      ...travelerData,
+      room_type: travelerData.room_type
+        ? new Types.ObjectId(travelerData.room_type)
+        : event.travelers[travelerIndex].room_type,
+      hotel: travelerData.hotel
+        ? new Types.ObjectId(travelerData.hotel)
+        : event.travelers[travelerIndex].hotel,
+      bus: travelerData.bus
+        ? new Types.ObjectId(travelerData.bus)
+        : event.travelers[travelerIndex].bus,
+    };
+
+    event.travelers[travelerIndex] = updatedTraveler;
+    const savedEvent = await event.save();
+
+    // Handle payment status change
+    if (
+      travelerData.payment_status &&
+      travelerData.payment_status !== oldTraveler.payment_status
+    ) {
+      await this.handlePaymentStatusChange(
+        eventId,
+        travelerId,
+        oldTraveler,
+        updatedTraveler,
+        event.agency?.toString(),
+        event.name,
+      );
+    }
+
+    return savedEvent;
+  }
+
+  private async handlePaymentStatusChange(
+    eventId: string,
+    travelerId: string,
+    oldTraveler: any,
+    newTraveler: any,
+    agencyId?: string,
+    eventName?: string,
+  ): Promise<void> {
+    const oldStatus = oldTraveler.payment_status;
+    const newStatus = newTraveler.payment_status;
+    const travelerName =
+      `${newTraveler.first_name || ''} ${newTraveler.last_name || ''}`.trim();
+
+    // If changing from unpaid/partial to paid, settle the debt and record income
+    if (newStatus === PaymentStatusTypes.PAID) {
+      if (oldStatus === PaymentStatusTypes.UNPAID) {
+        // Delete existing debt transaction and create income
+        await this.transactionService.deleteByEventTraveler(
+          eventId,
+          travelerId,
         );
-
-        return savedEvent;
-    }
-
-    async removeTraveler(eventId: string, travelerId: string): Promise<IEventHotel> {
-        const event = await this.eventModel.findById(eventId);
-
-        if (!event) {
-            throw new NotFoundException('Ngjarja nuk u gjet');
-        }
-
-        // Delete related transactions
-        await this.transactionService.deleteByEventTraveler(eventId, travelerId);
-        await this.transactionService.deleteByEventTraveler(eventId, `${travelerId}_debt`);
-
-        event.travelers = event.travelers.filter((t: any) => t._id.toString() !== travelerId);
-        return await event.save();
-    }
-
-    async assignBus(eventId: string, assignBusDto: AssignBusDto): Promise<IEventHotel> {
-        const event = await this.eventModel.findById(eventId);
-
-        if (!event) {
-            throw new NotFoundException('Ngjarja nuk u gjet');
-        }
-
-        const busObjectId = new Types.ObjectId(assignBusDto.bus_id);
-
-        if (!event.buses.some((b: any) => b.toString() === assignBusDto.bus_id)) {
-            event.buses.push(busObjectId);
-        }
-
-        event.travelers = event.travelers.map((traveler: any) => {
-            if (assignBusDto.traveler_ids.includes(traveler._id.toString())) {
-                return { ...traveler.toObject(), bus: busObjectId };
-            }
-            return traveler;
+        await this.transactionService.create({
+          amount: newTraveler.price,
+          currency: newTraveler.currency,
+          type: TransactionTypes.INCOME,
+          status: TransactionStatus.SETTLED,
+          event: eventId,
+          travelerId: travelerId,
+          agency: agencyId,
+          description: `Ngjarje: ${eventName} - Udhëtar: ${travelerName} (Paguar)`,
         });
-
-        return await event.save();
-    }
-
-    async getTravelersByBus(eventId: string): Promise<any> {
-        const event = await this.findOne(eventId);
-        const travelersByBus: any = {};
-
-        event.travelers.forEach((traveler: any) => {
-            const busId = traveler.bus?._id?.toString() || 'unassigned';
-            const busName = traveler.bus?.name || 'Pa autobus';
-
-            if (!travelersByBus[busId]) {
-                travelersByBus[busId] = { bus: traveler.bus || null, busName, travelers: [] };
-            }
-            travelersByBus[busId].travelers.push(traveler);
-        });
-
-        return Object.values(travelersByBus);
-    }
-
-    async getTravelersByHotel(eventId: string): Promise<any> {
-        const event = await this.findOne(eventId);
-        const travelersByHotel: any = {};
-
-        event.travelers.forEach((traveler: any) => {
-            const hotelId = traveler.hotel?._id?.toString() || 'unassigned';
-            const hotelName = traveler.hotel?.name || 'Pa hotel';
-
-            if (!travelersByHotel[hotelId]) {
-                travelersByHotel[hotelId] = { hotel: traveler.hotel || null, hotelName, travelers: [] };
-            }
-            travelersByHotel[hotelId].travelers.push(traveler);
-        });
-
-        return Object.values(travelersByHotel);
-    }
-
-    async getHotelList(eventId: string): Promise<any[]> {
-        const event = await this.findOne(eventId);
-        return event.travelers.filter((t: any) => t.show_in_hotel_list !== false);
-    }
-
-    async getBorderList(eventId: string): Promise<any[]> {
-        const event = await this.findOne(eventId);
-        return event.travelers.filter((t: any) => t.show_in_border_list !== false);
-    }
-
-    async getGuideList(eventId: string): Promise<any[]> {
-        const event = await this.findOne(eventId);
-        return event.travelers.filter((t: any) => t.show_in_guide_list !== false);
-    }
-
-    async updatePrintColumns(eventId: string, printColumns: any): Promise<IEventHotel> {
-        const event = await this.eventModel.findByIdAndUpdate(
-            eventId,
-            { $set: { print_columns: printColumns } },
-            { new: true },
+      } else if (oldStatus === PaymentStatusTypes.PARTIALLY_PAID) {
+        // Delete debt portion and create income for remaining
+        await this.transactionService.deleteByEventTraveler(
+          eventId,
+          `${travelerId}_debt`,
         );
-
-        if (!event) {
-            throw new NotFoundException('Ngjarja nuk u gjet');
+        const remainingAmount =
+          newTraveler.price - (oldTraveler.paid_amount || 0);
+        if (remainingAmount > 0) {
+          await this.transactionService.create({
+            amount: remainingAmount,
+            currency: newTraveler.currency,
+            type: TransactionTypes.INCOME,
+            status: TransactionStatus.SETTLED,
+            event: eventId,
+            travelerId: `${travelerId}_final`,
+            agency: agencyId,
+            description: `Ngjarje: ${eventName} - Udhëtar: ${travelerName} (Pagesa finale)`,
+          });
         }
+      }
+    } else if (newStatus === PaymentStatusTypes.PARTIALLY_PAID) {
+      const paidAmount = newTraveler.paid_amount || 0;
+      const previousPaidAmount = oldTraveler.paid_amount || 0;
 
-        return event;
+      if (paidAmount > previousPaidAmount) {
+        // New payment received
+        const newPayment = paidAmount - previousPaidAmount;
+        await this.transactionService.create({
+          amount: newPayment,
+          currency: newTraveler.currency,
+          type: TransactionTypes.INCOME,
+          status: TransactionStatus.SETTLED,
+          event: eventId,
+          travelerId: `${travelerId}_payment_${Date.now()}`,
+          agency: agencyId,
+          description: `Ngjarje: ${eventName} - Udhëtar: ${travelerName} (Pagesa e pjesshme)`,
+        });
+
+        // Update remaining debt
+        const remainingDebt = newTraveler.price - paidAmount;
+        await this.transactionService.updateByEventTraveler(
+          eventId,
+          `${travelerId}_debt`,
+          {
+            amount: remainingDebt,
+            description: `Borxh - Ngjarje: ${eventName} - Udhëtar: ${travelerName} (Mbetja: ${remainingDebt})`,
+          },
+        );
+      }
+    } else if (
+      newStatus === PaymentStatusTypes.UNPAID &&
+      oldStatus !== PaymentStatusTypes.UNPAID
+    ) {
+      // Changing to unpaid - delete all related transactions and create new debt
+      await this.transactionService.deleteByEventTraveler(eventId, travelerId);
+      await this.transactionService.deleteByEventTraveler(
+        eventId,
+        `${travelerId}_debt`,
+      );
+
+      await this.transactionService.create({
+        amount: newTraveler.price,
+        currency: newTraveler.currency,
+        type: TransactionTypes.DEBT,
+        status: TransactionStatus.PENDING,
+        event: eventId,
+        travelerId: travelerId,
+        agency: agencyId,
+        description: `Borxh - Ngjarje: ${eventName} - Udhëtar: ${travelerName}`,
+      });
     }
+  }
+
+  async updateTravelerPaymentStatus(
+    eventId: string,
+    travelerId: string,
+    paymentStatus: PaymentStatusTypes,
+    paidAmount?: number,
+  ): Promise<IEventHotel> {
+    const event = await this.eventModel.findById(eventId);
+
+    if (!event) {
+      throw new NotFoundException('Ngjarja nuk u gjet');
+    }
+
+    const travelerIndex = event.travelers.findIndex(
+      (t: any) => t._id.toString() === travelerId,
+    );
+
+    if (travelerIndex === -1) {
+      throw new NotFoundException('Udhëtari nuk u gjet');
+    }
+
+    const oldTraveler = event.travelers[travelerIndex].toObject();
+    event.travelers[travelerIndex].payment_status = paymentStatus;
+
+    if (paidAmount !== undefined) {
+      event.travelers[travelerIndex].paid_amount = paidAmount;
+    }
+
+    // Auto-calculate paid_amount based on status
+    if (paymentStatus === PaymentStatusTypes.PAID) {
+      event.travelers[travelerIndex].paid_amount =
+        event.travelers[travelerIndex].price || 0;
+    } else if (paymentStatus === PaymentStatusTypes.UNPAID) {
+      event.travelers[travelerIndex].paid_amount = 0;
+    }
+
+    const savedEvent = await event.save();
+
+    await this.handlePaymentStatusChange(
+      eventId,
+      travelerId,
+      oldTraveler,
+      event.travelers[travelerIndex].toObject(),
+      event.agency?.toString(),
+      event.name,
+    );
+
+    return savedEvent;
+  }
+
+  async removeTraveler(
+    eventId: string,
+    travelerId: string,
+  ): Promise<IEventHotel> {
+    const event = await this.eventModel.findById(eventId);
+
+    if (!event) {
+      throw new NotFoundException('Ngjarja nuk u gjet');
+    }
+
+    // Delete related transactions
+    await this.transactionService.deleteByEventTraveler(eventId, travelerId);
+    await this.transactionService.deleteByEventTraveler(
+      eventId,
+      `${travelerId}_debt`,
+    );
+
+    event.travelers = event.travelers.filter(
+      (t: any) => t._id.toString() !== travelerId,
+    );
+    return await event.save();
+  }
+
+  async assignBus(
+    eventId: string,
+    assignBusDto: AssignBusDto,
+  ): Promise<IEventHotel> {
+    const event = await this.eventModel.findById(eventId);
+
+    if (!event) {
+      throw new NotFoundException('Ngjarja nuk u gjet');
+    }
+
+    const busObjectId = new Types.ObjectId(assignBusDto.bus_id);
+
+    if (!event.buses.some((b: any) => b.toString() === assignBusDto.bus_id)) {
+      event.buses.push(busObjectId);
+    }
+
+    event.travelers = event.travelers.map((traveler: any) => {
+      if (assignBusDto.traveler_ids.includes(traveler._id.toString())) {
+        return { ...traveler.toObject(), bus: busObjectId };
+      }
+      return traveler;
+    });
+
+    return await event.save();
+  }
+
+  async getTravelersByBus(eventId: string): Promise<any> {
+    const event = await this.findOne(eventId);
+    const travelersByBus: any = {};
+
+    event.travelers.forEach((traveler: any) => {
+      const busId = traveler.bus?._id?.toString() || 'unassigned';
+      const busName = traveler.bus?.name || 'Pa autobus';
+
+      if (!travelersByBus[busId]) {
+        travelersByBus[busId] = {
+          bus: traveler.bus || null,
+          busName,
+          travelers: [],
+        };
+      }
+      travelersByBus[busId].travelers.push(traveler);
+    });
+
+    return Object.values(travelersByBus);
+  }
+
+  async getTravelersByHotel(eventId: string): Promise<any> {
+    const event = await this.findOne(eventId);
+    const travelersByHotel: any = {};
+
+    event.travelers.forEach((traveler: any) => {
+      const hotelId = traveler.hotel?._id?.toString() || 'unassigned';
+      const hotelName = traveler.hotel?.name || 'Pa hotel';
+
+      if (!travelersByHotel[hotelId]) {
+        travelersByHotel[hotelId] = {
+          hotel: traveler.hotel || null,
+          hotelName,
+          travelers: [],
+        };
+      }
+      travelersByHotel[hotelId].travelers.push(traveler);
+    });
+
+    return Object.values(travelersByHotel);
+  }
+
+  async getHotelList(eventId: string): Promise<any[]> {
+    const event = await this.findOne(eventId);
+    return event.travelers.filter((t: any) => t.show_in_hotel_list !== false);
+  }
+
+  async getBorderList(eventId: string): Promise<any[]> {
+    const event = await this.findOne(eventId);
+    return event.travelers.filter((t: any) => t.show_in_border_list !== false);
+  }
+
+  async getGuideList(eventId: string): Promise<any[]> {
+    const event = await this.findOne(eventId);
+    return event.travelers.filter((t: any) => t.show_in_guide_list !== false);
+  }
+
+  async updatePrintColumns(
+    eventId: string,
+    printColumns: any,
+  ): Promise<IEventHotel> {
+    const event = await this.eventModel.findByIdAndUpdate(
+      eventId,
+      { $set: { print_columns: printColumns } },
+      { new: true },
+    );
+
+    if (!event) {
+      throw new NotFoundException('Ngjarja nuk u gjet');
+    }
+
+    return event;
+  }
 }

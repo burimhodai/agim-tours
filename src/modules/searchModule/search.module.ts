@@ -8,17 +8,17 @@ import { EventHotelSchema, EventBusSchema } from 'src/models/eventHotel.model';
 import { HotelReservationSchema } from 'src/models/hotelReservation.model';
 
 @Module({
-    imports: [
-        MongooseModule.forFeature([
-            { name: 'Ticket', schema: TicketSchema },
-            { name: 'User', schema: UserSchema },
-            { name: 'EventHotel', schema: EventHotelSchema },
-            { name: 'EventBus', schema: EventBusSchema },
-            { name: 'HotelReservation', schema: HotelReservationSchema },
-        ]),
-    ],
-    controllers: [GlobalSearchController],
-    providers: [GlobalSearchService],
-    exports: [GlobalSearchService],
+  imports: [
+    MongooseModule.forFeature([
+      { name: 'Ticket', schema: TicketSchema },
+      { name: 'User', schema: UserSchema },
+      { name: 'EventHotel', schema: EventHotelSchema },
+      { name: 'EventBus', schema: EventBusSchema },
+      { name: 'HotelReservation', schema: HotelReservationSchema },
+    ]),
+  ],
+  controllers: [GlobalSearchController],
+  providers: [GlobalSearchService],
+  exports: [GlobalSearchService],
 })
-export class SearchModule { }
+export class SearchModule {}

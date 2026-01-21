@@ -3,14 +3,14 @@ import { Type } from 'class-transformer';
 import { CurrencyTypes } from '../types/currency.types';
 
 export class PaymentChunkDto {
-    @IsNumber()
-    amount: number;
+  @IsNumber()
+  amount: number;
 
-    @IsEnum(CurrencyTypes)
-    currency: CurrencyTypes;
+  @IsEnum(CurrencyTypes)
+  currency: CurrencyTypes;
 
-    @IsOptional()
-    @Type(() => Date)
-    @IsDate()
-    payment_date?: Date;
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  payment_date?: Date;
 }

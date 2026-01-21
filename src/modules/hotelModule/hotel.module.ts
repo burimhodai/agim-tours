@@ -17,27 +17,19 @@ import { PartnerHotelController } from './controllers/partner-hotel.controller';
 import { HotelReservationController } from './controllers/hotel-reservation.controller';
 
 @Module({
-    imports: [
-        MongooseModule.forFeature([
-            { name: 'RoomType', schema: RoomTypeSchema },
-            { name: 'PartnerHotel', schema: PartnerHotelSchema },
-            { name: 'HotelReservation', schema: HotelReservationSchema },
-        ]),
-    ],
-    controllers: [
-        RoomTypeController,
-        PartnerHotelController,
-        HotelReservationController,
-    ],
-    providers: [
-        RoomTypeService,
-        PartnerHotelService,
-        HotelReservationService,
-    ],
-    exports: [
-        RoomTypeService,
-        PartnerHotelService,
-        HotelReservationService,
-    ],
+  imports: [
+    MongooseModule.forFeature([
+      { name: 'RoomType', schema: RoomTypeSchema },
+      { name: 'PartnerHotel', schema: PartnerHotelSchema },
+      { name: 'HotelReservation', schema: HotelReservationSchema },
+    ]),
+  ],
+  controllers: [
+    RoomTypeController,
+    PartnerHotelController,
+    HotelReservationController,
+  ],
+  providers: [RoomTypeService, PartnerHotelService, HotelReservationService],
+  exports: [RoomTypeService, PartnerHotelService, HotelReservationService],
 })
-export class HotelModule { }
+export class HotelModule {}

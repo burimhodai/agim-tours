@@ -1,12 +1,12 @@
 import {
-    IsString,
-    IsOptional,
-    IsDate,
-    IsNumber,
-    IsEnum,
-    IsArray,
-    ValidateNested,
-    IsBoolean,
+  IsString,
+  IsOptional,
+  IsDate,
+  IsNumber,
+  IsEnum,
+  IsArray,
+  ValidateNested,
+  IsBoolean,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CurrencyTypes } from '../types/currency.types';
@@ -14,211 +14,239 @@ import { PaymentStatusTypes } from '../types/payment.types';
 
 // Organized Travel Traveler DTO (without hotel fields)
 export class OrganizedTravelerDto {
-    @IsOptional()
-    @IsString()
-    first_name?: string;
+  @IsOptional()
+  @IsString()
+  _id?: string;
 
-    @IsOptional()
-    @IsString()
-    last_name?: string;
+  @IsOptional()
+  @IsString()
+  group_id?: string;
 
-    @IsOptional()
-    @IsString()
-    phone?: string;
+  @IsOptional()
+  @IsString()
+  first_name?: string;
 
-    @IsOptional()
-    @IsString()
-    passport_number?: string;
+  @IsOptional()
+  @IsString()
+  last_name?: string;
 
-    @IsOptional()
-    @IsNumber()
-    price?: number;
+  @IsOptional()
+  @IsString()
+  phone?: string;
 
-    @IsOptional()
-    @IsNumber()
-    paid_amount?: number;
+  @IsOptional()
+  @IsString()
+  passport_number?: string;
 
-    @IsOptional()
-    @IsEnum(CurrencyTypes)
-    currency?: CurrencyTypes;
+  @IsOptional()
+  @IsNumber()
+  price?: number;
 
-    @IsOptional()
-    @IsEnum(PaymentStatusTypes)
-    payment_status?: PaymentStatusTypes;
+  @IsOptional()
+  @IsNumber()
+  paid_amount?: number;
 
-    @IsOptional()
-    @IsBoolean()
-    show_in_border_list?: boolean;
+  @IsOptional()
+  @IsEnum(CurrencyTypes)
+  currency?: CurrencyTypes;
 
-    @IsOptional()
-    @IsBoolean()
-    show_in_guide_list?: boolean;
+  @IsOptional()
+  @IsEnum(PaymentStatusTypes)
+  payment_status?: PaymentStatusTypes;
 
-    @IsOptional()
-    @IsString()
-    bus?: string;
+  @IsOptional()
+  @IsBoolean()
+  show_in_border_list?: boolean;
 
-    @IsOptional()
-    @IsString()
-    note?: string;
+  @IsOptional()
+  @IsBoolean()
+  show_in_guide_list?: boolean;
+
+  @IsOptional()
+  @IsString()
+  bus?: string;
+
+  @IsOptional()
+  @IsString()
+  note?: string;
 }
 
 // Print Columns DTO for Organized Travel
 export class OrganizedPrintColumnsDto {
-    @IsOptional()
-    @IsArray()
-    @IsString({ each: true })
-    border_list?: string[];
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  border_list?: string[];
 
-    @IsOptional()
-    @IsArray()
-    @IsString({ each: true })
-    guide_list?: string[];
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  guide_list?: string[];
 
-    @IsOptional()
-    @IsArray()
-    @IsString({ each: true })
-    bus_list?: string[];
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  bus_list?: string[];
 }
 
 // Create Organized Travel DTO
 export class CreateOrganizedTravelDto {
-    @IsString()
-    name: string;
+  @IsString()
+  name: string;
 
-    @IsString()
-    location: string;
+  @IsString()
+  location: string;
 
-    @Type(() => Date)
-    @IsDate()
-    date: Date;
+  @Type(() => Date)
+  @IsDate()
+  date: Date;
 
-    @IsOptional()
-    @Type(() => Date)
-    @IsDate()
-    return_date?: Date;
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  return_date?: Date;
 
-    @IsOptional()
-    @IsNumber()
-    price?: number;
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  check_in_date?: Date;
 
-    @IsOptional()
-    @IsEnum(CurrencyTypes)
-    currency?: CurrencyTypes;
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  check_out_date?: Date;
 
-    @IsOptional()
-    @IsEnum(PaymentStatusTypes)
-    payment_status?: PaymentStatusTypes;
+  @IsOptional()
+  @IsNumber()
+  price?: number;
 
-    @IsOptional()
-    @IsArray()
-    @ValidateNested({ each: true })
-    @Type(() => OrganizedTravelerDto)
-    travelers?: OrganizedTravelerDto[];
+  @IsOptional()
+  @IsEnum(CurrencyTypes)
+  currency?: CurrencyTypes;
 
-    @IsOptional()
-    @IsArray()
-    @IsString({ each: true })
-    buses?: string[];
+  @IsOptional()
+  @IsEnum(PaymentStatusTypes)
+  payment_status?: PaymentStatusTypes;
 
-    @IsOptional()
-    @ValidateNested()
-    @Type(() => OrganizedPrintColumnsDto)
-    print_columns?: OrganizedPrintColumnsDto;
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => OrganizedTravelerDto)
+  travelers?: OrganizedTravelerDto[];
 
-    @IsOptional()
-    @IsString()
-    agency?: string;
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  buses?: string[];
 
-    @IsOptional()
-    @IsString()
-    employee?: string;
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => OrganizedPrintColumnsDto)
+  print_columns?: OrganizedPrintColumnsDto;
+
+  @IsOptional()
+  @IsString()
+  agency?: string;
+
+  @IsOptional()
+  @IsString()
+  employee?: string;
 }
 
 // Update Organized Travel DTO
 export class UpdateOrganizedTravelDto {
-    @IsOptional()
-    @IsString()
-    name?: string;
+  @IsOptional()
+  @IsString()
+  name?: string;
 
-    @IsOptional()
-    @IsString()
-    location?: string;
+  @IsOptional()
+  @IsString()
+  location?: string;
 
-    @IsOptional()
-    @Type(() => Date)
-    @IsDate()
-    date?: Date;
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  date?: Date;
 
-    @IsOptional()
-    @Type(() => Date)
-    @IsDate()
-    return_date?: Date;
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  return_date?: Date;
 
-    @IsOptional()
-    @IsNumber()
-    price?: number;
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  check_in_date?: Date;
 
-    @IsOptional()
-    @IsEnum(CurrencyTypes)
-    currency?: CurrencyTypes;
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  check_out_date?: Date;
 
-    @IsOptional()
-    @IsEnum(PaymentStatusTypes)
-    payment_status?: PaymentStatusTypes;
+  @IsOptional()
+  @IsNumber()
+  price?: number;
 
-    @IsOptional()
-    @IsArray()
-    @ValidateNested({ each: true })
-    @Type(() => OrganizedTravelerDto)
-    travelers?: OrganizedTravelerDto[];
+  @IsOptional()
+  @IsEnum(CurrencyTypes)
+  currency?: CurrencyTypes;
 
-    @IsOptional()
-    @IsArray()
-    @IsString({ each: true })
-    buses?: string[];
+  @IsOptional()
+  @IsEnum(PaymentStatusTypes)
+  payment_status?: PaymentStatusTypes;
 
-    @IsOptional()
-    @ValidateNested()
-    @Type(() => OrganizedPrintColumnsDto)
-    print_columns?: OrganizedPrintColumnsDto;
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => OrganizedTravelerDto)
+  travelers?: OrganizedTravelerDto[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  buses?: string[];
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => OrganizedPrintColumnsDto)
+  print_columns?: OrganizedPrintColumnsDto;
 }
 
 // Add Travelers DTO
 export class AddOrganizedTravelersDto {
-    @IsArray()
-    @ValidateNested({ each: true })
-    @Type(() => OrganizedTravelerDto)
-    travelers: OrganizedTravelerDto[];
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => OrganizedTravelerDto)
+  travelers: OrganizedTravelerDto[];
 }
 
 // Assign Bus DTO
 export class AssignOrganizedBusDto {
-    @IsString()
-    bus_id: string;
+  @IsString()
+  bus_id: string;
 
-    @IsArray()
-    @IsString({ each: true })
-    traveler_ids: string[];
+  @IsArray()
+  @IsString({ each: true })
+  traveler_ids: string[];
 }
 
 // Query DTO
 export class OrganizedTravelQueryDto {
-    @IsOptional()
-    @IsString()
-    agency?: string;
+  @IsOptional()
+  @IsString()
+  agency?: string;
 
-    @IsOptional()
-    @IsString()
-    search?: string;
+  @IsOptional()
+  @IsString()
+  search?: string;
 
-    @IsOptional()
-    @Type(() => Number)
-    @IsNumber()
-    page?: number;
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  page?: number;
 
-    @IsOptional()
-    @Type(() => Number)
-    @IsNumber()
-    limit?: number;
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  limit?: number;
 }

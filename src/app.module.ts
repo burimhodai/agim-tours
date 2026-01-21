@@ -13,6 +13,7 @@ import { ReportsModule } from './modules/reportsModule/reports.module';
 import { HotelModule } from './modules/hotelModule/hotel.module';
 import { SearchModule } from './modules/searchModule/search.module';
 import { LoyalCustomerModule } from './modules/loyalCustomerModule/loyal-customer.module';
+import { LuggageModule } from './modules/luggageModule/luggage.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AgencySchema } from './models/agency.model';
 import { TransactionSchema } from './models/transaction.model';
@@ -57,8 +58,9 @@ import { TransactionServiceService } from './transactions/transaction-service.se
     HotelModule,
     SearchModule,
     LoyalCustomerModule,
+    LuggageModule,
   ],
   controllers: [AppController, TransactionControllerController],
   providers: [AppService, TransactionServiceService],
 })
-export class AppModule { }
+export class AppModule {}

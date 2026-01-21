@@ -6,13 +6,13 @@ import { LoyalCustomerSchema } from '../../models/loyalCustomer.model';
 import { AgencySchema } from '../../models/agency.model';
 
 @Module({
-    imports: [
-        MongooseModule.forFeature([
-            { name: 'LoyalCustomer', schema: LoyalCustomerSchema },
-            { name: 'Agency', schema: AgencySchema }
-        ]),
-    ],
-    controllers: [LoyalCustomerController],
-    providers: [LoyalCustomerService],
+  imports: [
+    MongooseModule.forFeature([
+      { name: 'LoyalCustomer', schema: LoyalCustomerSchema },
+      { name: 'Agency', schema: AgencySchema },
+    ]),
+  ],
+  controllers: [LoyalCustomerController],
+  providers: [LoyalCustomerService],
 })
-export class LoyalCustomerModule { }
+export class LoyalCustomerModule {}

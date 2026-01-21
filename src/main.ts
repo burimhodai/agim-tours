@@ -26,7 +26,7 @@ async function bootstrap() {
       transformOptions: {
         enableImplicitConversion: true,
       },
-      disableErrorMessages: configService.get('NODE_ENV') === 'production',
+      disableErrorMessages: false, // configService.get('NODE_ENV') === 'production',
     }),
   );
 
@@ -49,7 +49,10 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document);
 
-  const port = parseInt(process.env.PORT || configService.get('PORT') || '3000', 10);
+  const port = parseInt(
+    process.env.PORT || configService.get('PORT') || '3000',
+    10,
+  );
 
   await app.listen(port, '0.0.0.0');
 

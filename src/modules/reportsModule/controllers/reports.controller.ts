@@ -5,23 +5,23 @@ import { ReportQueryDto } from 'src/shared/DTO/report.dto';
 
 @Controller('reports')
 export class ReportsController {
-    constructor(
-        private readonly reportsService: ReportsService,
-        private readonly seedDataService: SeedDataService,
-    ) { }
+  constructor(
+    private readonly reportsService: ReportsService,
+    private readonly seedDataService: SeedDataService,
+  ) {}
 
-    @Get()
-    async generateReport(@Query() query: ReportQueryDto) {
-        return await this.reportsService.generateReport(query);
-    }
+  @Get()
+  async generateReport(@Query() query: ReportQueryDto) {
+    return await this.reportsService.generateReport(query);
+  }
 
-    @Post('seed')
-    async seedData() {
-        return await this.seedDataService.seedReportData();
-    }
+  @Post('seed')
+  async seedData() {
+    return await this.seedDataService.seedReportData();
+  }
 
-    @Post('clear')
-    async clearData() {
-        return await this.seedDataService.clearReportData();
-    }
+  @Post('clear')
+  async clearData() {
+    return await this.seedDataService.clearReportData();
+  }
 }

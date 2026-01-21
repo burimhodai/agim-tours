@@ -9,14 +9,18 @@ import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { IUser, UserRoles } from 'src/shared/types/user.types';
-import { createUserDTO, LoginDto, UpdateUserDto } from 'src/shared/DTO/user.dto';
+import {
+  createUserDTO,
+  LoginDto,
+  UpdateUserDto,
+} from 'src/shared/DTO/user.dto';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectModel('User') private userModel: Model<IUser>,
     private jwtService: JwtService,
-  ) { }
+  ) {}
 
   async createUser(
     createUserDto: createUserDTO,
@@ -79,7 +83,7 @@ export class UserService {
   }
 
   async findAll(): Promise<Partial<IUser>[]> {
-    const users = await this.userModel.find().populate("agency");
+    const users = await this.userModel.find().populate('agency');
     return users.map((user) => this.sanitizeUser(user));
   }
 
@@ -91,16 +95,23 @@ export class UserService {
 
     if (updateData.password) {
       const saltRounds = await bcrypt.genSalt(10);
-      updatePayload.password = await bcrypt.hash(updateData.password, saltRounds);
+      updatePayload.password = await bcrypt.hash(
+        updateData.password,
+        saltRounds,
+      );
     }
 
     if (updateData.agency) {
       updatePayload.agency = updateData.agency;
     }
 
-    const updatedUser = await this.userModel.findByIdAndUpdate(id, updatePayload, {
-      new: true,
-    });
+    const updatedUser = await this.userModel.findByIdAndUpdate(
+      id,
+      updatePayload,
+      {
+        new: true,
+      },
+    );
 
     if (!updatedUser) {
       throw new NotFoundException('User not found');

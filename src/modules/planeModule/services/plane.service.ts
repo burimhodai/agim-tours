@@ -11,9 +11,13 @@ import {
   UpdatePlaneTicketDto,
   AddPlaneLogDto,
   PlaneTicketQueryDto,
+  CancelTicketDto,
 } from 'src/shared/DTO/plane.dto';
 import { PaymentStatusTypes } from 'src/shared/types/payment.types';
-import { TransactionTypes, TransactionStatus } from 'src/shared/types/transaction.types';
+import {
+  TransactionTypes,
+  TransactionStatus,
+} from 'src/shared/types/transaction.types';
 import { TransactionServiceService } from 'src/transactions/transaction-service.service';
 
 @Injectable()
@@ -21,7 +25,7 @@ export class PlaneService {
   constructor(
     @InjectModel('Ticket') private ticketModel: Model<ITicket>,
     private transactionService: TransactionServiceService,
-  ) { }
+  ) {}
 
   private generatePlaneUid(): string {
     // Generate random 5-6 digit number
@@ -33,35 +37,62 @@ export class PlaneService {
   }
 
   async create(createPlaneTicketDto: CreatePlaneTicketDto): Promise<ITicket> {
+    if (
+      !createPlaneTicketDto.agency ||
+      !Types.ObjectId.isValid(createPlaneTicketDto.agency)
+    ) {
+      console.error(
+        'ERROR: Attempted to create ticket without valid Agency ID, received:',
+        createPlaneTicketDto.agency,
+      );
+      throw new BadRequestException(
+        'A valid Agency ID is required to create a ticket',
+      );
+    }
+
     const ticketData = {
       ...createPlaneTicketDto,
       uid: this.generatePlaneUid(),
       ticket_type: TicketTypes.PLANE,
-      agency: createPlaneTicketDto.agency
-        ? new Types.ObjectId(createPlaneTicketDto.agency)
-        : undefined,
-      employee: createPlaneTicketDto.employee
-        ? new Types.ObjectId(createPlaneTicketDto.employee)
-        : undefined,
+      agency: new Types.ObjectId(createPlaneTicketDto.agency),
+      employee:
+        createPlaneTicketDto.employee &&
+        Types.ObjectId.isValid(createPlaneTicketDto.employee)
+          ? new Types.ObjectId(createPlaneTicketDto.employee)
+          : undefined,
     };
+
+    console.log('Saving Ticket Data:', JSON.stringify(ticketData, null, 2));
 
     const newTicket = new this.ticketModel(ticketData);
     const savedTicket = await newTicket.save();
 
+    console.log('Saved Ticket Result:', savedTicket);
+
     // Determine transaction type based on payment status
-    const isUnpaid = createPlaneTicketDto.payment_status === PaymentStatusTypes.UNPAID ||
+    const isUnpaid =
+      createPlaneTicketDto.payment_status === PaymentStatusTypes.UNPAID ||
       createPlaneTicketDto.payment_status === PaymentStatusTypes.NOT_PAID;
 
-    await this.transactionService.create({
-      amount: createPlaneTicketDto.price,
-      currency: createPlaneTicketDto.currency,
-      type: isUnpaid ? TransactionTypes.DEBT : TransactionTypes.INCOME,
-      status: isUnpaid ? TransactionStatus.PENDING : TransactionStatus.SETTLED,
-      ticket: savedTicket._id.toString(),
-      agency: createPlaneTicketDto.agency,
-      user: createPlaneTicketDto.employee,
-      description: isUnpaid ? 'Borxh - Biletë avioni e papaguar' : 'Biletë avioni',
-    });
+    try {
+      await this.transactionService.create({
+        amount: createPlaneTicketDto.price,
+        currency: createPlaneTicketDto.currency,
+        type: isUnpaid ? TransactionTypes.DEBT : TransactionTypes.INCOME,
+        status: isUnpaid
+          ? TransactionStatus.PENDING
+          : TransactionStatus.SETTLED,
+        ticket: savedTicket._id.toString(),
+        agency: createPlaneTicketDto.agency,
+        user: createPlaneTicketDto.employee,
+        description: isUnpaid
+          ? 'Borxh - Biletë avioni e papaguar'
+          : 'Biletë avioni',
+      });
+    } catch (txError) {
+      console.error('Transaction creation failed:', txError);
+      // We do not revert the ticket creation, but we should probably log this.
+    }
 
     return savedTicket;
   }
@@ -212,18 +243,23 @@ export class PlaneService {
     }
 
     // Handle payment status change - update transaction
-    if (updatePlaneTicketDto.payment_status &&
-      updatePlaneTicketDto.payment_status !== currentTicket.payment_status) {
-
-      const isPaidNow = updatePlaneTicketDto.payment_status === PaymentStatusTypes.PAID;
-      const wasUnpaid = currentTicket.payment_status === PaymentStatusTypes.UNPAID ||
+    if (
+      updatePlaneTicketDto.payment_status &&
+      updatePlaneTicketDto.payment_status !== currentTicket.payment_status
+    ) {
+      const isPaidNow =
+        updatePlaneTicketDto.payment_status === PaymentStatusTypes.PAID;
+      const wasUnpaid =
+        currentTicket.payment_status === PaymentStatusTypes.UNPAID ||
         currentTicket.payment_status === PaymentStatusTypes.NOT_PAID;
 
       if (isPaidNow && wasUnpaid) {
         // Debt is being settled - convert to income
         await this.transactionService.settleDebt(id);
-      } else if (updatePlaneTicketDto.payment_status === PaymentStatusTypes.UNPAID ||
-        updatePlaneTicketDto.payment_status === PaymentStatusTypes.NOT_PAID) {
+      } else if (
+        updatePlaneTicketDto.payment_status === PaymentStatusTypes.UNPAID ||
+        updatePlaneTicketDto.payment_status === PaymentStatusTypes.NOT_PAID
+      ) {
         // Changing to unpaid - update transaction to debt
         await this.transactionService.updateByTicket(id, {
           type: TransactionTypes.DEBT,
@@ -351,5 +387,72 @@ export class PlaneService {
     }
 
     return ticket;
+  }
+
+  async cancel(id: string, cancelTicketDto: CancelTicketDto): Promise<ITicket> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid ticket ID');
+    }
+
+    const ticket = await this.ticketModel.findById(id).exec();
+    if (!ticket) {
+      throw new NotFoundException('Plane ticket not found');
+    }
+
+    if (ticket.status === 'canceled') {
+      throw new BadRequestException('Bileta është e anuluar tashmë');
+    }
+
+    const { refund_chunks, note } = cancelTicketDto;
+
+    // 1. Update ticket status
+    ticket.status = 'canceled';
+    if (note) {
+      ticket.note = ticket.note
+        ? `${ticket.note}\n\nAnulimi: ${note}`
+        : `Anulimi: ${note}`;
+    }
+
+    // 2. Handle transactions
+    const wasUnpaid =
+      ticket.payment_status === PaymentStatusTypes.UNPAID ||
+      ticket.payment_status === PaymentStatusTypes.NOT_PAID;
+
+    if (wasUnpaid) {
+      // If it's unpaid, we just delete the debt transaction
+      await this.transactionService.deleteByTicket(id);
+    } else {
+      // If it was paid or partially paid, handle refunds if provided
+      if (refund_chunks && refund_chunks.length > 0) {
+        if (!ticket.payment_chunks) {
+          ticket.payment_chunks = [];
+        }
+        // Add refund chunks to payment_chunks
+        // We might want to mark these as refunds (negative amount?)
+        // The user suggested using payment chunks for refunds
+        for (const chunk of refund_chunks) {
+          ticket.payment_chunks.push({
+            amount: -Math.abs(chunk.amount), // Ensure it's negative to represent a refund
+            currency: chunk.currency,
+            payment_date: new Date(),
+          });
+
+          // Create an OUTCOME transaction for each refund
+          await this.transactionService.create({
+            amount: Math.abs(chunk.amount),
+            currency: chunk.currency,
+            type: TransactionTypes.OUTCOME,
+            status: TransactionStatus.SETTLED,
+            ticket: ticket._id.toString(),
+            agency: ticket.agency?.toString() || '',
+            user: ticket.employee?.toString(),
+            description: `Rimbursim - Biletë avioni e anuluar (${ticket.uid})`,
+          });
+        }
+        ticket.payment_status = PaymentStatusTypes.REFUNDED;
+      }
+    }
+
+    return await ticket.save();
   }
 }

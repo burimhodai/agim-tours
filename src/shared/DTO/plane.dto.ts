@@ -20,6 +20,10 @@ export class PlaneLuggageDto {
 
   @IsOptional()
   @IsNumber()
+  quantity?: number;
+
+  @IsOptional()
+  @IsNumber()
   weight_in_kg?: number;
 
   @IsOptional()
@@ -28,6 +32,10 @@ export class PlaneLuggageDto {
 }
 
 export class PlanePassengerDto {
+  @IsOptional()
+  @IsString()
+  title?: string;
+
   @IsOptional()
   @IsString()
   first_name?: string;
@@ -45,10 +53,30 @@ export class PlanePassengerDto {
   passport_number?: string;
 
   @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  birthdate?: Date;
+
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  passport_expiry_date?: Date;
+
+  @IsOptional()
+  @IsString()
+  nationality?: string;
+
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => PlaneLuggageDto)
   luggage?: PlaneLuggageDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PlaneLuggageDto)
+  return_luggage?: PlaneLuggageDto[];
 }
 
 export class CreatePlaneTicketDto {
@@ -58,6 +86,14 @@ export class CreatePlaneTicketDto {
   @IsOptional()
   @IsEnum(CurrencyTypes)
   currency?: CurrencyTypes;
+
+  @IsOptional()
+  @IsNumber()
+  provision?: number;
+
+  @IsOptional()
+  @IsEnum(CurrencyTypes)
+  provision_currency?: CurrencyTypes;
 
   @IsOptional()
   @IsEnum(PaymentStatusTypes)
@@ -136,6 +172,14 @@ export class UpdatePlaneTicketDto {
   @IsOptional()
   @IsEnum(CurrencyTypes)
   currency?: CurrencyTypes;
+
+  @IsOptional()
+  @IsNumber()
+  provision?: number;
+
+  @IsOptional()
+  @IsEnum(CurrencyTypes)
+  provision_currency?: CurrencyTypes;
 
   @IsOptional()
   @IsEnum(PaymentStatusTypes)
@@ -222,6 +266,18 @@ export class AddPlaneLogDto {
   @IsOptional()
   @IsString()
   employee?: string;
+}
+
+export class CancelTicketDto {
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PaymentChunkDto)
+  refund_chunks?: PaymentChunkDto[];
+
+  @IsOptional()
+  @IsString()
+  note?: string;
 }
 
 export class PlaneTicketQueryDto {

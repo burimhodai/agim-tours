@@ -9,15 +9,15 @@ import { EventBusController } from './controllers/eventBus.controller';
 import { TransactionServiceService } from 'src/transactions/transaction-service.service';
 
 @Module({
-    imports: [
-        MongooseModule.forFeature([
-            { name: 'EventHotel', schema: EventHotelSchema },
-            { name: 'EventBus', schema: EventBusSchema },
-            { name: 'Transaction', schema: TransactionSchema },
-        ]),
-    ],
-    controllers: [EventHotelController, EventBusController],
-    providers: [EventHotelService, EventBusService, TransactionServiceService],
-    exports: [EventHotelService, EventBusService],
+  imports: [
+    MongooseModule.forFeature([
+      { name: 'EventHotel', schema: EventHotelSchema },
+      { name: 'EventBus', schema: EventBusSchema },
+      { name: 'Transaction', schema: TransactionSchema },
+    ]),
+  ],
+  controllers: [EventHotelController, EventBusController],
+  providers: [EventHotelService, EventBusService, TransactionServiceService],
+  exports: [EventHotelService, EventBusService],
 })
-export class EventHotelModule { }
+export class EventHotelModule {}

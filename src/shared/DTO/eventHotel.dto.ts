@@ -66,6 +66,10 @@ export class UpdateEventBusDto {
 export class EventTravelerDto {
     @IsOptional()
     @IsString()
+    _id?: string;
+
+    @IsOptional()
+    @IsString()
     first_name?: string;
 
     @IsOptional()
@@ -130,6 +134,10 @@ export class EventTravelerDto {
 }
 
 export class RoomGroupDto {
+    @IsOptional()
+    @IsString()
+    _id?: string;
+
     @IsString()
     group_id: string;
 
@@ -185,6 +193,16 @@ export class CreateEventDto {
     @Type(() => Date)
     @IsDate()
     return_date?: Date;
+
+    @IsOptional()
+    @Type(() => Date)
+    @IsDate()
+    check_in_date?: Date;
+
+    @IsOptional()
+    @Type(() => Date)
+    @IsDate()
+    check_out_date?: Date;
 
     @IsOptional()
     @IsNumber()
@@ -252,6 +270,16 @@ export class UpdateEventDto {
     @Type(() => Date)
     @IsDate()
     return_date?: Date;
+
+    @IsOptional()
+    @Type(() => Date)
+    @IsDate()
+    check_in_date?: Date;
+
+    @IsOptional()
+    @Type(() => Date)
+    @IsDate()
+    check_out_date?: Date;
 
     @IsOptional()
     @IsNumber()

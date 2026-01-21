@@ -15,6 +15,7 @@ import {
   UpdatePlaneTicketDto,
   AddPlaneLogDto,
   PlaneTicketQueryDto,
+  CancelTicketDto,
 } from 'src/shared/DTO/plane.dto';
 import { PaymentStatusTypes } from 'src/shared/types/payment.types';
 
@@ -24,11 +25,7 @@ export class PlaneController {
 
   @Post('tickets')
   async create(@Body() createPlaneTicketDto: CreatePlaneTicketDto) {
-    try {
-      return await this.planeService.create(createPlaneTicketDto);
-    } catch (error) {
-      console.log(error);
-    }
+    return await this.planeService.create(createPlaneTicketDto);
   }
 
   @Get('tickets')
@@ -80,5 +77,13 @@ export class PlaneController {
     @Body('checked_in') checkedIn: boolean,
   ) {
     return await this.planeService.checkIn(id, checkedIn);
+  }
+
+  @Patch('tickets/:id/cancel')
+  async cancel(
+    @Param('id') id: string,
+    @Body() cancelTicketDto: CancelTicketDto,
+  ) {
+    return await this.planeService.cancel(id, cancelTicketDto);
   }
 }

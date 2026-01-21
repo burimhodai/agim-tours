@@ -8,15 +8,15 @@ import { OrganizedTravelController } from './controllers/organizedTravel.control
 import { TransactionServiceService } from 'src/transactions/transaction-service.service';
 
 @Module({
-    imports: [
-        MongooseModule.forFeature([
-            { name: 'OrganizedTravel', schema: OrganizedTravelSchema },
-            { name: 'EventBus', schema: EventBusSchema },
-            { name: 'Transaction', schema: TransactionSchema },
-        ]),
-    ],
-    controllers: [OrganizedTravelController],
-    providers: [OrganizedTravelService, TransactionServiceService],
-    exports: [OrganizedTravelService],
+  imports: [
+    MongooseModule.forFeature([
+      { name: 'OrganizedTravel', schema: OrganizedTravelSchema },
+      { name: 'EventBus', schema: EventBusSchema },
+      { name: 'Transaction', schema: TransactionSchema },
+    ]),
+  ],
+  controllers: [OrganizedTravelController],
+  providers: [OrganizedTravelService, TransactionServiceService],
+  exports: [OrganizedTravelService],
 })
-export class OrganizedTravelModule { }
+export class OrganizedTravelModule {}

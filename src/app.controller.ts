@@ -1,10 +1,18 @@
-import { Controller, Get, Post, Body, Patch, Delete, Param } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Delete,
+  Param,
+} from '@nestjs/common';
 import { AppService } from './app.service';
 import { CreateAgencyDto } from './shared/DTO/agency.dto';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) { }
+  constructor(private readonly appService: AppService) {}
 
   @Post('agencies')
   async createAgency(@Body() createAgencyDto: CreateAgencyDto) {
@@ -17,7 +25,10 @@ export class AppController {
   }
 
   @Patch('agencies/:id')
-  async updateAgency(@Param('id') id: string, @Body() data: Partial<CreateAgencyDto>) {
+  async updateAgency(
+    @Param('id') id: string,
+    @Body() data: Partial<CreateAgencyDto>,
+  ) {
     return await this.appService.updateAgency(id, data);
   }
 
