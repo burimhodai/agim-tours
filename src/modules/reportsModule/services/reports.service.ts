@@ -18,7 +18,7 @@ import { PaymentStatusTypes } from 'src/shared/types/payment.types';
 export class ReportsService {
   constructor(
     @InjectModel('Transaction') private transactionModel: Model<ITransaction>,
-  ) {}
+  ) { }
 
   async generateReport(query: ReportQueryDto): Promise<ReportResponseDto> {
     const {
@@ -68,16 +68,10 @@ export class ReportsService {
       });
     }
 
-    // Include transactions that either:
-    // 1. Have no ticket (standalone income/expense entries)
-    // 2. Have a ticket with payment_status === 'paid'
-    allTransactions = allTransactions.filter((transaction) => {
-      const ticket = transaction.ticket as any;
-      // If no ticket, include the transaction (standalone entry)
-      if (!ticket) return true;
-      // If has ticket, only include if paid
-      return ticket.payment_status === PaymentStatusTypes.PAID;
-    });
+    // Include all transactions that are within the date range.
+    // The filtering by type (income/outcome) will happen next.
+    // Previously there was a filter here that only included transactions for fully paid tickets,
+    // which caused refunds and partial payments to be missing from reports.
 
     const incomeTransactions = allTransactions.filter(
       (t) => t.type === TransactionTypes.INCOME,
@@ -188,26 +182,26 @@ export class ReportsService {
         createdAt: transaction.createdAt,
         user: user
           ? {
-              _id: user._id.toString(),
-              email: user.email,
-              first_name: user.first_name,
-              last_name: user.last_name,
-            }
+            _id: user._id.toString(),
+            email: user.email,
+            first_name: user.first_name,
+            last_name: user.last_name,
+          }
           : undefined,
         ticket: ticket
           ? {
-              _id: ticket._id.toString(),
-              ticket_type: ticket.ticket_type,
-              booking_reference: ticket.booking_reference,
-              departure_location: ticket.departure_location,
-              destination_location: ticket.destination_location,
-              departure_date: ticket.departure_date,
-              passengers: ticket.passengers,
-              operator: ticket.operator,
-              price: ticket.price,
-              payment_status: ticket.payment_status,
-              payment_chunks: ticket.payment_chunks || [],
-            }
+            _id: ticket._id.toString(),
+            ticket_type: ticket.ticket_type,
+            booking_reference: ticket.booking_reference,
+            departure_location: ticket.departure_location,
+            destination_location: ticket.destination_location,
+            departure_date: ticket.departure_date,
+            passengers: ticket.passengers,
+            operator: ticket.operator,
+            price: ticket.price,
+            payment_status: ticket.payment_status,
+            payment_chunks: ticket.payment_chunks || [],
+          }
           : undefined,
       };
     });

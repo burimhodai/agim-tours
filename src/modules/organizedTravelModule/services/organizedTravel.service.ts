@@ -469,18 +469,66 @@ export class OrganizedTravelService {
           agency: agencyId,
           description: `Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName} (Pagesa e pjesshme)`,
         });
-
-        // Update remaining debt
-        const remainingDebt = newTraveler.price - paidAmount;
-        await this.transactionService.updateByOrganizedTravelTraveler(
-          travelId,
-          `${travelerId}_debt`,
-          {
-            amount: remainingDebt,
-            description: `Borxh - Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName} (Mbetja: ${remainingDebt})`,
-          },
-        );
+      } else if (paidAmount < previousPaidAmount) {
+        // Refund given
+        const refundAmount = previousPaidAmount - paidAmount;
+        await this.transactionService.create({
+          amount: refundAmount,
+          currency: newTraveler.currency,
+          type: TransactionTypes.OUTCOME,
+          status: TransactionStatus.SETTLED,
+          organizedTravel: travelId,
+          travelerId: `${travelerId}_refund_${Date.now()}`,
+          agency: agencyId,
+          description: `Rimbursim - Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName} (Pjesërisht)`,
+        });
       }
+
+      // Update remaining debt
+      const remainingDebt = newTraveler.price - paidAmount;
+      if (remainingDebt > 0) {
+        const existingDebt = await this.transactionService.findByOrganizedTravelTraveler(travelId, `${travelerId}_debt`);
+        if (existingDebt) {
+          await this.transactionService.updateByOrganizedTravelTraveler(
+            travelId,
+            `${travelerId}_debt`,
+            {
+              amount: remainingDebt,
+              description: `Borxh - Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName} (Mbetja: ${remainingDebt})`,
+            },
+          );
+        } else {
+          await this.transactionService.create({
+            amount: remainingDebt,
+            currency: newTraveler.currency,
+            type: TransactionTypes.DEBT,
+            status: TransactionStatus.PENDING,
+            organizedTravel: travelId,
+            travelerId: `${travelerId}_debt`,
+            agency: agencyId,
+            description: `Borxh - Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName}`,
+          });
+        }
+      } else {
+        await this.transactionService.deleteByOrganizedTravelTraveler(travelId, `${travelerId}_debt`);
+      }
+    } else if (newStatus === PaymentStatusTypes.REFUNDED) {
+      const previouslyPaid = oldTraveler.paid_amount || 0;
+      if (previouslyPaid > 0) {
+        await this.transactionService.create({
+          amount: previouslyPaid,
+          currency: newTraveler.currency,
+          type: TransactionTypes.OUTCOME,
+          status: TransactionStatus.SETTLED,
+          organizedTravel: travelId,
+          travelerId: `${travelerId}_refund_${Date.now()}`,
+          agency: agencyId,
+          description: `Rimbursim i plotë - Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName}`,
+        });
+      }
+      // Delete any existing transactions for this traveler to clear history
+      await this.transactionService.deleteByOrganizedTravelTraveler(travelId, travelerId);
+      await this.transactionService.deleteByOrganizedTravelTraveler(travelId, `${travelerId}_debt`);
     } else if (
       newStatus === PaymentStatusTypes.UNPAID &&
       oldStatus !== PaymentStatusTypes.UNPAID
