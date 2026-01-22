@@ -91,4 +91,12 @@ export class BusController {
   ) {
     return await this.busService.cancel(id, cancelTicketDto);
   }
+
+  @Patch('tickets/:id/refund')
+  async refund(
+    @Param('id') id: string,
+    @Body() refundDto: CancelTicketDto,
+  ) {
+    return await this.busService.refund(id, refundDto);
+  }
 }

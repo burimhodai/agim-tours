@@ -564,4 +564,72 @@ export class BusService {
 
     return await ticket.save();
   }
+
+  async refund(id: string, refundDto: CancelTicketDto): Promise<ITicket> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid ticket ID');
+    }
+
+    const ticket = await this.ticketModel.findById(id).exec();
+    if (!ticket) {
+      throw new NotFoundException('Bus ticket not found');
+    }
+
+    if (ticket.status !== 'canceled') {
+      throw new BadRequestException('Vetëm biletat e anuluara mund të rimbursohen');
+    }
+
+    if (ticket.payment_status === PaymentStatusTypes.REFUNDED) {
+      throw new BadRequestException('Bileta është rimbursuar tashmë');
+    }
+
+    const { refund_chunks, note } = refundDto;
+
+    if (!refund_chunks || refund_chunks.length === 0) {
+      throw new BadRequestException('Duhet të shtoni së paku një rimbursim');
+    }
+
+    // Add refund chunks and create transactions
+    if (!ticket.payment_chunks) {
+      ticket.payment_chunks = [];
+    }
+
+    for (const chunk of refund_chunks) {
+      ticket.payment_chunks.push({
+        amount: -Math.abs(chunk.amount),
+        currency: chunk.currency,
+        payment_date: new Date(),
+      });
+
+      await this.transactionService.create({
+        amount: Math.abs(chunk.amount),
+        currency: chunk.currency,
+        type: TransactionTypes.OUTCOME,
+        status: TransactionStatus.SETTLED,
+        ticket: ticket._id.toString(),
+        agency: ticket.agency?.toString() || '',
+        user: ticket.employee?.toString(),
+        description: `Rimbursim - Biletë autobusi e anuluar (${ticket.uid})`,
+      });
+    }
+
+    ticket.payment_status = PaymentStatusTypes.REFUNDED;
+
+    if (note) {
+      ticket.note = ticket.note
+        ? `${ticket.note}\n\nRimbursimi: ${note}`
+        : `Rimbursimi: ${note}`;
+    }
+
+    const refundInfo = `Rimbursim: ${refund_chunks.map(c => `${c.amount} ${c.currency}`).join(', ')}.`;
+
+    await this.addLogInternal(
+      id,
+      'Bileta u rimbursua',
+      `${refundInfo} Shënim: ${note || '-'}`,
+      refundDto.employee,
+    );
+
+    return await ticket.save();
+  }
 }

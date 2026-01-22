@@ -91,4 +91,12 @@ export class PlaneController {
   ) {
     return await this.planeService.cancel(id, cancelTicketDto);
   }
+
+  @Patch('tickets/:id/refund')
+  async refund(
+    @Param('id') id: string,
+    @Body() refundDto: CancelTicketDto,
+  ) {
+    return await this.planeService.refund(id, refundDto);
+  }
 }

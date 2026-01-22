@@ -56,6 +56,10 @@ export class CreateBusTicketDto {
   price: number;
 
   @IsOptional()
+  @IsNumber()
+  neto_price?: number;
+
+  @IsOptional()
   @IsEnum(CurrencyTypes)
   currency?: CurrencyTypes;
 
@@ -132,6 +136,10 @@ export class UpdateBusTicketDto {
   @IsOptional()
   @IsNumber()
   price?: number;
+
+  @IsOptional()
+  @IsNumber()
+  neto_price?: number;
 
   @IsOptional()
   @IsEnum(CurrencyTypes)
