@@ -141,6 +141,10 @@ export class EventTravelerDto {
     @IsOptional()
     @IsString()
     note?: string;
+
+    @IsOptional()
+    @IsString()
+    pickup_location?: string;
 }
 
 export class RoomGroupDto {

@@ -74,6 +74,10 @@ export class OrganizedTravelerDto {
   @IsOptional()
   @IsString()
   note?: string;
+
+  @IsOptional()
+  @IsString()
+  pickup_location?: string;
 }
 
 // Print Columns DTO for Organized Travel

@@ -56,6 +56,7 @@ const EventTravelerSchema = new mongoose.Schema({
   room_group_id: { type: String },
 
   note: { type: String },
+  pickup_location: { type: String },
 });
 
 // Main Event Hotel Schema

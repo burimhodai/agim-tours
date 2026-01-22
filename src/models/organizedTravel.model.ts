@@ -34,6 +34,7 @@ const OrganizedTravelerSchema = new mongoose.Schema({
   group_id: { type: String },
 
   note: { type: String },
+  pickup_location: { type: String },
 });
 
 // Main Organized Travel Schema
