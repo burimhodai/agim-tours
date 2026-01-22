@@ -84,6 +84,10 @@ export class CreatePlaneTicketDto {
   price: number;
 
   @IsOptional()
+  @IsNumber()
+  neto_price?: number;
+
+  @IsOptional()
   @IsEnum(CurrencyTypes)
   currency?: CurrencyTypes;
 
@@ -170,6 +174,10 @@ export class UpdatePlaneTicketDto {
   price?: number;
 
   @IsOptional()
+  @IsNumber()
+  neto_price?: number;
+
+  @IsOptional()
   @IsEnum(CurrencyTypes)
   currency?: CurrencyTypes;
 
@@ -252,6 +260,10 @@ export class UpdatePlaneTicketDto {
   @IsOptional()
   @IsString()
   original_booking_reference?: string;
+
+  @IsOptional()
+  @IsString()
+  employee?: string;
 }
 
 export class AddPlaneLogDto {
@@ -278,6 +290,10 @@ export class CancelTicketDto {
   @IsOptional()
   @IsString()
   note?: string;
+
+  @IsOptional()
+  @IsString()
+  employee?: string;
 }
 
 export class PlaneTicketQueryDto {

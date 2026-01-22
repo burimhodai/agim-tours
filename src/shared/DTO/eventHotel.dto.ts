@@ -85,6 +85,11 @@ export class EventTravelerDto {
     passport_number?: string;
 
     @IsOptional()
+    @Type(() => Date)
+    @IsDate()
+    date_of_birth?: Date;
+
+    @IsOptional()
     @IsNumber()
     price?: number;
 
@@ -127,6 +132,11 @@ export class EventTravelerDto {
     @IsOptional()
     @IsString()
     room_group_id?: string;
+
+    @IsOptional()
+    @Type(() => Date)
+    @IsDate()
+    passport_expiry_date?: Date;
 
     @IsOptional()
     @IsString()
@@ -203,6 +213,14 @@ export class CreateEventDto {
     @Type(() => Date)
     @IsDate()
     check_out_date?: Date;
+
+    @IsOptional()
+    @IsString()
+    departure_city?: string;
+
+    @IsOptional()
+    @IsString()
+    arrival_city?: string;
 
     @IsOptional()
     @IsNumber()
@@ -282,6 +300,14 @@ export class UpdateEventDto {
     check_out_date?: Date;
 
     @IsOptional()
+    @IsString()
+    departure_city?: string;
+
+    @IsOptional()
+    @IsString()
+    arrival_city?: string;
+
+    @IsOptional()
     @IsNumber()
     price?: number;
 
@@ -318,6 +344,14 @@ export class UpdateEventDto {
     @ValidateNested()
     @Type(() => PrintColumnsDto)
     print_columns?: PrintColumnsDto;
+
+    @IsOptional()
+    @IsString()
+    agency?: string;
+
+    @IsOptional()
+    @IsString()
+    employee?: string;
 }
 
 // Add Traveler DTO

@@ -21,7 +21,7 @@ import { PaymentStatusTypes } from 'src/shared/types/payment.types';
 
 @Controller('plane')
 export class PlaneController {
-  constructor(private readonly planeService: PlaneService) {}
+  constructor(private readonly planeService: PlaneService) { }
 
   @Post('tickets')
   async create(@Body() createPlaneTicketDto: CreatePlaneTicketDto) {
@@ -54,8 +54,11 @@ export class PlaneController {
   }
 
   @Delete('tickets/:id')
-  async delete(@Param('id') id: string) {
-    return await this.planeService.delete(id);
+  async delete(
+    @Param('id') id: string,
+    @Query('employeeId') employeeId?: string,
+  ) {
+    return await this.planeService.delete(id, employeeId);
   }
 
   @Post('tickets/:id/logs')
@@ -67,16 +70,18 @@ export class PlaneController {
   async updatePaymentStatus(
     @Param('id') id: string,
     @Body('payment_status') paymentStatus: PaymentStatusTypes,
+    @Body('employee') employeeId?: string,
   ) {
-    return await this.planeService.updatePaymentStatus(id, paymentStatus);
+    return await this.planeService.updatePaymentStatus(id, paymentStatus, employeeId);
   }
 
   @Patch('tickets/:id/check-in')
   async checkIn(
     @Param('id') id: string,
     @Body('checked_in') checkedIn: boolean,
+    @Body('employee') employeeId?: string,
   ) {
-    return await this.planeService.checkIn(id, checkedIn);
+    return await this.planeService.checkIn(id, checkedIn, employeeId);
   }
 
   @Patch('tickets/:id/cancel')

@@ -21,7 +21,28 @@ export class HotelReservationService {
   constructor(
     @InjectModel('HotelReservation')
     private reservationModel: Model<IHotelReservation>,
-  ) {}
+  ) { }
+
+  private validateTravelerPassport(traveler: any, departureDate: Date, departureCity?: string, arrivalCity?: string) {
+    const isIstanbulOrStamboll = (city?: string) =>
+      city?.toLowerCase() === 'istanbul' || city?.toLowerCase() === 'stamboll';
+
+    if (isIstanbulOrStamboll(departureCity) || isIstanbulOrStamboll(arrivalCity)) {
+      if (!traveler.passport_expiry_date) {
+        throw new BadRequestException(`Data e skadimit të pasaportës është e detyrueshme për destinacionin Stamboll (${traveler.full_name || ''})`);
+      }
+
+      const expiryDate = new Date(traveler.passport_expiry_date);
+      const depDate = new Date(departureDate);
+
+      const diffTime = expiryDate.getTime() - depDate.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays < 150) {
+        throw new BadRequestException(`Pasaporta e udhëtarit ${traveler.full_name || ''} duhet të jetë e vlefshme edhe të paktën 150 ditë pas datës së nisjes.`);
+      }
+    }
+  }
 
   async create(
     createReservationDto: CreateHotelReservationDto,
@@ -36,6 +57,12 @@ export class HotelReservationService {
         ? new Types.ObjectId(createReservationDto.employee)
         : undefined,
     };
+
+    if (createReservationDto.travelers) {
+      createReservationDto.travelers.forEach(traveler => {
+        this.validateTravelerPassport(traveler, createReservationDto.check_in_date, createReservationDto.departure_city, createReservationDto.arrival_city);
+      });
+    }
 
     const reservation = new this.reservationModel(reservationData);
     const savedReservation = await reservation.save();
@@ -179,6 +206,12 @@ export class HotelReservationService {
       updateData.hotel_partner = new Types.ObjectId(
         updateReservationDto.hotel_partner,
       );
+    }
+
+    if (updateReservationDto.travelers) {
+      updateReservationDto.travelers.forEach(traveler => {
+        this.validateTravelerPassport(traveler, updateReservationDto.check_in_date || new Date(), updateReservationDto.departure_city, updateReservationDto.arrival_city);
+      });
     }
 
     const reservation = await this.reservationModel

@@ -21,7 +21,7 @@ import { PaymentStatusTypes } from 'src/shared/types/payment.types';
 
 @Controller('bus')
 export class BusController {
-  constructor(private readonly busService: BusService) {}
+  constructor(private readonly busService: BusService) { }
 
   @Post('tickets')
   async create(@Body() createBusTicketDto: CreateBusTicketDto) {
@@ -54,8 +54,11 @@ export class BusController {
   }
 
   @Delete('tickets/:id')
-  async delete(@Param('id') id: string) {
-    return await this.busService.delete(id);
+  async delete(
+    @Param('id') id: string,
+    @Query('employeeId') employeeId?: string,
+  ) {
+    return await this.busService.delete(id, employeeId);
   }
 
   @Post('tickets/:id/logs')
@@ -67,16 +70,18 @@ export class BusController {
   async updatePaymentStatus(
     @Param('id') id: string,
     @Body('payment_status') paymentStatus: PaymentStatusTypes,
+    @Body('employee') employeeId?: string,
   ) {
-    return await this.busService.updatePaymentStatus(id, paymentStatus);
+    return await this.busService.updatePaymentStatus(id, paymentStatus, employeeId);
   }
 
   @Patch('tickets/:id/check-in')
   async checkIn(
     @Param('id') id: string,
     @Body('checked_in') checkedIn: boolean,
+    @Body('employee') employeeId?: string,
   ) {
-    return await this.busService.checkIn(id, checkedIn);
+    return await this.busService.checkIn(id, checkedIn, employeeId);
   }
 
   @Patch('tickets/:id/cancel')

@@ -11,6 +11,7 @@ export const TicketSchema = new mongoose.Schema(
     original_booking_reference: { type: String, lowercase: true },
 
     price: { type: Number, required: true },
+    neto_price: { type: Number },
     currency: {
       type: String,
       enum: Object.values(CurrencyTypes),

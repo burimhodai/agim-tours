@@ -174,6 +174,11 @@ export class TravelerDto {
   @IsOptional()
   @IsString()
   room_group_id?: string;
+
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  passport_expiry_date?: Date;
 }
 
 // ===================================
@@ -224,6 +229,14 @@ export class CreateHotelReservationDto {
   check_out_date: Date;
 
   @IsOptional()
+  @IsString()
+  departure_city?: string;
+
+  @IsOptional()
+  @IsString()
+  arrival_city?: string;
+
+  @IsOptional()
   @IsEnum(ReservationStatus)
   status?: ReservationStatus;
 
@@ -272,6 +285,14 @@ export class UpdateHotelReservationDto {
   @Type(() => Date)
   @IsDate()
   check_out_date?: Date;
+
+  @IsOptional()
+  @IsString()
+  departure_city?: string;
+
+  @IsOptional()
+  @IsString()
+  arrival_city?: string;
 
   @IsOptional()
   @IsEnum(ReservationStatus)

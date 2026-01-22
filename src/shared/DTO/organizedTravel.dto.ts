@@ -39,6 +39,11 @@ export class OrganizedTravelerDto {
   passport_number?: string;
 
   @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  date_of_birth?: Date;
+
+  @IsOptional()
   @IsNumber()
   price?: number;
 
@@ -210,6 +215,14 @@ export class UpdateOrganizedTravelDto {
   @ValidateNested()
   @Type(() => OrganizedPrintColumnsDto)
   print_columns?: OrganizedPrintColumnsDto;
+
+  @IsOptional()
+  @IsString()
+  agency?: string;
+
+  @IsOptional()
+  @IsString()
+  employee?: string;
 }
 
 // Add Travelers DTO

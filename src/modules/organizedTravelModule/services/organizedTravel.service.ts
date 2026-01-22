@@ -133,9 +133,21 @@ export class OrganizedTravelService {
     const updateData: any = { ...updateDto };
 
     if (updateDto.buses) {
-      updateData.buses = updateDto.buses.map(
-        (busId) => new Types.ObjectId(busId),
-      );
+      updateData.buses = updateDto.buses
+        .filter((busId) => busId && busId !== '')
+        .map((busId) => new Types.ObjectId(busId));
+    }
+
+    if (updateDto.agency && updateDto.agency !== '') {
+      updateData.agency = new Types.ObjectId(updateDto.agency);
+    } else if (updateDto.agency === '') {
+      updateData.agency = undefined;
+    }
+
+    if (updateDto.employee && updateDto.employee !== '') {
+      updateData.employee = new Types.ObjectId(updateDto.employee);
+    } else if (updateDto.employee === '') {
+      updateData.employee = undefined;
     }
 
     const travel = await this.travelModel

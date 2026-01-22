@@ -8,6 +8,7 @@ const OrganizedTravelerSchema = new mongoose.Schema({
   last_name: { type: String },
   phone: { type: String },
   passport_number: { type: String },
+  date_of_birth: { type: Date },
 
   // Payment tracking for this traveler
   price: { type: Number },

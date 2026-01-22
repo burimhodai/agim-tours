@@ -44,6 +44,7 @@ export interface ITicket extends Document {
   original_booking_reference?: string;
 
   price: number;
+  neto_price?: number;
   currency?: CurrencyTypes;
 
   payment_status?: PaymentStatusTypes;

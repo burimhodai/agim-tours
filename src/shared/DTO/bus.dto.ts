@@ -204,6 +204,10 @@ export class UpdateBusTicketDto {
   @IsOptional()
   @IsString()
   booking_reference?: string;
+
+  @IsOptional()
+  @IsString()
+  employee?: string;
 }
 
 export class AddLogDto {
@@ -230,6 +234,10 @@ export class CancelTicketDto {
   @IsOptional()
   @IsString()
   note?: string;
+
+  @IsOptional()
+  @IsString()
+  employee?: string;
 }
 
 export class BusTicketQueryDto {

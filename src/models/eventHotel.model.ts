@@ -23,6 +23,8 @@ const EventTravelerSchema = new mongoose.Schema({
   last_name: { type: String },
   phone: { type: String },
   passport_number: { type: String },
+  passport_expiry_date: { type: Date },
+  date_of_birth: { type: Date },
 
   // Payment tracking for this traveler
   price: { type: Number },
@@ -66,6 +68,8 @@ export const EventHotelSchema = new mongoose.Schema(
     return_date: { type: Date }, // Data e kthimit (opsionale)
     check_in_date: { type: Date }, // Data e hyrjes në hotel
     check_out_date: { type: Date }, // Data e daljes nga hoteli
+    departure_city: { type: String },
+    arrival_city: { type: String },
 
     price: { type: Number },
     currency: {

@@ -11,6 +11,8 @@ export const HotelReservationSchema = new mongoose.Schema(
     hotel_name: { type: String, required: true },
     check_in_date: { type: Date, required: true },
     check_out_date: { type: Date, required: true },
+    departure_city: { type: String },
+    arrival_city: { type: String },
     status: {
       type: String,
       enum: Object.values(ReservationStatus),
@@ -32,6 +34,7 @@ export const HotelReservationSchema = new mongoose.Schema(
       {
         full_name: { type: String, required: true },
         passport_number: { type: String, required: true },
+        passport_expiry_date: { type: Date },
         date_of_birth: { type: Date, required: true },
         place_of_birth: { type: String, required: true },
         room_type: {

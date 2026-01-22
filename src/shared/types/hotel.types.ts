@@ -49,6 +49,7 @@ export interface IPartnerHotel extends Document {
 export interface ITraveler {
   full_name: string;
   passport_number: string;
+  passport_expiry_date?: Date;
   date_of_birth: Date;
   place_of_birth: string;
   room_type: string;
@@ -75,6 +76,8 @@ export interface IHotelReservation extends Document {
   hotel_name: string;
   check_in_date: Date;
   check_out_date: Date;
+  departure_city?: string;
+  arrival_city?: string;
   status: ReservationStatus;
   notes?: string;
   travelers: ITraveler[];

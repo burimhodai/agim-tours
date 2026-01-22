@@ -25,7 +25,7 @@ export class BusService {
   constructor(
     @InjectModel('Ticket') private ticketModel: Model<ITicket>,
     private transactionService: TransactionServiceService,
-  ) {}
+  ) { }
 
   private generateBusUid(): string {
     // Generate random 5-6 digit number
@@ -34,6 +34,88 @@ export class BusService {
     const max = Math.pow(10, numDigits) - 1;
     const randomNum = Math.floor(Math.random() * (max - min + 1)) + min;
     return `B${randomNum}`;
+  }
+
+  private async addLogInternal(
+    ticketId: string,
+    title: string,
+    description: string,
+    employeeId?: string,
+  ) {
+    const logEntry = {
+      title,
+      description,
+      employee: employeeId ? new Types.ObjectId(employeeId) : undefined,
+      created_at: new Date(),
+    };
+
+    await this.ticketModel.updateOne(
+      { _id: ticketId },
+      { $push: { logs: logEntry } },
+    );
+  }
+
+  private getChangesDescription(oldData: any, newData: any): string {
+    const changes: string[] = [];
+    const fieldNames: Record<string, string> = {
+      price: 'Çmimi',
+      currency: 'Valuta',
+      payment_status: 'Statusi i pagesës',
+      departure_date: 'Data e nisjes',
+      arrival_date: 'Data e mbërritjes',
+      return_date: 'Data e kthimit',
+      departure_location: 'Vendi i nisjes',
+      destination_location: 'Destinacioni',
+      operator: 'Operatori',
+      route_number: 'Nr. i linjës',
+      note: 'Shënim',
+      checked_in: 'Check-in',
+      booking_reference: 'Ref. i rezervimit',
+    };
+
+    for (const key in newData) {
+      if (['logs', '_id', '__v', 'employee', 'updatedAt', 'createdAt', 'passengers', 'payment_chunks'].includes(key)) continue;
+
+      let oldValue = oldData[key];
+      let newValue = newData[key];
+
+      // Skip if value is not provided in update
+      if (newValue === undefined) continue;
+
+      // Handle dates
+      if (key.includes('date') || key.includes('arrival')) {
+        const oldTime = oldValue ? new Date(oldValue).getTime() : 0;
+        const newTime = newValue ? new Date(newValue).getTime() : 0;
+
+        if (oldTime !== newTime) {
+          const oldStr = oldValue ? new Date(oldValue).toLocaleString('sq-AL') : 'pa përcaktuar';
+          const newStr = newValue ? new Date(newValue).toLocaleString('sq-AL') : 'pa përcaktuar';
+          changes.push(`${fieldNames[key] || key}: ${oldStr} -> ${newStr}`);
+        }
+        continue;
+      }
+
+      if (oldValue !== newValue) {
+        changes.push(`${fieldNames[key] || key}: ${oldValue || 'pa përcaktuar'} -> ${newValue}`);
+      }
+    }
+
+    if (newData.payment_chunks && JSON.stringify(oldData.payment_chunks) !== JSON.stringify(newData.payment_chunks)) {
+      const oldLen = oldData.payment_chunks?.length || 0;
+      const newLen = newData.payment_chunks?.length || 0;
+      if (newLen > oldLen) {
+        const latest = newData.payment_chunks[newLen - 1];
+        changes.push(`U shtua pagesa: ${latest.amount} ${latest.currency}`);
+      } else {
+        changes.push('Llogaritë e pagesave u përditësuan');
+      }
+    }
+
+    if (newData.passengers && JSON.stringify(oldData.passengers) !== JSON.stringify(newData.passengers)) {
+      changes.push('Të dhënat e pasagjerëve u përditësuan');
+    }
+
+    return changes.length > 0 ? changes.join(', ') : 'Të dhënat u përditësuan.';
   }
 
   async create(createBusTicketDto: CreateBusTicketDto): Promise<ITicket> {
@@ -47,6 +129,16 @@ export class BusService {
       employee: createBusTicketDto.employee
         ? new Types.ObjectId(createBusTicketDto.employee)
         : undefined,
+      logs: [
+        {
+          title: 'U krijua bileta',
+          description: `Bileta u krijua me sukses nga ${createBusTicketDto.operator || 'operatori'}.`,
+          employee: createBusTicketDto.employee
+            ? new Types.ObjectId(createBusTicketDto.employee)
+            : undefined,
+          created_at: new Date(),
+        },
+      ],
     };
 
     const newTicket = new this.ticketModel(ticketData);
@@ -217,6 +309,15 @@ export class BusService {
       throw new NotFoundException('Bus ticket not found');
     }
 
+    const changesDescription = this.getChangesDescription(currentTicket.toObject(), updateData);
+
+    await this.addLogInternal(
+      id,
+      'Ndryshim i të dhënave',
+      changesDescription,
+      updateBusTicketDto.employee,
+    );
+
     // Handle payment status change - update transaction
     if (
       updateBusTicketDto.payment_status &&
@@ -245,7 +346,7 @@ export class BusService {
     return ticket;
   }
 
-  async delete(id: string): Promise<{ message: string }> {
+  async delete(id: string, employeeId?: string): Promise<{ message: string }> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid ticket ID');
     }
@@ -259,6 +360,13 @@ export class BusService {
     if (!result) {
       throw new NotFoundException('Bus ticket not found');
     }
+
+    await this.addLogInternal(
+      id,
+      'Bileta u fshi',
+      'Bileta u shënua si e fshirë.',
+      employeeId,
+    );
 
     return { message: 'Bus ticket deleted successfully' };
   }
@@ -297,6 +405,7 @@ export class BusService {
   async updatePaymentStatus(
     id: string,
     paymentStatus: PaymentStatusTypes,
+    employeeId?: string,
   ): Promise<ITicket> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid ticket ID');
@@ -316,10 +425,21 @@ export class BusService {
       throw new NotFoundException('Bus ticket not found');
     }
 
+    await this.addLogInternal(
+      id,
+      'Ndryshim i statusit të pagesës',
+      `Statusi i pagesës u ndryshua në: ${paymentStatus}`,
+      employeeId,
+    );
+
     return ticket;
   }
 
-  async checkIn(id: string, checkedIn: boolean): Promise<ITicket> {
+  async checkIn(
+    id: string,
+    checkedIn: boolean,
+    employeeId?: string,
+  ): Promise<ITicket> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid ticket ID');
     }
@@ -337,6 +457,15 @@ export class BusService {
     if (!ticket) {
       throw new NotFoundException('Bus ticket not found');
     }
+
+    await this.addLogInternal(
+      id,
+      checkedIn ? 'Check-in i kryer' : 'Check-in i anuluar',
+      checkedIn
+        ? 'Pasagjeri bëri check-in me sukses.'
+        : 'Anulimi i statusit check-in.',
+      employeeId,
+    );
 
     return ticket;
   }
@@ -421,6 +550,17 @@ export class BusService {
         ticket.payment_status = PaymentStatusTypes.REFUNDED;
       }
     }
+
+    const refundInfo = refund_chunks && refund_chunks.length > 0
+      ? `Rimbursim: ${refund_chunks.map(c => `${c.amount} ${c.currency}`).join(', ')}.`
+      : 'Pa rimbursim.';
+
+    await this.addLogInternal(
+      id,
+      'Bileta u anulua',
+      `Bileta u anulua. ${refundInfo} Arsyetimi: ${note || '-'}`,
+      cancelTicketDto.employee,
+    );
 
     return await ticket.save();
   }
