@@ -264,6 +264,7 @@ export class BusService {
         .find(filter)
         .populate('employee', 'email')
         .populate('agency')
+        .populate('documentId')
         .sort({ departure_date: -1 })
         .skip(skip)
         .limit(limit)
@@ -292,6 +293,7 @@ export class BusService {
       })
       .populate('employee', 'email')
       .populate('agency')
+      .populate('documentId')
       .populate('logs.employee', 'email')
       .exec();
 
@@ -337,6 +339,7 @@ export class BusService {
       )
       .populate('employee', 'email')
       .populate('agency')
+      .populate('documentId')
       .exec();
 
     if (!ticket) {

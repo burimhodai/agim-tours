@@ -63,6 +63,9 @@ export class OrganizedTravelService {
       employee: createDto.employee
         ? new Types.ObjectId(createDto.employee)
         : undefined,
+      documentId: createDto.documentId
+        ? new Types.ObjectId(createDto.documentId)
+        : undefined,
       buses: createDto.buses?.map((id) => new Types.ObjectId(id)) || [],
     };
 
@@ -105,6 +108,7 @@ export class OrganizedTravelService {
       .populate('employee')
       .populate('buses')
       .populate('travelers.bus')
+      .populate('documentId')
       .exec();
 
     return { trips, total, page, totalPages };
@@ -117,6 +121,7 @@ export class OrganizedTravelService {
       .populate('employee')
       .populate('buses')
       .populate('travelers.bus')
+      .populate('documentId')
       .exec();
 
     if (!travel || travel.is_deleted) {
@@ -148,6 +153,12 @@ export class OrganizedTravelService {
       updateData.employee = new Types.ObjectId(updateDto.employee);
     } else if (updateDto.employee === '') {
       updateData.employee = undefined;
+    }
+
+    if (updateDto.documentId && updateDto.documentId !== '') {
+      updateData.documentId = new Types.ObjectId(updateDto.documentId);
+    } else if (updateDto.documentId === '') {
+      updateData.documentId = undefined;
     }
 
     const travel = await this.travelModel

@@ -150,6 +150,9 @@ export const EventHotelSchema = new mongoose.Schema(
     ],
     agency: { type: mongoose.Schema.Types.ObjectId, ref: 'Agency' },
 
+    // Attached document for ticket PDF
+    documentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Document' },
+
     is_deleted: { type: Boolean, default: false },
   },
   {

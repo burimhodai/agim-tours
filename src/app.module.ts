@@ -19,6 +19,7 @@ import { AgencySchema } from './models/agency.model';
 import { TransactionSchema } from './models/transaction.model';
 import { TransactionControllerController } from './transactions/transaction-controller.controller';
 import { TransactionServiceService } from './transactions/transaction-service.service';
+import { DocumentsModule } from './modules/documents/documents.module';
 
 @Module({
   imports: [
@@ -59,8 +60,9 @@ import { TransactionServiceService } from './transactions/transaction-service.se
     SearchModule,
     LoyalCustomerModule,
     LuggageModule,
+    DocumentsModule,
   ],
   controllers: [AppController, TransactionControllerController],
   providers: [AppService, TransactionServiceService],
 })
-export class AppModule {}
+export class AppModule { }

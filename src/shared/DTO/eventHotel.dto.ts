@@ -293,6 +293,10 @@ export class CreateEventDto {
     @IsOptional()
     @IsString()
     employee?: string;
+
+    @IsOptional()
+    @IsString()
+    documentId?: string;
 }
 
 // Update Event DTO
@@ -384,6 +388,10 @@ export class UpdateEventDto {
     @IsOptional()
     @IsString()
     employee?: string;
+
+    @IsOptional()
+    @IsString()
+    documentId?: string;
 }
 
 // Add Traveler DTO

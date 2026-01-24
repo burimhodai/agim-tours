@@ -47,6 +47,9 @@ export const EventSchema = new mongoose.Schema(
     //stop mos prek termo
 
     agency: { type: mongoose.Schema.Types.ObjectId, ref: 'Agency' },
+
+    // Attached document for ticket PDF
+    documentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Document' },
   },
   {
     timestamps: true,

@@ -182,6 +182,10 @@ export class CreateOrganizedTravelDto {
   @IsOptional()
   @IsString()
   employee?: string;
+
+  @IsOptional()
+  @IsString()
+  documentId?: string;
 }
 
 // Update Organized Travel DTO
@@ -255,6 +259,10 @@ export class UpdateOrganizedTravelDto {
   @IsOptional()
   @IsString()
   employee?: string;
+
+  @IsOptional()
+  @IsString()
+  documentId?: string;
 }
 
 // Add Travelers DTO
