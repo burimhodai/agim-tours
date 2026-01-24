@@ -20,7 +20,7 @@ import {
 export class TransactionServiceService {
   constructor(
     @InjectModel('Transaction') private transactionModel: Model<ITransaction>,
-  ) {}
+  ) { }
 
   async create(
     createTransactionDto: CreateTransactionDto,
@@ -46,7 +46,11 @@ export class TransactionServiceService {
     };
 
     const newTransaction = new this.transactionModel(transactionData);
-    return await newTransaction.save();
+    const savedTransaction = await newTransaction.save();
+    return await savedTransaction.populate([
+      { path: 'user', select: 'email first_name last_name' },
+      { path: 'agency' },
+    ]);
   }
 
   async update(
