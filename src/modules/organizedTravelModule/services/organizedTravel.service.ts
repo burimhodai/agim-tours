@@ -81,7 +81,7 @@ export class OrganizedTravelService {
   }> {
     const { agency, search, page = 1, limit = 20 } = query;
 
-    const filter: any = { is_deleted: { $ne: true } };
+    const filter: any = {};
 
     if (agency) {
       filter.agency = new Types.ObjectId(agency);
@@ -124,7 +124,7 @@ export class OrganizedTravelService {
       .populate('documentId')
       .exec();
 
-    if (!travel || travel.is_deleted) {
+    if (!travel) {
       throw new NotFoundException('Udhëtimi nuk u gjet');
     }
 
@@ -187,7 +187,21 @@ export class OrganizedTravelService {
       throw new NotFoundException('Udhëtimi nuk u gjet');
     }
 
-    return { message: 'Udhëtimi u fshi me sukses' };
+    return { message: 'Udhëtimi u çaktivizua me sukses' };
+  }
+
+  async reactivate(id: string): Promise<IOrganizedTravel> {
+    const travel = await this.travelModel.findByIdAndUpdate(
+      id,
+      { $set: { is_deleted: false } },
+      { new: true },
+    );
+
+    if (!travel) {
+      throw new NotFoundException('Udhëtimi nuk u gjet');
+    }
+
+    return travel;
   }
 
   async addTravelers(

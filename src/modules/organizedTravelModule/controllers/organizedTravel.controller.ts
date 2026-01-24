@@ -53,6 +53,11 @@ export class OrganizedTravelController {
     return await this.travelService.delete(id);
   }
 
+  @Patch(':id/reactivate')
+  async reactivate(@Param('id') id: string) {
+    return await this.travelService.reactivate(id);
+  }
+
   // Traveler endpoints
   @Post(':id/travelers')
   async addTravelers(

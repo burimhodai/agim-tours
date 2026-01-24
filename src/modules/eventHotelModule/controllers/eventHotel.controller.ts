@@ -53,6 +53,11 @@ export class EventHotelController {
     return await this.eventService.delete(id);
   }
 
+  @Patch(':id/reactivate')
+  async reactivate(@Param('id') id: string) {
+    return await this.eventService.reactivate(id);
+  }
+
   // Traveler endpoints
   @Post(':id/travelers')
   async addTravelers(

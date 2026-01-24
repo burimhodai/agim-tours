@@ -108,7 +108,7 @@ export class EventHotelService {
   }> {
     const { agency, search, page = 1, limit = 20 } = query;
 
-    const filter: any = { is_deleted: { $ne: true } };
+    const filter: any = {};
 
     if (agency) {
       filter.agency = new Types.ObjectId(agency);
@@ -161,7 +161,7 @@ export class EventHotelService {
       .populate('documentId')
       .exec();
 
-    if (!event || event.is_deleted) {
+    if (!event) {
       throw new NotFoundException('Ngjarja nuk u gjet');
     }
 
@@ -304,7 +304,21 @@ export class EventHotelService {
       throw new NotFoundException('Ngjarja nuk u gjet');
     }
 
-    return { message: 'Ngjarja u fshi me sukses' };
+    return { message: 'Ngjarja u çaktivizua me sukses' };
+  }
+
+  async reactivate(id: string): Promise<IEventHotel> {
+    const event = await this.eventModel.findByIdAndUpdate(
+      id,
+      { $set: { is_deleted: false } },
+      { new: true },
+    );
+
+    if (!event) {
+      throw new NotFoundException('Ngjarja nuk u gjet');
+    }
+
+    return event;
   }
 
   async addTravelers(
