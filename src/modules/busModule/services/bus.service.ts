@@ -363,7 +363,9 @@ export class BusService {
         type: TransactionTypes.INCOME,
         status: TransactionStatus.SETTLED,
         ticket: id,
-        agency: ticket.agency?.toString() || updateBusTicketDto.agency,
+        agency: ticket.agency instanceof Types.ObjectId
+          ? ticket.agency.toString()
+          : (ticket.agency as any)?._id?.toString() || updateBusTicketDto.agency,
         user: updateBusTicketDto.employee,
         description: `Pagesë - Biletë autobusi (${ticket.uid})`,
       });
@@ -594,7 +596,9 @@ export class BusService {
             type: TransactionTypes.OUTCOME,
             status: TransactionStatus.SETTLED,
             ticket: ticket._id.toString(),
-            agency: ticket.agency?.toString() || '',
+            agency: ticket.agency instanceof Types.ObjectId
+              ? ticket.agency.toString()
+              : (ticket.agency as any)?._id?.toString() || '',
             user: ticket.employee?.toString(),
             description: `Rimbursim - Biletë autobusi e anuluar (${ticket.uid})`,
           });
@@ -659,7 +663,9 @@ export class BusService {
         type: TransactionTypes.OUTCOME,
         status: TransactionStatus.SETTLED,
         ticket: ticket._id.toString(),
-        agency: ticket.agency?.toString() || '',
+        agency: ticket.agency instanceof Types.ObjectId
+          ? ticket.agency.toString()
+          : (ticket.agency as any)?._id?.toString() || '',
         user: ticket.employee?.toString(),
         description: `Rimbursim - Biletë autobusi e anuluar (${ticket.uid})`,
       });

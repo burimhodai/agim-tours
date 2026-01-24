@@ -387,7 +387,9 @@ export class PlaneService {
         type: TransactionTypes.INCOME,
         status: TransactionStatus.SETTLED,
         ticket: id,
-        agency: ticket.agency?.toString() || updatePlaneTicketDto.agency,
+        agency: ticket.agency instanceof Types.ObjectId
+          ? ticket.agency.toString()
+          : (ticket.agency as any)?._id?.toString() || updatePlaneTicketDto.agency,
         user: updatePlaneTicketDto.employee,
         description: `Pagesë - Biletë avioni (${ticket.uid})`,
       });
@@ -613,7 +615,9 @@ export class PlaneService {
             type: TransactionTypes.OUTCOME,
             status: TransactionStatus.SETTLED,
             ticket: ticket._id.toString(),
-            agency: ticket.agency?.toString() || '',
+            agency: ticket.agency instanceof Types.ObjectId
+              ? ticket.agency.toString()
+              : (ticket.agency as any)?._id?.toString() || '',
             user: ticket.employee?.toString(),
             description: `Rimbursim - Biletë avioni e anuluar (${ticket.uid})`,
           });
@@ -677,7 +681,9 @@ export class PlaneService {
         type: TransactionTypes.OUTCOME,
         status: TransactionStatus.SETTLED,
         ticket: ticket._id.toString(),
-        agency: ticket.agency?.toString() || '',
+        agency: ticket.agency instanceof Types.ObjectId
+          ? ticket.agency.toString()
+          : (ticket.agency as any)?._id?.toString() || '',
         user: ticket.employee?.toString(),
         description: `Rimbursim - Biletë avioni e anuluar (${ticket.uid})`,
       });
