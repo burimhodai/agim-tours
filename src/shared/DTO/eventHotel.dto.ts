@@ -12,6 +12,14 @@ import { Type } from 'class-transformer';
 import { CurrencyTypes } from '../types/currency.types';
 import { PaymentStatusTypes } from '../types/payment.types';
 
+export class EventStartDto {
+    @IsString()
+    location: string;
+
+    @IsString()
+    time: string;
+}
+
 // Event Bus DTOs
 export class CreateEventBusDto {
     @IsString()
@@ -67,6 +75,10 @@ export class EventTravelerDto {
     @IsOptional()
     @IsString()
     _id?: string;
+
+    @IsOptional()
+    @IsString()
+    title?: string;
 
     @IsOptional()
     @IsString()
@@ -145,6 +157,10 @@ export class EventTravelerDto {
     @IsOptional()
     @IsString()
     pickup_location?: string;
+
+    @IsOptional()
+    @IsString()
+    pickup_time?: string;
 }
 
 export class RoomGroupDto {
@@ -252,6 +268,12 @@ export class CreateEventDto {
 
     @IsOptional()
     @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => EventStartDto)
+    starts?: EventStartDto[];
+
+    @IsOptional()
+    @IsArray()
     @IsString({ each: true })
     buses?: string[];
 
@@ -334,6 +356,12 @@ export class UpdateEventDto {
     @ValidateNested({ each: true })
     @Type(() => RoomGroupDto)
     room_groups?: RoomGroupDto[];
+
+    @IsOptional()
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => EventStartDto)
+    starts?: EventStartDto[];
 
     @IsOptional()
     @IsArray()

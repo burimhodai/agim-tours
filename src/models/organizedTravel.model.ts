@@ -39,6 +39,7 @@ const OrganizedTravelerSchema = new mongoose.Schema({
 
   note: { type: String },
   pickup_location: { type: String },
+  pickup_time: { type: String },
 });
 
 // Main Organized Travel Schema
@@ -63,6 +64,11 @@ export const OrganizedTravelSchema = new mongoose.Schema(
       type: String,
       enum: Object.values(PaymentStatusTypes),
       default: PaymentStatusTypes.UNPAID,
+    },
+
+    starts: {
+      type: [{ location: String, time: String }],
+      default: [],
     },
 
     travelers: [OrganizedTravelerSchema],

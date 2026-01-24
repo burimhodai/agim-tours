@@ -12,11 +12,23 @@ import { Type } from 'class-transformer';
 import { CurrencyTypes } from '../types/currency.types';
 import { PaymentStatusTypes } from '../types/payment.types';
 
+export class EventStartDto {
+  @IsString()
+  location: string;
+
+  @IsString()
+  time: string;
+}
+
 // Organized Travel Traveler DTO (without hotel fields)
 export class OrganizedTravelerDto {
   @IsOptional()
   @IsString()
   _id?: string;
+
+  @IsOptional()
+  @IsString()
+  title?: string;
 
   @IsOptional()
   @IsString()
@@ -78,6 +90,10 @@ export class OrganizedTravelerDto {
   @IsOptional()
   @IsString()
   pickup_location?: string;
+
+  @IsOptional()
+  @IsString()
+  pickup_time?: string;
 }
 
 // Print Columns DTO for Organized Travel
@@ -145,6 +161,12 @@ export class CreateOrganizedTravelDto {
 
   @IsOptional()
   @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => EventStartDto)
+  starts?: EventStartDto[];
+
+  @IsOptional()
+  @IsArray()
   @IsString({ each: true })
   buses?: string[];
 
@@ -209,6 +231,12 @@ export class UpdateOrganizedTravelDto {
   @ValidateNested({ each: true })
   @Type(() => OrganizedTravelerDto)
   travelers?: OrganizedTravelerDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => EventStartDto)
+  starts?: EventStartDto[];
 
   @IsOptional()
   @IsArray()

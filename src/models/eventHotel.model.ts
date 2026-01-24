@@ -19,6 +19,10 @@ export const EventBusSchema = new mongoose.Schema(
 
 // Traveler/Passenger schema for events
 const EventTravelerSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    enum: ['M', 'F', 'Infant', 'CHD'],
+  },
   first_name: { type: String },
   last_name: { type: String },
   phone: { type: String },
@@ -57,6 +61,7 @@ const EventTravelerSchema = new mongoose.Schema({
 
   note: { type: String },
   pickup_location: { type: String },
+  pickup_time: { type: String },
 });
 
 // Main Event Hotel Schema
@@ -83,6 +88,11 @@ export const EventHotelSchema = new mongoose.Schema(
       type: String,
       enum: Object.values(PaymentStatusTypes),
       default: PaymentStatusTypes.UNPAID,
+    },
+
+    starts: {
+      type: [{ location: String, time: String }],
+      default: [],
     },
 
     travelers: [EventTravelerSchema],
