@@ -76,15 +76,13 @@ export class PlaneService {
     };
 
     for (const key in newData) {
-      if (['logs', '_id', '__v', 'employee', 'updatedAt', 'createdAt', 'passengers', 'payment_chunks', 'is_round_trip'].includes(key)) continue;
+      if (['logs', '_id', '__v', 'employee', 'updatedAt', 'createdAt', 'passengers', 'payment_chunks', 'is_round_trip', 'stops', 'return_stops'].includes(key)) continue;
 
       let oldValue = oldData[key];
       let newValue = newData[key];
 
-      // Skip if value is not provided in update
       if (newValue === undefined) continue;
 
-      // Handle dates
       if (key.includes('date') || key.includes('arrival')) {
         const oldTime = oldValue ? new Date(oldValue).getTime() : 0;
         const newTime = newValue ? new Date(newValue).getTime() : 0;
@@ -115,6 +113,11 @@ export class PlaneService {
 
     if (newData.passengers && JSON.stringify(oldData.passengers) !== JSON.stringify(newData.passengers)) {
       changes.push('Të dhënat e pasagjerëve u përditësuan');
+    }
+
+    if ((newData.stops && JSON.stringify(oldData.stops) !== JSON.stringify(newData.stops)) ||
+      (newData.return_stops && JSON.stringify(oldData.return_stops) !== JSON.stringify(newData.return_stops))) {
+      changes.push('Ndalesat u përditësuan');
     }
 
     return changes.length > 0 ? changes.join(', ') : 'Të dhënat u përditësuan.';
@@ -165,29 +168,51 @@ export class PlaneService {
 
     console.log('Saved Ticket Result:', savedTicket);
 
-    // Determine transaction type based on payment status
-    const isUnpaid =
-      createPlaneTicketDto.payment_status === PaymentStatusTypes.UNPAID ||
-      createPlaneTicketDto.payment_status === PaymentStatusTypes.NOT_PAID;
+    const paymentChunks = createPlaneTicketDto.payment_chunks || [];
+    const hasPaymentChunks = paymentChunks.length > 0;
 
     try {
-      await this.transactionService.create({
-        amount: createPlaneTicketDto.price,
-        currency: createPlaneTicketDto.currency,
-        type: isUnpaid ? TransactionTypes.DEBT : TransactionTypes.INCOME,
-        status: isUnpaid
-          ? TransactionStatus.PENDING
-          : TransactionStatus.SETTLED,
-        ticket: savedTicket._id.toString(),
-        agency: createPlaneTicketDto.agency,
-        user: createPlaneTicketDto.employee,
-        description: isUnpaid
-          ? 'Borxh - Biletë avioni e papaguar'
-          : 'Biletë avioni',
-      });
+      if (hasPaymentChunks) {
+        for (const chunk of paymentChunks) {
+          await this.transactionService.create({
+            amount: chunk.amount,
+            currency: chunk.currency,
+            type: TransactionTypes.INCOME,
+            status: TransactionStatus.SETTLED,
+            ticket: savedTicket._id.toString(),
+            agency: createPlaneTicketDto.agency,
+            user: createPlaneTicketDto.employee,
+            description: `Pagesë - Biletë avioni (${savedTicket.uid})`,
+          });
+        }
+      } else if (createPlaneTicketDto.payment_status === PaymentStatusTypes.PAID) {
+        await this.transactionService.create({
+          amount: createPlaneTicketDto.price,
+          currency: createPlaneTicketDto.currency,
+          type: TransactionTypes.INCOME,
+          status: TransactionStatus.SETTLED,
+          ticket: savedTicket._id.toString(),
+          agency: createPlaneTicketDto.agency,
+          user: createPlaneTicketDto.employee,
+          description: 'Biletë avioni',
+        });
+      } else if (
+        createPlaneTicketDto.payment_status === PaymentStatusTypes.UNPAID ||
+        createPlaneTicketDto.payment_status === PaymentStatusTypes.NOT_PAID
+      ) {
+        await this.transactionService.create({
+          amount: createPlaneTicketDto.price,
+          currency: createPlaneTicketDto.currency,
+          type: TransactionTypes.DEBT,
+          status: TransactionStatus.PENDING,
+          ticket: savedTicket._id.toString(),
+          agency: createPlaneTicketDto.agency,
+          user: createPlaneTicketDto.employee,
+          description: 'Borxh - Biletë avioni e papaguar',
+        });
+      }
     } catch (txError) {
       console.error('Transaction creation failed:', txError);
-      // We do not revert the ticket creation, but we should probably log this.
     }
 
     return savedTicket;
@@ -312,7 +337,6 @@ export class PlaneService {
       throw new BadRequestException('Invalid ticket ID');
     }
 
-    // Get the current ticket to check payment status change
     const currentTicket = await this.ticketModel.findById(id).exec();
     if (!currentTicket) {
       throw new NotFoundException('Plane ticket not found');
@@ -323,6 +347,12 @@ export class PlaneService {
     if (updatePlaneTicketDto.agency) {
       updateData.agency = new Types.ObjectId(updatePlaneTicketDto.agency);
     }
+
+    const oldPaymentChunks = currentTicket.payment_chunks || [];
+    const newPaymentChunks = updatePlaneTicketDto.payment_chunks || [];
+    const newChunksAdded = newPaymentChunks.length > oldPaymentChunks.length
+      ? newPaymentChunks.slice(oldPaymentChunks.length)
+      : [];
 
     const ticket = await this.ticketModel
       .findOneAndUpdate(
@@ -347,10 +377,23 @@ export class PlaneService {
       updatePlaneTicketDto.employee,
     );
 
-    // Handle payment status change - update transaction
+    for (const chunk of newChunksAdded) {
+      await this.transactionService.create({
+        amount: chunk.amount,
+        currency: chunk.currency,
+        type: TransactionTypes.INCOME,
+        status: TransactionStatus.SETTLED,
+        ticket: id,
+        agency: ticket.agency?.toString() || updatePlaneTicketDto.agency,
+        user: updatePlaneTicketDto.employee,
+        description: `Pagesë - Biletë avioni (${ticket.uid})`,
+      });
+    }
+
     if (
       updatePlaneTicketDto.payment_status &&
-      updatePlaneTicketDto.payment_status !== currentTicket.payment_status
+      updatePlaneTicketDto.payment_status !== currentTicket.payment_status &&
+      newChunksAdded.length === 0
     ) {
       const isPaidNow =
         updatePlaneTicketDto.payment_status === PaymentStatusTypes.PAID;
@@ -359,13 +402,11 @@ export class PlaneService {
         currentTicket.payment_status === PaymentStatusTypes.NOT_PAID;
 
       if (isPaidNow && wasUnpaid) {
-        // Debt is being settled - convert to income
         await this.transactionService.settleDebt(id);
       } else if (
         updatePlaneTicketDto.payment_status === PaymentStatusTypes.UNPAID ||
         updatePlaneTicketDto.payment_status === PaymentStatusTypes.NOT_PAID
       ) {
-        // Changing to unpaid - update transaction to debt
         await this.transactionService.updateByTicket(id, {
           type: TransactionTypes.DEBT,
           status: TransactionStatus.PENDING,
@@ -538,7 +579,6 @@ export class PlaneService {
 
     const { refund_chunks, note } = cancelTicketDto;
 
-    // 1. Update ticket status
     ticket.status = 'canceled';
     if (note) {
       ticket.note = ticket.note
@@ -546,31 +586,24 @@ export class PlaneService {
         : `Anulimi: ${note}`;
     }
 
-    // 2. Handle transactions
     const wasUnpaid =
       ticket.payment_status === PaymentStatusTypes.UNPAID ||
       ticket.payment_status === PaymentStatusTypes.NOT_PAID;
 
     if (wasUnpaid) {
-      // If it's unpaid, we just delete the debt transaction
       await this.transactionService.deleteByTicket(id);
     } else {
-      // If it was paid or partially paid, handle refunds if provided
       if (refund_chunks && refund_chunks.length > 0) {
         if (!ticket.payment_chunks) {
           ticket.payment_chunks = [];
         }
-        // Add refund chunks to payment_chunks
-        // We might want to mark these as refunds (negative amount?)
-        // The user suggested using payment chunks for refunds
         for (const chunk of refund_chunks) {
           ticket.payment_chunks.push({
-            amount: -Math.abs(chunk.amount), // Ensure it's negative to represent a refund
+            amount: -Math.abs(chunk.amount),
             currency: chunk.currency,
             payment_date: new Date(),
           });
 
-          // Create an OUTCOME transaction for each refund
           await this.transactionService.create({
             amount: Math.abs(chunk.amount),
             currency: chunk.currency,
@@ -624,7 +657,6 @@ export class PlaneService {
       throw new BadRequestException('Duhet të shtoni së paku një rimbursim');
     }
 
-    // Add refund chunks and create transactions
     if (!ticket.payment_chunks) {
       ticket.payment_chunks = [];
     }

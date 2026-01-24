@@ -18,6 +18,10 @@ export const EventSchema = new mongoose.Schema(
       {
         passengers: [
           {
+            title: {
+              type: String,
+              enum: ['M', 'F', 'Infant', 'CHD'],
+            },
             first_name: { type: String },
             last_name: { type: String },
             phone: { type: String },

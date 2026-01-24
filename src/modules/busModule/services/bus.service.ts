@@ -144,22 +144,49 @@ export class BusService {
     const newTicket = new this.ticketModel(ticketData);
     const savedTicket = await newTicket.save();
 
-    // Determine transaction type based on payment status
-    const isUnpaid =
-      createBusTicketDto.payment_status === PaymentStatusTypes.UNPAID;
+    // Handle transactions based on payment chunks
+    const paymentChunks = createBusTicketDto.payment_chunks || [];
+    const hasPaymentChunks = paymentChunks.length > 0;
 
-    await this.transactionService.create({
-      amount: createBusTicketDto.price,
-      currency: createBusTicketDto.currency,
-      type: isUnpaid ? TransactionTypes.DEBT : TransactionTypes.INCOME,
-      status: isUnpaid ? TransactionStatus.PENDING : TransactionStatus.SETTLED,
-      ticket: savedTicket._id.toString(),
-      agency: createBusTicketDto.agency,
-      user: createBusTicketDto.employee,
-      description: isUnpaid
-        ? 'Borxh - Biletë autobusi e papaguar'
-        : 'Biletë autobusi',
-    });
+    if (hasPaymentChunks) {
+      // Create INCOME transactions for each payment chunk
+      for (const chunk of paymentChunks) {
+        await this.transactionService.create({
+          amount: chunk.amount,
+          currency: chunk.currency,
+          type: TransactionTypes.INCOME,
+          status: TransactionStatus.SETTLED,
+          ticket: savedTicket._id.toString(),
+          agency: createBusTicketDto.agency,
+          user: createBusTicketDto.employee,
+          description: `Pagesë - Biletë autobusi (${savedTicket.uid})`,
+        });
+      }
+    } else if (createBusTicketDto.payment_status === PaymentStatusTypes.PAID) {
+      // Fully paid without chunks - create single INCOME transaction
+      await this.transactionService.create({
+        amount: createBusTicketDto.price,
+        currency: createBusTicketDto.currency,
+        type: TransactionTypes.INCOME,
+        status: TransactionStatus.SETTLED,
+        ticket: savedTicket._id.toString(),
+        agency: createBusTicketDto.agency,
+        user: createBusTicketDto.employee,
+        description: 'Biletë autobusi',
+      });
+    } else if (createBusTicketDto.payment_status === PaymentStatusTypes.UNPAID) {
+      // Unpaid - create DEBT transaction
+      await this.transactionService.create({
+        amount: createBusTicketDto.price,
+        currency: createBusTicketDto.currency,
+        type: TransactionTypes.DEBT,
+        status: TransactionStatus.PENDING,
+        ticket: savedTicket._id.toString(),
+        agency: createBusTicketDto.agency,
+        user: createBusTicketDto.employee,
+        description: 'Borxh - Biletë autobusi e papaguar',
+      });
+    }
 
     return savedTicket;
   }
@@ -295,6 +322,13 @@ export class BusService {
       updateData.agency = new Types.ObjectId(updateBusTicketDto.agency);
     }
 
+    // Detect new payment chunks before updating
+    const oldPaymentChunks = currentTicket.payment_chunks || [];
+    const newPaymentChunks = updateBusTicketDto.payment_chunks || [];
+    const newChunksAdded = newPaymentChunks.length > oldPaymentChunks.length
+      ? newPaymentChunks.slice(oldPaymentChunks.length)
+      : [];
+
     const ticket = await this.ticketModel
       .findOneAndUpdate(
         { _id: id, ticket_type: TicketTypes.BUS, is_deleted: { $ne: true } },
@@ -318,10 +352,25 @@ export class BusService {
       updateBusTicketDto.employee,
     );
 
-    // Handle payment status change - update transaction
+    // Create INCOME transactions for each new payment chunk
+    for (const chunk of newChunksAdded) {
+      await this.transactionService.create({
+        amount: chunk.amount,
+        currency: chunk.currency,
+        type: TransactionTypes.INCOME,
+        status: TransactionStatus.SETTLED,
+        ticket: id,
+        agency: ticket.agency?.toString() || updateBusTicketDto.agency,
+        user: updateBusTicketDto.employee,
+        description: `Pagesë - Biletë autobusi (${ticket.uid})`,
+      });
+    }
+
+    // Handle payment status change - update transaction (only for non-partial payments)
     if (
       updateBusTicketDto.payment_status &&
-      updateBusTicketDto.payment_status !== currentTicket.payment_status
+      updateBusTicketDto.payment_status !== currentTicket.payment_status &&
+      newChunksAdded.length === 0 // Only handle if not adding payment chunks
     ) {
       const isPaidNow =
         updateBusTicketDto.payment_status === PaymentStatusTypes.PAID;

@@ -4,6 +4,10 @@ import { PaymentStatusTypes } from 'src/shared/types/payment.types';
 
 // Traveler/Passenger schema for organized travel (without hotel)
 const OrganizedTravelerSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    enum: ['M', 'F', 'Infant', 'CHD'],
+  },
   first_name: { type: String },
   last_name: { type: String },
   phone: { type: String },

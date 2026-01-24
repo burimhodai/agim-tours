@@ -27,6 +27,7 @@ export interface IPassenger {
   passport_number?: string;
   birthdate?: Date;
   passport_expiry_date?: Date;
+  passport_issue_date?: Date;
   nationality?: string;
   luggage?: ILuggage[];
 }
@@ -35,6 +36,11 @@ export interface IPaymentChunk {
   amount: number;
   currency: CurrencyTypes;
   payment_date?: Date;
+}
+
+export interface IStop {
+  airport: string;
+  time: string;
 }
 
 export interface ITicket extends Document {
@@ -58,6 +64,8 @@ export interface ITicket extends Document {
 
   departure_location: string;
   destination_location: string;
+  stops?: IStop[];
+  return_stops?: IStop[];
 
   employee?: Types.ObjectId;
   logs?: ILog[];

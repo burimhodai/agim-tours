@@ -50,6 +50,18 @@ export const TicketSchema = new mongoose.Schema(
 
     departure_location: { type: String, required: true },
     destination_location: { type: String, required: true },
+    stops: [
+      {
+        airport: String,
+        time: String,
+      },
+    ],
+    return_stops: [
+      {
+        airport: String,
+        time: String,
+      },
+    ],
 
     employee: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     logs: [
@@ -68,7 +80,7 @@ export const TicketSchema = new mongoose.Schema(
       {
         title: {
           type: String,
-          enum: ['Mr', 'Mrs', 'Miss', 'Ms', 'Infant', 'CHD'],
+          enum: ['M', 'F', 'Infant', 'CHD'],
         },
         first_name: { type: String },
         last_name: { type: String },
@@ -76,6 +88,7 @@ export const TicketSchema = new mongoose.Schema(
         passport_number: { type: String },
         birthdate: { type: Date },
         passport_expiry_date: { type: Date },
+        passport_issue_date: { type: Date },
         nationality: { type: String },
         luggage: [
           {

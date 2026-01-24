@@ -13,6 +13,14 @@ import { CurrencyTypes } from '../types/currency.types';
 import { PaymentStatusTypes } from '../types/payment.types';
 import { PaymentChunkDto } from './payment-chunk.dto';
 
+export class PlaneStopDto {
+  @IsString()
+  airport: string;
+
+  @IsString()
+  time: string;
+}
+
 export class PlaneLuggageDto {
   @IsOptional()
   @IsString()
@@ -61,6 +69,11 @@ export class PlanePassengerDto {
   @Type(() => Date)
   @IsDate()
   passport_expiry_date?: Date;
+
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  passport_issue_date?: Date;
 
   @IsOptional()
   @IsString()
@@ -133,6 +146,18 @@ export class CreatePlaneTicketDto {
 
   @IsString()
   destination_location: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PlaneStopDto)
+  stops?: PlaneStopDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PlaneStopDto)
+  return_stops?: PlaneStopDto[];
 
   @IsOptional()
   @IsString()
@@ -226,6 +251,18 @@ export class UpdatePlaneTicketDto {
   @IsOptional()
   @IsString()
   destination_location?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PlaneStopDto)
+  stops?: PlaneStopDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PlaneStopDto)
+  return_stops?: PlaneStopDto[];
 
   @IsOptional()
   @IsString()
