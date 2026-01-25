@@ -83,10 +83,6 @@ export class OrganizedTravelService {
 
     const filter: any = {};
 
-    if (agency) {
-      filter.agency = new Types.ObjectId(agency);
-    }
-
     if (search) {
       filter.$or = [
         { name: { $regex: search, $options: 'i' } },
@@ -207,6 +203,7 @@ export class OrganizedTravelService {
   async addTravelers(
     id: string,
     addTravelersDto: AddOrganizedTravelersDto,
+    performingAgencyId?: string,
   ): Promise<IOrganizedTravel> {
     const travel = await this.travelModel.findById(id);
 
@@ -233,7 +230,7 @@ export class OrganizedTravelService {
           savedTravel._id.toString(),
           traveler._id.toString(),
           traveler,
-          savedTravel.agency?.toString(),
+          performingAgencyId || savedTravel.agency?.toString(),
           savedTravel.name,
         );
       }
@@ -314,6 +311,7 @@ export class OrganizedTravelService {
     travelId: string,
     groupId: string,
     travelersData: OrganizedTravelerDto[],
+    performingAgencyId?: string,
   ): Promise<IOrganizedTravel> {
     const travel = await this.travelModel.findById(travelId);
     if (!travel) throw new NotFoundException("Udhëtimi nuk u gjet");
@@ -363,7 +361,7 @@ export class OrganizedTravelService {
           newTraveler._id.toString(),
           oldTraveler.toObject(),
           newTraveler,
-          travel.agency?.toString(),
+          performingAgencyId || travel.agency?.toString(),
           travel.name
         );
       } else if (!oldTraveler && newTraveler.price > 0) {
@@ -378,7 +376,7 @@ export class OrganizedTravelService {
             travelId,
             createdTraveler._id.toString(),
             createdTraveler,
-            travel.agency?.toString(),
+            performingAgencyId || travel.agency?.toString(),
             travel.name
           );
         }
@@ -392,6 +390,7 @@ export class OrganizedTravelService {
     travelId: string,
     travelerId: string,
     travelerData: OrganizedTravelerDto,
+    performingAgencyId?: string,
   ): Promise<IOrganizedTravel> {
     const travel = await this.travelModel.findById(travelId);
 
@@ -429,7 +428,7 @@ export class OrganizedTravelService {
         travelerId,
         oldTraveler,
         updatedTraveler,
-        travel.agency?.toString(),
+        performingAgencyId || travel.agency?.toString(),
         travel.name,
       );
     }
@@ -598,6 +597,7 @@ export class OrganizedTravelService {
     travelerId: string,
     paymentStatus: PaymentStatusTypes,
     paidAmount?: number,
+    performingAgencyId?: string,
   ): Promise<IOrganizedTravel> {
     const travel = await this.travelModel.findById(travelId);
 
@@ -635,7 +635,7 @@ export class OrganizedTravelService {
       travelerId,
       oldTraveler,
       travel.travelers[travelerIndex].toObject(),
-      travel.agency?.toString(),
+      performingAgencyId || travel.agency?.toString(),
       travel.name,
     );
 

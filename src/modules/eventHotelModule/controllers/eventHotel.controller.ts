@@ -63,8 +63,9 @@ export class EventHotelController {
   async addTravelers(
     @Param('id') id: string,
     @Body() addTravelerDto: AddTravelerDto,
+    @Body('agency') performingAgencyId?: string,
   ) {
-    return await this.eventService.addTravelers(id, addTravelerDto);
+    return await this.eventService.addTravelers(id, addTravelerDto, performingAgencyId);
   }
 
   @Put(':id/travelers/:travelerId')
@@ -72,11 +73,13 @@ export class EventHotelController {
     @Param('id') eventId: string,
     @Param('travelerId') travelerId: string,
     @Body() travelerData: EventTravelerDto,
+    @Body('agency') performingAgencyId?: string,
   ) {
     return await this.eventService.updateTraveler(
       eventId,
       travelerId,
       travelerData,
+      performingAgencyId,
     );
   }
 
@@ -85,11 +88,13 @@ export class EventHotelController {
     @Param('id') eventId: string,
     @Param('groupId') groupId: string,
     @Body('travelers') travelers: EventTravelerDto[],
+    @Body('agency') performingAgencyId?: string,
   ) {
     return await this.eventService.updateTravelersGroup(
       eventId,
       groupId,
       travelers,
+      performingAgencyId,
     );
   }
 
@@ -108,12 +113,14 @@ export class EventHotelController {
     @Param('travelerId') travelerId: string,
     @Body('payment_status') paymentStatus: PaymentStatusTypes,
     @Body('paid_amount') paidAmount?: number,
+    @Body('agency') performingAgencyId?: string,
   ) {
     return await this.eventService.updateTravelerPaymentStatus(
       eventId,
       travelerId,
       paymentStatus,
       paidAmount,
+      performingAgencyId,
     );
   }
 

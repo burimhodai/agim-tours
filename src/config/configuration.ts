@@ -7,7 +7,7 @@ export default () => ({
 
   // Database
   database: {
-    uri: process.env.MONGODB_URI,
+    uri: process.env.DATABASE_URL,
   },
 
   // JWT

@@ -94,6 +94,10 @@ export class OrganizedTravelerDto {
   @IsOptional()
   @IsString()
   pickup_time?: string;
+
+  @IsOptional()
+  @IsString()
+  agency?: string;
 }
 
 // Print Columns DTO for Organized Travel
@@ -271,6 +275,10 @@ export class AddOrganizedTravelersDto {
   @ValidateNested({ each: true })
   @Type(() => OrganizedTravelerDto)
   travelers: OrganizedTravelerDto[];
+
+  @IsOptional()
+  @IsString()
+  agency?: string;
 }
 
 // Assign Bus DTO

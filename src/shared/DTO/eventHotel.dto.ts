@@ -161,6 +161,10 @@ export class EventTravelerDto {
     @IsOptional()
     @IsString()
     pickup_time?: string;
+
+    @IsOptional()
+    @IsString()
+    agency?: string;
 }
 
 export class RoomGroupDto {
@@ -400,6 +404,10 @@ export class AddTravelerDto {
     @ValidateNested({ each: true })
     @Type(() => EventTravelerDto)
     travelers: EventTravelerDto[];
+
+    @IsOptional()
+    @IsString()
+    agency?: string;
 }
 
 // Assign Bus DTO

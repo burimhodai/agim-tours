@@ -110,10 +110,6 @@ export class EventHotelService {
 
     const filter: any = {};
 
-    if (agency) {
-      filter.agency = new Types.ObjectId(agency);
-    }
-
     if (search) {
       filter.$or = [
         { name: { $regex: search, $options: 'i' } },
@@ -324,6 +320,7 @@ export class EventHotelService {
   async addTravelers(
     id: string,
     addTravelerDto: AddTravelerDto,
+    performingAgencyId?: string,
   ): Promise<IEventHotel> {
     const event = await this.eventModel.findById(id);
 
@@ -357,7 +354,7 @@ export class EventHotelService {
           savedEvent._id.toString(),
           traveler._id.toString(),
           traveler,
-          savedEvent.agency?.toString(),
+          performingAgencyId || savedEvent.agency?.toString(),
           savedEvent.name,
         );
       }
@@ -438,6 +435,7 @@ export class EventHotelService {
     eventId: string,
     roomGroupId: string,
     travelersData: EventTravelerDto[],
+    performingAgencyId?: string,
   ): Promise<IEventHotel> {
     const event = await this.eventModel.findById(eventId);
     if (!event) throw new NotFoundException("Ngjarja nuk u gjet");
@@ -495,7 +493,7 @@ export class EventHotelService {
           newTraveler._id.toString(),
           oldTraveler.toObject(),
           newTraveler,
-          event.agency?.toString(),
+          performingAgencyId || event.agency?.toString(),
           event.name
         );
       } else if (!oldTraveler && newTraveler.price > 0) {
@@ -510,7 +508,7 @@ export class EventHotelService {
             eventId,
             createdTraveler._id.toString(),
             createdTraveler,
-            event.agency?.toString(),
+            performingAgencyId || event.agency?.toString(),
             event.name
           );
         }
@@ -524,6 +522,7 @@ export class EventHotelService {
     eventId: string,
     travelerId: string,
     travelerData: EventTravelerDto,
+    performingAgencyId?: string,
   ): Promise<IEventHotel> {
     const event = await this.eventModel.findById(eventId);
 
@@ -569,7 +568,7 @@ export class EventHotelService {
         travelerId,
         oldTraveler,
         updatedTraveler,
-        event.agency?.toString(),
+        performingAgencyId || event.agency?.toString(),
         event.name,
       );
     }
@@ -735,6 +734,7 @@ export class EventHotelService {
     travelerId: string,
     paymentStatus: PaymentStatusTypes,
     paidAmount?: number,
+    performingAgencyId?: string,
   ): Promise<IEventHotel> {
     const event = await this.eventModel.findById(eventId);
 
@@ -772,7 +772,7 @@ export class EventHotelService {
       travelerId,
       oldTraveler,
       event.travelers[travelerIndex].toObject(),
-      event.agency?.toString(),
+      performingAgencyId || event.agency?.toString(),
       event.name,
     );
 

@@ -63,8 +63,9 @@ export class OrganizedTravelController {
   async addTravelers(
     @Param('id') id: string,
     @Body() addTravelersDto: AddOrganizedTravelersDto,
+    @Body('agency') performingAgencyId?: string,
   ) {
-    return await this.travelService.addTravelers(id, addTravelersDto);
+    return await this.travelService.addTravelers(id, addTravelersDto, performingAgencyId);
   }
 
   @Put(':id/travelers/:travelerId')
@@ -72,11 +73,13 @@ export class OrganizedTravelController {
     @Param('id') travelId: string,
     @Param('travelerId') travelerId: string,
     @Body() travelerData: OrganizedTravelerDto,
+    @Body('agency') performingAgencyId?: string,
   ) {
     return await this.travelService.updateTraveler(
       travelId,
       travelerId,
       travelerData,
+      performingAgencyId,
     );
   }
 
@@ -85,11 +88,13 @@ export class OrganizedTravelController {
     @Param('id') travelId: string,
     @Param('groupId') groupId: string,
     @Body('travelers') travelers: OrganizedTravelerDto[],
+    @Body('agency') performingAgencyId?: string,
   ) {
     return await this.travelService.updateTravelersGroup(
       travelId,
       groupId,
       travelers,
+      performingAgencyId,
     );
   }
 
@@ -108,12 +113,14 @@ export class OrganizedTravelController {
     @Param('travelerId') travelerId: string,
     @Body('payment_status') paymentStatus: PaymentStatusTypes,
     @Body('paid_amount') paidAmount?: number,
+    @Body('agency') performingAgencyId?: string,
   ) {
     return await this.travelService.updateTravelerPaymentStatus(
       travelId,
       travelerId,
       paymentStatus,
       paidAmount,
+      performingAgencyId,
     );
   }
 
