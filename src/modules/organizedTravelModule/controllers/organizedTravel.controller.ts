@@ -18,6 +18,7 @@ import {
   AssignOrganizedBusDto,
   OrganizedTravelerDto,
   OrganizedPrintColumnsDto,
+  RefundOrganizedTravelerDto,
 } from 'src/shared/DTO/organizedTravel.dto';
 import { PaymentStatusTypes } from 'src/shared/types/payment.types';
 
@@ -104,6 +105,14 @@ export class OrganizedTravelController {
     @Param('travelerId') travelerId: string,
   ) {
     return await this.travelService.removeTraveler(travelId, travelerId);
+  }
+
+  @Post(':id/refund-travelers')
+  async refundTravelers(
+    @Param('id') travelId: string,
+    @Body() refundDto: RefundOrganizedTravelerDto,
+  ) {
+    return await this.travelService.refundTravelers(travelId, refundDto);
   }
 
   // Update traveler payment status

@@ -291,6 +291,37 @@ export class AssignOrganizedBusDto {
   traveler_ids: string[];
 }
 
+export class RefundItemDto {
+  @IsString()
+  traveler_id: string;
+
+  @IsNumber()
+  amount: number;
+
+  @IsEnum(CurrencyTypes)
+  currency: CurrencyTypes;
+}
+
+// Refund Traveler DTO
+export class RefundOrganizedTravelerDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => RefundItemDto)
+  items: RefundItemDto[];
+
+  @IsOptional()
+  @IsString()
+  note?: string;
+
+  @IsOptional()
+  @IsString()
+  agency?: string;
+
+  @IsOptional()
+  @IsString()
+  employee?: string;
+}
+
 // Query DTO
 export class OrganizedTravelQueryDto {
   @IsOptional()

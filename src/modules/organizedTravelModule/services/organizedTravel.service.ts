@@ -8,6 +8,7 @@ import {
   OrganizedTravelerDto,
   AddOrganizedTravelersDto,
   AssignOrganizedBusDto,
+  RefundOrganizedTravelerDto,
 } from 'src/shared/DTO/organizedTravel.dto';
 import { PaymentStatusTypes } from 'src/shared/types/payment.types';
 import {
@@ -443,6 +444,8 @@ export class OrganizedTravelService {
     newTraveler: any,
     agencyId?: string,
     travelName?: string,
+    customRefundAmount?: number,
+    customRefundCurrency?: string,
   ): Promise<void> {
     const oldStatus = oldTraveler.payment_status;
     const newStatus = newTraveler.payment_status;
@@ -549,17 +552,19 @@ export class OrganizedTravelService {
         await this.transactionService.deleteByOrganizedTravelTraveler(travelId, `${travelerId}_debt`);
       }
     } else if (newStatus === PaymentStatusTypes.REFUNDED) {
-      const previouslyPaid = oldTraveler.paid_amount || 0;
-      if (previouslyPaid > 0) {
+      const refundAmount = customRefundAmount !== undefined ? customRefundAmount : (oldTraveler.paid_amount || 0);
+      const refundCurrency = customRefundCurrency || newTraveler.currency;
+
+      if (refundAmount > 0) {
         await this.transactionService.create({
-          amount: previouslyPaid,
-          currency: newTraveler.currency,
+          amount: refundAmount,
+          currency: refundCurrency,
           type: TransactionTypes.OUTCOME,
           status: TransactionStatus.SETTLED,
           organizedTravel: travelId,
           travelerId: `${travelerId}_refund_${Date.now()}`,
           agency: agencyId,
-          description: `Rimbursim i plotë - Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName}`,
+          description: `Rimbursim - Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName}${customRefundAmount !== undefined ? ' (Shumë e personalizuar)' : ' (i plotë)'}`,
         });
       }
       // Delete any existing transactions for this traveler to clear history
@@ -740,5 +745,50 @@ export class OrganizedTravelService {
     }
 
     return travel;
+  }
+
+  async refundTravelers(
+    travelId: string,
+    refundDto: RefundOrganizedTravelerDto,
+  ): Promise<IOrganizedTravel> {
+    const travel = await this.travelModel.findById(travelId);
+    if (!travel) {
+      throw new NotFoundException('Udhëtimi nuk u gjet');
+    }
+
+    const { items, note, agency, employee } = refundDto;
+
+    for (const item of items) {
+      const { traveler_id, amount, currency } = item;
+      const travelerIndex = travel.travelers.findIndex(
+        (t: any) => t._id.toString() === traveler_id,
+      );
+
+      if (travelerIndex !== -1) {
+        const oldTraveler = travel.travelers[travelerIndex].toObject();
+
+        // Skip if already refunded
+        if (oldTraveler.payment_status === PaymentStatusTypes.REFUNDED) continue;
+
+        travel.travelers[travelerIndex].payment_status =
+          PaymentStatusTypes.REFUNDED;
+        travel.travelers[travelerIndex].note = note
+          ? `${travel.travelers[travelerIndex].note || ''}\n\nRimbursimi: ${note}`.trim()
+          : travel.travelers[travelerIndex].note;
+
+        await this.handlePaymentStatusChange(
+          travelId,
+          traveler_id,
+          oldTraveler,
+          travel.travelers[travelerIndex].toObject(),
+          agency || travel.agency?.toString(),
+          travel.name,
+          amount,
+          currency
+        );
+      }
+    }
+
+    return await travel.save();
   }
 }

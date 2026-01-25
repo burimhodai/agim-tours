@@ -18,6 +18,7 @@ import {
   AssignBusDto,
   EventTravelerDto,
   PrintColumnsDto,
+  RefundTravelerDto,
 } from 'src/shared/DTO/eventHotel.dto';
 import { PaymentStatusTypes } from 'src/shared/types/payment.types';
 
@@ -104,6 +105,14 @@ export class EventHotelController {
     @Param('travelerId') travelerId: string,
   ) {
     return await this.eventService.removeTraveler(eventId, travelerId);
+  }
+
+  @Post(':id/refund-travelers')
+  async refundTravelers(
+    @Param('id') eventId: string,
+    @Body() refundDto: RefundTravelerDto,
+  ) {
+    return await this.eventService.refundTravelers(eventId, refundDto);
   }
 
   // Update traveler payment status
