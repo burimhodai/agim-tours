@@ -927,25 +927,24 @@ export class EventHotelService {
       if (travelerIndex !== -1) {
         const oldTraveler = event.travelers[travelerIndex].toObject();
 
-        // Skip if already refunded
-        if (oldTraveler.payment_status === PaymentStatusTypes.REFUNDED) continue;
-
-        event.travelers[travelerIndex].payment_status =
-          PaymentStatusTypes.REFUNDED;
-        event.travelers[travelerIndex].note = note
-          ? `${event.travelers[travelerIndex].note || ''}\n\nRimbursimi: ${note}`.trim()
-          : event.travelers[travelerIndex].note;
-
+        // Record the refund transaction using the REFUNDED status logic
         await this.handlePaymentStatusChange(
           eventId,
           traveler_id,
           oldTraveler,
-          event.travelers[travelerIndex].toObject(),
+          { ...oldTraveler, payment_status: PaymentStatusTypes.REFUNDED },
           agency || event.agency?.toString(),
           event.name,
           amount,
           currency
         );
+
+        // Set the final status to UNPAID/NOT_PAID as requested
+        event.travelers[travelerIndex].payment_status = PaymentStatusTypes.UNPAID;
+        event.travelers[travelerIndex].paid_amount = 0;
+        event.travelers[travelerIndex].note = note
+          ? `${event.travelers[travelerIndex].note || ''}\n\nRimbursimi: ${note}`.trim()
+          : event.travelers[travelerIndex].note;
       }
     }
 

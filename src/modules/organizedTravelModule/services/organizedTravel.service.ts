@@ -767,25 +767,27 @@ export class OrganizedTravelService {
       if (travelerIndex !== -1) {
         const oldTraveler = travel.travelers[travelerIndex].toObject();
 
-        // Skip if already refunded
-        if (oldTraveler.payment_status === PaymentStatusTypes.REFUNDED) continue;
+        // Skip if already refunded (though we are changing the status to UNPAID now, 
+        // we use a note to track it)
 
-        travel.travelers[travelerIndex].payment_status =
-          PaymentStatusTypes.REFUNDED;
-        travel.travelers[travelerIndex].note = note
-          ? `${travel.travelers[travelerIndex].note || ''}\n\nRimbursimi: ${note}`.trim()
-          : travel.travelers[travelerIndex].note;
-
+        // Record the refund transaction using the REFUNDED status logic
         await this.handlePaymentStatusChange(
           travelId,
           traveler_id,
           oldTraveler,
-          travel.travelers[travelerIndex].toObject(),
+          { ...oldTraveler, payment_status: PaymentStatusTypes.REFUNDED },
           agency || travel.agency?.toString(),
           travel.name,
           amount,
           currency
         );
+
+        // Set the final status to UNPAID/NOT_PAID as requested
+        travel.travelers[travelerIndex].payment_status = PaymentStatusTypes.UNPAID;
+        travel.travelers[travelerIndex].paid_amount = 0;
+        travel.travelers[travelerIndex].note = note
+          ? `${travel.travelers[travelerIndex].note || ''}\n\nRimbursimi: ${note}`.trim()
+          : travel.travelers[travelerIndex].note;
       }
     }
 
