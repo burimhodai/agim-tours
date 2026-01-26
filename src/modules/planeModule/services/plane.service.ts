@@ -238,9 +238,30 @@ export class PlaneService {
       agency,
     } = query;
 
+    const andConditions: any[] = [
+      {
+        $or: [
+          { ticket_type: { $regex: new RegExp(`^${TicketTypes.PLANE}$`, 'i') } },
+          { ticket_type: { $exists: false } },
+          { ticket_type: null },
+          { ticket_type: "" }
+        ]
+      }
+    ];
+
+    if (agency && Types.ObjectId.isValid(agency)) {
+      andConditions.push({
+        $or: [
+          { agency: new Types.ObjectId(agency) },
+          { agency: { $exists: false } },
+          { agency: null }
+        ]
+      });
+    }
+
     const filter: any = {
-      ticket_type: TicketTypes.PLANE,
       is_deleted: { $ne: true },
+      $and: andConditions
     };
 
     if (departure_location) {
@@ -280,9 +301,7 @@ export class PlaneService {
       filter.route_number = route_number;
     }
 
-    if (agency) {
-      filter.agency = new Types.ObjectId(agency);
-    }
+    console.log('Plane Ticket Filter:', JSON.stringify(filter));
 
     const skip = (page - 1) * limit;
 
