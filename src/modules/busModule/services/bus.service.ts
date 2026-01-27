@@ -6,6 +6,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { ITicket, TicketTypes } from 'src/shared/types/ticket.types';
+import { IUser } from 'src/shared/types/user.types';
 import {
   CreateBusTicketDto,
   UpdateBusTicketDto,
@@ -24,6 +25,7 @@ import { TransactionServiceService } from 'src/transactions/transaction-service.
 export class BusService {
   constructor(
     @InjectModel('Ticket') private ticketModel: Model<ITicket>,
+    @InjectModel('User') private userModel: Model<IUser>,
     private transactionService: TransactionServiceService,
   ) { }
 
@@ -375,19 +377,25 @@ export class BusService {
     );
 
     // Create INCOME transactions for each new payment chunk
-    for (const chunk of newChunksAdded) {
-      await this.transactionService.create({
-        amount: chunk.amount,
-        currency: chunk.currency,
-        type: TransactionTypes.INCOME,
-        status: TransactionStatus.SETTLED,
-        ticket: id,
-        agency: ticket.agency instanceof Types.ObjectId
-          ? ticket.agency.toString()
-          : (ticket.agency as any)?._id?.toString() || updateBusTicketDto.agency,
-        user: updateBusTicketDto.employee,
-        description: `Pagesë - Biletë autobusi (${ticket.uid})`,
-      });
+    if (newChunksAdded.length > 0) {
+      // Fetch the employee to get their agency
+      const employee = await this.userModel.findById(updateBusTicketDto.employee).exec();
+      const employeeAgencyId = employee?.agency?.toString();
+
+      for (const chunk of newChunksAdded) {
+        await this.transactionService.create({
+          amount: chunk.amount,
+          currency: chunk.currency,
+          type: TransactionTypes.INCOME,
+          status: TransactionStatus.SETTLED,
+          ticket: id,
+          agency: employeeAgencyId || (ticket.agency instanceof Types.ObjectId
+            ? ticket.agency.toString()
+            : (ticket.agency as any)?._id?.toString() || updateBusTicketDto.agency),
+          user: updateBusTicketDto.employee,
+          description: `Pagesë - Biletë autobusi (${ticket.uid})`,
+        });
+      }
     }
 
     // Handle payment status change - update transaction (only for non-partial payments)
@@ -669,6 +677,10 @@ export class BusService {
       ticket.payment_chunks = [];
     }
 
+    // Fetch the employee to get their agency
+    const employee = await this.userModel.findById(refundDto.employee).exec();
+    const employeeAgencyId = employee?.agency?.toString();
+
     for (const chunk of refund_chunks) {
       ticket.payment_chunks.push({
         amount: -Math.abs(chunk.amount),
@@ -682,9 +694,9 @@ export class BusService {
         type: TransactionTypes.OUTCOME,
         status: TransactionStatus.SETTLED,
         ticket: ticket._id.toString(),
-        agency: ticket.agency instanceof Types.ObjectId
+        agency: employeeAgencyId || (ticket.agency instanceof Types.ObjectId
           ? ticket.agency.toString()
-          : (ticket.agency as any)?._id?.toString() || '',
+          : (ticket.agency as any)?._id?.toString() || ''),
         user: ticket.employee?.toString(),
         description: `Rimbursim - Biletë autobusi e anuluar (${ticket.uid})`,
       });

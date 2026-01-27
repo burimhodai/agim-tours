@@ -96,4 +96,8 @@ export class ReportResponseDto {
     transactions: ReportTransactionItem[];
     summary: CurrencySummary[];
   };
+  debt: {
+    transactions: ReportTransactionItem[];
+    summary: CurrencySummary[];
+  };
 }

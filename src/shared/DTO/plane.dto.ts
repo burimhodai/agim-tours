@@ -19,6 +19,15 @@ export class PlaneStopDto {
 
   @IsString()
   time: string;
+
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  arrival_date?: Date;
+
+  @IsOptional()
+  @IsString()
+  arrival_time?: string;
 }
 
 export class PlaneLuggageDto {

@@ -18,6 +18,7 @@ import { PaymentStatusTypes } from 'src/shared/types/payment.types';
 export class ReportsService {
   constructor(
     @InjectModel('Transaction') private transactionModel: Model<ITransaction>,
+    @InjectModel('Ticket') private ticketModel: Model<any>,
   ) { }
 
   async generateReport(query: ReportQueryDto): Promise<ReportResponseDto> {
@@ -86,6 +87,87 @@ export class ReportsService {
     const incomeSummary = this.calculateSummary(incomeTransactions);
     const outcomeSummary = this.calculateSummary(outcomeTransactions);
 
+    // DEBT CALCULATION
+    const ticketFilter: any = {
+      createdAt: {
+        $gte: dateRange.from,
+        $lte: dateRange.to,
+      },
+      // Ensure we don't count cancelled tickets as debt
+      // Assuming 'status' field exists and 'cancelled' is the value
+      // If not, rely on payment_status not being 'refunded' if that implies cancellation?
+      // Best to check if status field exists in TicketSchema.
+      status: { $ne: 'canceled' }
+    };
+
+    if (agency) {
+      ticketFilter.agency = new Types.ObjectId(agency);
+    }
+
+    if (employee) {
+      ticketFilter.employee = new Types.ObjectId(employee);
+    }
+
+    if (module) {
+      ticketFilter.ticket_type = module;
+    }
+
+    // Also filter by payment status to optimize?
+    // We want unpaid, partially_paid.
+    // ticketFilter.payment_status = { $in: [PaymentStatusTypes.UNPAID, PaymentStatusTypes.PARTIALLY_PAID] };
+    // Actually fetching all and filtering in code might be safer for complex logic, but query is better.
+    ticketFilter.payment_status = { $in: ['unpaid', 'partially_paid'] };
+
+    const tickets = await this.ticketModel
+      .find(ticketFilter)
+      .populate('employee', 'email first_name last_name')
+      .sort({ createdAt: -1 })
+      .exec();
+
+    const debtItems: ReportTransactionItem[] = [];
+
+    for (const ticket of tickets) {
+      // Calculate total paid
+      let totalPaid = 0;
+      if (ticket.payment_chunks && Array.isArray(ticket.payment_chunks)) {
+        totalPaid = ticket.payment_chunks.reduce((sum: number, chunk: any) => sum + (chunk.amount || 0), 0);
+      }
+
+      const debtAmount = (ticket.price || 0) - totalPaid;
+
+      if (debtAmount > 0.05) { // Tolerance
+        debtItems.push({
+          _id: ticket._id.toString(),
+          amount: debtAmount,
+          currency: ticket.currency,
+          type: 'DEBT',
+          description: `Borxh për biletën ${ticket.booking_reference || ticket.uid || ''} (${ticket.ticket_type})`,
+          createdAt: ticket.createdAt,
+          user: ticket.employee ? {
+            _id: (ticket.employee as any)._id.toString(),
+            email: (ticket.employee as any).email,
+            first_name: (ticket.employee as any).first_name,
+            last_name: (ticket.employee as any).last_name,
+          } : undefined,
+          ticket: {
+            _id: ticket._id.toString(),
+            ticket_type: ticket.ticket_type,
+            booking_reference: ticket.booking_reference,
+            departure_location: ticket.departure_location,
+            destination_location: ticket.destination_location,
+            departure_date: ticket.departure_date,
+            passengers: ticket.passengers,
+            operator: ticket.operator,
+            price: ticket.price,
+            payment_status: ticket.payment_status,
+            payment_chunks: ticket.payment_chunks,
+          }
+        });
+      }
+    }
+
+    const debtSummary = this.calculateSummary(debtItems as any[]);
+
     return {
       period,
       module,
@@ -97,6 +179,10 @@ export class ReportsService {
       outcome: {
         transactions: outcomeItems,
         summary: outcomeSummary,
+      },
+      debt: {
+        transactions: debtItems,
+        summary: debtSummary,
       },
     };
   }

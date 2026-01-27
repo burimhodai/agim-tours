@@ -54,12 +54,16 @@ export const TicketSchema = new mongoose.Schema(
       {
         airport: String,
         time: String,
+        arrival_date: Date,
+        arrival_time: String,
       },
     ],
     return_stops: [
       {
         airport: String,
         time: String,
+        arrival_date: Date,
+        arrival_time: String,
       },
     ],
 
