@@ -16,7 +16,7 @@ import {
 export class RoomTypeService {
   constructor(
     @InjectModel('RoomType') private roomTypeModel: Model<IRoomType>,
-  ) {}
+  ) { }
 
   async create(createRoomTypeDto: CreateRoomTypeDto): Promise<IRoomType> {
     const roomTypeData = {
@@ -27,18 +27,38 @@ export class RoomTypeService {
     return await roomType.save();
   }
 
-  async findAll(query: RoomTypeQueryDto): Promise<IRoomType[]> {
+  async findAll(query: RoomTypeQueryDto): Promise<{
+    roomTypes: IRoomType[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
+    const { agency, page = 1, limit = 100 } = query;
     const filter: any = {};
 
-    if (query.agency) {
-      filter.agency = new Types.ObjectId(query.agency);
+    if (agency) {
+      filter.agency = new Types.ObjectId(agency);
     }
 
-    return await this.roomTypeModel
-      .find(filter)
-      .populate('agency')
-      .sort({ name: 1 })
-      .exec();
+    const skip = (page - 1) * limit;
+
+    const [roomTypes, total] = await Promise.all([
+      this.roomTypeModel
+        .find(filter)
+        .populate('agency')
+        .sort({ name: 1 })
+        .skip(skip)
+        .limit(limit)
+        .exec(),
+      this.roomTypeModel.countDocuments(filter).exec(),
+    ]);
+
+    return {
+      roomTypes,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findById(id: string, agencyId: string): Promise<IRoomType> {

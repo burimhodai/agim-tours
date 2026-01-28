@@ -46,6 +46,16 @@ export class UpdateRoomTypeDto {
 export class RoomTypeQueryDto {
   @IsString()
   agency: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  page?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  limit?: number;
 }
 
 // ===================================

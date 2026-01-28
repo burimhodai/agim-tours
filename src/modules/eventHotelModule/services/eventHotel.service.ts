@@ -226,13 +226,13 @@ export class EventHotelService {
           result._id = group._id;
         }
 
-        // Only include room_type if it's a valid non-empty string
-        if (roomTypeId && roomTypeId !== '') {
+        // Only include room_type if it's a valid ObjectId
+        if (roomTypeId && roomTypeId !== '' && Types.ObjectId.isValid(roomTypeId)) {
           result.room_type = new Types.ObjectId(roomTypeId);
         }
 
-        // Only include hotel if it's a valid non-empty string
-        if (hotelId && hotelId !== '') {
+        // Only include hotel if it's a valid ObjectId
+        if (hotelId && hotelId !== '' && Types.ObjectId.isValid(hotelId)) {
           result.hotel = new Types.ObjectId(hotelId);
         }
 
@@ -247,21 +247,21 @@ export class EventHotelService {
 
         if (traveler.hotel && traveler.hotel !== '') {
           const hotelId = typeof traveler.hotel === 'object' ? (traveler.hotel as any)._id : traveler.hotel;
-          result.hotel = hotelId ? new Types.ObjectId(hotelId) : undefined;
+          result.hotel = hotelId && Types.ObjectId.isValid(hotelId) ? new Types.ObjectId(hotelId) : undefined;
         } else if (traveler.hotel === '') {
           result.hotel = undefined;
         }
 
         if (traveler.room_type && traveler.room_type !== '') {
           const roomTypeId = typeof traveler.room_type === 'object' ? (traveler.room_type as any)._id : traveler.room_type;
-          result.room_type = roomTypeId ? new Types.ObjectId(roomTypeId) : undefined;
+          result.room_type = roomTypeId && Types.ObjectId.isValid(roomTypeId) ? new Types.ObjectId(roomTypeId) : undefined;
         } else if (traveler.room_type === '') {
           result.room_type = undefined;
         }
 
         if (traveler.bus && traveler.bus !== '') {
           const busId = typeof traveler.bus === 'object' ? (traveler.bus as any)._id : traveler.bus;
-          result.bus = busId ? new Types.ObjectId(busId) : undefined;
+          result.bus = busId && Types.ObjectId.isValid(busId) ? new Types.ObjectId(busId) : undefined;
         } else if (traveler.bus === '') {
           result.bus = undefined;
         }
