@@ -54,6 +54,28 @@ export class OrganizedTravelService {
     return `OT${randomNum}`;
   }
 
+  private async addLog(
+    travelId: string,
+    title: string,
+    description: string,
+    employeeId?: string,
+  ) {
+    try {
+      await this.travelModel.findByIdAndUpdate(travelId, {
+        $push: {
+          logs: {
+            title,
+            description,
+            employee: employeeId ? new Types.ObjectId(employeeId) : undefined,
+            created_at: new Date(),
+          },
+        },
+      });
+    } catch (e) {
+      console.error('Failed to add log:', e);
+    }
+  }
+
   async create(createDto: CreateOrganizedTravelDto): Promise<IOrganizedTravel> {
     const travelData = {
       ...createDto,
@@ -103,6 +125,7 @@ export class OrganizedTravelService {
       .limit(limit)
       .populate('agency')
       .populate('employee')
+      .populate('logs.employee')
       .populate('buses')
       .populate('travelers.bus')
       .populate('documentId')
@@ -116,6 +139,7 @@ export class OrganizedTravelService {
       .findById(id)
       .populate('agency')
       .populate('employee')
+      .populate('logs.employee')
       .populate('buses')
       .populate('travelers.bus')
       .populate('documentId')
@@ -212,6 +236,8 @@ export class OrganizedTravelService {
       throw new NotFoundException('Udhëtimi nuk u gjet');
     }
 
+    const employeeId = addTravelersDto.employee;
+
     const batchGroupId = `G-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     const processedTravelers = addTravelersDto.travelers.map((traveler) => ({
       ...traveler,
@@ -221,6 +247,15 @@ export class OrganizedTravelService {
 
     travel.travelers.push(...processedTravelers);
     const savedTravel = await travel.save();
+
+    // Add log
+    const travelerNames = processedTravelers.map(t => `${t.first_name} ${t.last_name}`).join(', ');
+    await this.addLog(
+      id,
+      'Udhëtarët u shtuan',
+      `U shtuan udhëtarët: ${travelerNames}`,
+      employeeId
+    );
 
     // Create transactions for each traveler with a price
     for (const traveler of savedTravel.travelers.slice(
@@ -313,6 +348,7 @@ export class OrganizedTravelService {
     groupId: string,
     travelersData: OrganizedTravelerDto[],
     performingAgencyId?: string,
+    employeeId?: string,
   ): Promise<IOrganizedTravel> {
     const travel = await this.travelModel.findById(travelId);
     if (!travel) throw new NotFoundException("Udhëtimi nuk u gjet");
@@ -346,6 +382,15 @@ export class OrganizedTravelService {
 
     travel.travelers = [...otherTravelers, ...processedTravelers];
     const savedTravel = await travel.save();
+
+    // Add log
+    const groupTravelerNames = processedTravelers.map(t => `${t.first_name} ${t.last_name}`).join(', ');
+    await this.addLog(
+      travelId,
+      'Grupi u përditësua',
+      `Grupi ${groupId} u përditësua. Udhëtarët: ${groupTravelerNames}`,
+      employeeId
+    );
 
     for (const newTraveler of processedTravelers) {
       const oldTraveler = existingGroupTravelers.find(
@@ -392,6 +437,7 @@ export class OrganizedTravelService {
     travelerId: string,
     travelerData: OrganizedTravelerDto,
     performingAgencyId?: string,
+    employeeId?: string,
   ): Promise<IOrganizedTravel> {
     const travel = await this.travelModel.findById(travelId);
 
@@ -418,6 +464,14 @@ export class OrganizedTravelService {
 
     travel.travelers[travelerIndex] = updatedTraveler;
     const savedTravel = await travel.save();
+
+    // Add log
+    await this.addLog(
+      travelId,
+      'Udhëtari u përditësua',
+      `Detajet e udhëtarit ${updatedTraveler.first_name} ${updatedTraveler.last_name} u përditësuan`,
+      employeeId
+    );
 
     // Handle payment status change
     if (
@@ -603,6 +657,7 @@ export class OrganizedTravelService {
     paymentStatus: PaymentStatusTypes,
     paidAmount?: number,
     performingAgencyId?: string,
+    employeeId?: string,
   ): Promise<IOrganizedTravel> {
     const travel = await this.travelModel.findById(travelId);
 
@@ -634,6 +689,14 @@ export class OrganizedTravelService {
     }
 
     const savedTravel = await travel.save();
+    const t = travel.travelers[travelerIndex];
+
+    await this.addLog(
+      travelId,
+      'Statusi i pagesës u ndryshua',
+      `Statusi i pagesës për ${t.first_name} ${t.last_name} u bë ${paymentStatus}${paidAmount !== undefined ? ` (Shuma: ${paidAmount})` : ''}`,
+      employeeId
+    );
 
     await this.handlePaymentStatusChange(
       travelId,
@@ -650,6 +713,7 @@ export class OrganizedTravelService {
   async removeTraveler(
     travelId: string,
     travelerId: string,
+    employeeId?: string,
   ): Promise<IOrganizedTravel> {
     const travel = await this.travelModel.findById(travelId);
 
@@ -667,6 +731,16 @@ export class OrganizedTravelService {
       `${travelerId}_debt`,
     );
 
+    const travelerToRemove = travel.travelers.find((t: any) => t._id.toString() === travelerId);
+    if (travelerToRemove) {
+      await this.addLog(
+        travelId,
+        'Udhëtari u fshi',
+        `Udhëtari ${travelerToRemove.first_name} ${travelerToRemove.last_name} u hoq nga udhëtimi`,
+        employeeId
+      );
+    }
+
     travel.travelers = travel.travelers.filter(
       (t: any) => t._id.toString() !== travelerId,
     );
@@ -677,7 +751,7 @@ export class OrganizedTravelService {
     travelId: string,
     assignBusDto: AssignOrganizedBusDto,
   ): Promise<IOrganizedTravel> {
-    const travel = await this.travelModel.findById(travelId);
+    const travel = await this.travelModel.findById(travelId).populate('buses');
 
     if (!travel) {
       throw new NotFoundException('Udhëtimi nuk u gjet');
@@ -696,7 +770,21 @@ export class OrganizedTravelService {
       return traveler;
     });
 
-    return await travel.save();
+    const savedTravel = await travel.save();
+
+    const assignedTravelers = travel.travelers
+      .filter((t: any) => assignBusDto.traveler_ids.includes(t._id.toString()))
+      .map((t: any) => `${t.first_name} ${t.last_name}`)
+      .join(', ');
+
+    await this.addLog(
+      travelId,
+      'Autobusi u caktua',
+      `U caktuan ${assignedTravelers} në autobusin ${(travel.buses.find((b: any) => b._id.toString() === assignBusDto.bus_id) as any)?.name || 'e ri'}`,
+      assignBusDto.employee,
+    );
+
+    return savedTravel;
   }
 
   async getTravelersByBus(travelId: string): Promise<any> {
@@ -780,6 +868,13 @@ export class OrganizedTravelService {
           travel.name,
           amount,
           currency
+        );
+
+        await this.addLog(
+          travelId,
+          'Rimbursim i udhëtarit',
+          `Udhëtari ${oldTraveler.first_name} ${oldTraveler.last_name} u rimbursua me ${amount || oldTraveler.paid_amount} ${currency || oldTraveler.currency}. Shënim: ${note || '-'}`,
+          employee
         );
 
         // Set the final status to UNPAID/NOT_PAID as requested

@@ -75,12 +75,14 @@ export class OrganizedTravelController {
     @Param('travelerId') travelerId: string,
     @Body() travelerData: OrganizedTravelerDto,
     @Body('agency') performingAgencyId?: string,
+    @Body('employee') employeeId?: string,
   ) {
     return await this.travelService.updateTraveler(
       travelId,
       travelerId,
       travelerData,
       performingAgencyId,
+      employeeId,
     );
   }
 
@@ -90,12 +92,14 @@ export class OrganizedTravelController {
     @Param('groupId') groupId: string,
     @Body('travelers') travelers: OrganizedTravelerDto[],
     @Body('agency') performingAgencyId?: string,
+    @Body('employee') employeeId?: string,
   ) {
     return await this.travelService.updateTravelersGroup(
       travelId,
       groupId,
       travelers,
       performingAgencyId,
+      employeeId,
     );
   }
 
@@ -103,8 +107,9 @@ export class OrganizedTravelController {
   async removeTraveler(
     @Param('id') travelId: string,
     @Param('travelerId') travelerId: string,
+    @Query('employee') employeeId?: string,
   ) {
-    return await this.travelService.removeTraveler(travelId, travelerId);
+    return await this.travelService.removeTraveler(travelId, travelerId, employeeId);
   }
 
   @Post(':id/refund-travelers')

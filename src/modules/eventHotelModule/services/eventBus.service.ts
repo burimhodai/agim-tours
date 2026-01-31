@@ -20,7 +20,7 @@ export interface IEventBus {
 
 @Injectable()
 export class EventBusService {
-  constructor(@InjectModel('EventBus') private busModel: Model<IEventBus>) {}
+  constructor(@InjectModel('EventBus') private busModel: Model<IEventBus>) { }
 
   async create(createBusDto: CreateEventBusDto): Promise<IEventBus> {
     const busData = {
@@ -37,9 +37,9 @@ export class EventBusService {
   async findAll(agencyId?: string): Promise<IEventBus[]> {
     const filter: any = {};
 
-    if (agencyId) {
+    /* if (agencyId) {
       filter.agency = new Types.ObjectId(agencyId);
-    }
+    } */
 
     return await this.busModel
       .find(filter)
@@ -73,9 +73,9 @@ export class EventBusService {
       name: { $regex: query, $options: 'i' },
     };
 
-    if (agencyId) {
+    /* if (agencyId) {
       filter.agency = new Types.ObjectId(agencyId);
-    }
+    } */
 
     return await this.busModel.find(filter).limit(10).sort({ name: 1 }).exec();
   }

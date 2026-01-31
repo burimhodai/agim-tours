@@ -279,6 +279,10 @@ export class AddOrganizedTravelersDto {
   @IsOptional()
   @IsString()
   agency?: string;
+
+  @IsOptional()
+  @IsString()
+  employee?: string;
 }
 
 // Assign Bus DTO
@@ -289,6 +293,10 @@ export class AssignOrganizedBusDto {
   @IsArray()
   @IsString({ each: true })
   traveler_ids: string[];
+
+  @IsOptional()
+  @IsString()
+  employee?: string;
 }
 
 export class RefundItemDto {
