@@ -721,29 +721,56 @@ export class OrganizedTravelService {
       throw new NotFoundException('Udhëtimi nuk u gjet');
     }
 
-    // Delete related transactions
-    await this.transactionService.deleteByOrganizedTravelTraveler(
-      travelId,
-      travelerId,
-    );
-    await this.transactionService.deleteByOrganizedTravelTraveler(
-      travelId,
-      `${travelerId}_debt`,
+    const travelerIndex = travel.travelers.findIndex(
+      (t: any) => t._id.toString() === travelerId,
     );
 
-    const travelerToRemove = travel.travelers.find((t: any) => t._id.toString() === travelerId);
-    if (travelerToRemove) {
-      await this.addLog(
-        travelId,
-        'Udhëtari u fshi',
-        `Udhëtari ${travelerToRemove.first_name} ${travelerToRemove.last_name} u hoq nga udhëtimi`,
-        employeeId
-      );
+    if (travelerIndex === -1) {
+      throw new NotFoundException('Udhëtari nuk u gjet');
     }
 
-    travel.travelers = travel.travelers.filter(
-      (t: any) => t._id.toString() !== travelerId,
+    const traveler = travel.travelers[travelerIndex];
+    travel.travelers[travelerIndex].status = 'cancelled';
+
+    await this.addLog(
+      travelId,
+      'Udhëtari u anulua',
+      `Udhëtari ${traveler.first_name} ${traveler.last_name} u anulua nga udhëtimi`,
+      employeeId
     );
+
+    return await travel.save();
+  }
+
+  async reactivateTraveler(
+    travelId: string,
+    travelerId: string,
+    employeeId?: string,
+  ): Promise<IOrganizedTravel> {
+    const travel = await this.travelModel.findById(travelId);
+
+    if (!travel) {
+      throw new NotFoundException('Udhëtimi nuk u gjet');
+    }
+
+    const travelerIndex = travel.travelers.findIndex(
+      (t: any) => t._id.toString() === travelerId,
+    );
+
+    if (travelerIndex === -1) {
+      throw new NotFoundException('Udhëtari nuk u gjet');
+    }
+
+    const traveler = travel.travelers[travelerIndex];
+    travel.travelers[travelerIndex].status = 'active';
+
+    await this.addLog(
+      travelId,
+      'Udhëtari u reaktivizua',
+      `Udhëtari ${traveler.first_name} ${traveler.last_name} u reaktivizua në udhëtim`,
+      employeeId
+    );
+
     return await travel.save();
   }
 

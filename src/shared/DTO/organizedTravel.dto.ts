@@ -98,6 +98,10 @@ export class OrganizedTravelerDto {
   @IsOptional()
   @IsString()
   agency?: string;
+
+  @IsOptional()
+  @IsString()
+  status?: string;
 }
 
 // Print Columns DTO for Organized Travel

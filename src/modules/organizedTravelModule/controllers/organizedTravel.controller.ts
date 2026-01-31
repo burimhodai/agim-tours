@@ -112,6 +112,15 @@ export class OrganizedTravelController {
     return await this.travelService.removeTraveler(travelId, travelerId, employeeId);
   }
 
+  @Patch(':id/travelers/:travelerId/reactivate')
+  async reactivateTraveler(
+    @Param('id') travelId: string,
+    @Param('travelerId') travelerId: string,
+    @Query('employee') employeeId?: string,
+  ) {
+    return await this.travelService.reactivateTraveler(travelId, travelerId, employeeId);
+  }
+
   @Post(':id/refund-travelers')
   async refundTravelers(
     @Param('id') travelId: string,
