@@ -346,6 +346,15 @@ export class EventHotelService {
     event.travelers.push(...processedTravelers);
     const savedEvent = await event.save();
 
+    // Add log
+    const travelerNames = processedTravelers.map(t => `${t.first_name} ${t.last_name}`).join(', ');
+    await this.addLog(
+      id,
+      'Udhëtarët u shtuan',
+      `U shtuan udhëtarët: ${travelerNames}`,
+      addTravelerDto.employee
+    );
+
     // Create transactions for each traveler with a price
     for (const traveler of savedEvent.travelers.slice(
       -processedTravelers.length,
@@ -437,6 +446,7 @@ export class EventHotelService {
     roomGroupId: string,
     travelersData: EventTravelerDto[],
     performingAgencyId?: string,
+    employeeId?: string,
   ): Promise<IEventHotel> {
     const event = await this.eventModel.findById(eventId);
     if (!event) throw new NotFoundException("Ngjarja nuk u gjet");
@@ -478,6 +488,15 @@ export class EventHotelService {
 
     event.travelers = [...otherTravelers, ...processedTravelers];
     const savedEvent = await event.save();
+
+    // Add log
+    const travelerNames = processedTravelers.map(t => `${t.first_name} ${t.last_name}`).join(', ');
+    await this.addLog(
+      eventId,
+      'Grupi u përditësua',
+      `U përditësuan të dhënat për grupin e udhëtarëve: ${travelerNames}`,
+      employeeId
+    );
 
     for (const newTraveler of processedTravelers) {
       const oldTraveler = existingGroupTravelers.find(
@@ -524,6 +543,7 @@ export class EventHotelService {
     travelerId: string,
     travelerData: EventTravelerDto,
     performingAgencyId?: string,
+    employeeId?: string,
   ): Promise<IEventHotel> {
     const event = await this.eventModel.findById(eventId);
 
@@ -558,6 +578,14 @@ export class EventHotelService {
 
     event.travelers[travelerIndex] = updatedTraveler;
     const savedEvent = await event.save();
+
+    // Add log
+    await this.addLog(
+      eventId,
+      'Udhëtari u përditësua',
+      `U përditësuan të dhënat për udhëtarin: ${travelerData.first_name} ${travelerData.last_name}`,
+      employeeId || travelerData.employee
+    );
 
     // Handle payment status change
     if (
@@ -740,6 +768,7 @@ export class EventHotelService {
     paymentStatus: PaymentStatusTypes,
     paidAmount?: number,
     performingAgencyId?: string,
+    employeeId?: string,
   ): Promise<IEventHotel> {
     const event = await this.eventModel.findById(eventId);
 
@@ -772,6 +801,15 @@ export class EventHotelService {
 
     const savedEvent = await event.save();
 
+    // Add log
+    const updatedTraveler = event.travelers[travelerIndex];
+    await this.addLog(
+      eventId,
+      'Pagesa u përditësua',
+      `U përditësua statusi i pagesës për udhëtarin: ${updatedTraveler.first_name} ${updatedTraveler.last_name}. Statusi i ri: ${paymentStatus}`,
+      employeeId
+    );
+
     await this.handlePaymentStatusChange(
       eventId,
       travelerId,
@@ -787,6 +825,7 @@ export class EventHotelService {
   async removeTraveler(
     eventId: string,
     travelerId: string,
+    employeeId?: string,
   ): Promise<IEventHotel> {
     const event = await this.eventModel.findById(eventId);
 
@@ -794,12 +833,23 @@ export class EventHotelService {
       throw new NotFoundException('Ngjarja nuk u gjet');
     }
 
+    const traveler = event.travelers.find((t: any) => t._id.toString() === travelerId);
+
     // Delete related transactions
     await this.transactionService.deleteByEventTraveler(eventId, travelerId);
     await this.transactionService.deleteByEventTraveler(
       eventId,
       `${travelerId}_debt`,
     );
+
+    if (traveler) {
+      await this.addLog(
+        eventId,
+        'Udhëtari u fshi',
+        `U fshi udhëtari: ${traveler.first_name} ${traveler.last_name}`,
+        employeeId
+      );
+    }
 
     event.travelers = event.travelers.filter(
       (t: any) => t._id.toString() !== travelerId,
@@ -823,6 +873,10 @@ export class EventHotelService {
       event.buses.push(busObjectId);
     }
 
+    const assignedTravelers = event.travelers.filter((t: any) =>
+      assignBusDto.traveler_ids.includes(t._id.toString()),
+    );
+
     event.travelers = event.travelers.map((traveler: any) => {
       if (assignBusDto.traveler_ids.includes(traveler._id.toString())) {
         return { ...traveler.toObject(), bus: busObjectId };
@@ -830,7 +884,22 @@ export class EventHotelService {
       return traveler;
     });
 
-    return await event.save();
+    const savedEvent = await event.save();
+
+    // Add log
+    if (assignedTravelers.length > 0) {
+      const travelerNames = assignedTravelers
+        .map((t: any) => `${t.first_name} ${t.last_name}`)
+        .join(', ');
+      await this.addLog(
+        eventId,
+        'Autobusi u caktua',
+        `U caktua autobusi për udhëtarët: ${travelerNames}`,
+        assignBusDto.employee,
+      );
+    }
+
+    return savedEvent;
   }
 
   async getTravelersByBus(eventId: string): Promise<any> {
@@ -948,6 +1017,42 @@ export class EventHotelService {
       }
     }
 
-    return await event.save();
+    const savedEvent = await event.save();
+
+    // Add log
+    const refundedTravelerIds = items.map(i => i.traveler_id);
+    const refundedTravelers = event.travelers.filter((t: any) => refundedTravelerIds.includes(t._id.toString()));
+    const travelerNames = refundedTravelers.map((t: any) => `${t.first_name} ${t.last_name}`).join(', ');
+
+    await this.addLog(
+      eventId,
+      'Rimbursim',
+      `U krye rimbursimi për udhëtarët: ${travelerNames}${note ? `. Shënim: ${note}` : ''}`,
+      employee
+    );
+
+    return savedEvent;
+  }
+
+  private async addLog(
+    eventId: string,
+    title: string,
+    description: string,
+    employeeId?: string,
+  ) {
+    try {
+      await this.eventModel.findByIdAndUpdate(eventId, {
+        $push: {
+          logs: {
+            title,
+            description,
+            employee: employeeId && Types.ObjectId.isValid(employeeId) ? new Types.ObjectId(employeeId) : undefined,
+            created_at: new Date(),
+          },
+        },
+      });
+    } catch (e) {
+      console.error('Failed to add log:', e);
+    }
   }
 }

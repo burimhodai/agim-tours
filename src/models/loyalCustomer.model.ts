@@ -24,9 +24,9 @@ const PurchaseHistorySchema = new mongoose.Schema({
   purchased_at: { type: Date, default: Date.now },
 });
 
-// Main Loyal Customer Schema
 export const LoyalCustomerSchema = new mongoose.Schema(
   {
+    title: { type: String, enum: ['Mr', 'Mrs', 'Infant', 'CHD', 'M', 'F'], default: 'Mr' },
     first_name: { type: String, required: true },
     last_name: { type: String, required: true },
     phone: { type: String },

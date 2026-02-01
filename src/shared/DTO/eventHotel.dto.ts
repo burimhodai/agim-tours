@@ -165,6 +165,10 @@ export class EventTravelerDto {
     @IsOptional()
     @IsString()
     agency?: string;
+
+    @IsOptional()
+    @IsString()
+    employee?: string;
 }
 
 export class RoomGroupDto {
@@ -408,6 +412,10 @@ export class AddTravelerDto {
     @IsOptional()
     @IsString()
     agency?: string;
+
+    @IsOptional()
+    @IsString()
+    employee?: string;
 }
 
 // Assign Bus DTO
@@ -418,6 +426,10 @@ export class AssignBusDto {
     @IsArray()
     @IsString({ each: true })
     traveler_ids: string[];
+
+    @IsOptional()
+    @IsString()
+    employee?: string;
 }
 
 export class RefundItemDto {

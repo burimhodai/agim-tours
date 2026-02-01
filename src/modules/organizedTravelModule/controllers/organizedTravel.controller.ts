@@ -137,6 +137,7 @@ export class OrganizedTravelController {
     @Body('payment_status') paymentStatus: PaymentStatusTypes,
     @Body('paid_amount') paidAmount?: number,
     @Body('agency') performingAgencyId?: string,
+    @Body('employee') employeeId?: string,
   ) {
     return await this.travelService.updateTravelerPaymentStatus(
       travelId,
@@ -144,6 +145,7 @@ export class OrganizedTravelController {
       paymentStatus,
       paidAmount,
       performingAgencyId,
+      employeeId,
     );
   }
 

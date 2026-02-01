@@ -6,7 +6,7 @@ import { PaymentStatusTypes } from 'src/shared/types/payment.types';
 const OrganizedTravelerSchema = new mongoose.Schema({
   title: {
     type: String,
-    enum: ['M', 'F', 'Infant', 'CHD'],
+    enum: ['Mr', 'Mrs', 'Infant', 'CHD', 'M', 'F'],
   },
   first_name: { type: String },
   last_name: { type: String },
