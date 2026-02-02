@@ -143,6 +143,10 @@ export class EventTravelerDto {
 
     @IsOptional()
     @IsString()
+    booking_id?: string;
+
+    @IsOptional()
+    @IsString()
     room_group_id?: string;
 
     @IsOptional()
@@ -178,6 +182,10 @@ export class RoomGroupDto {
 
     @IsString()
     group_id: string;
+
+    @IsOptional()
+    @IsString()
+    booking_id?: string;
 
     @IsOptional()
     @IsString()

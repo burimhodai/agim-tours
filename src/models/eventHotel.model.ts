@@ -56,7 +56,10 @@ const EventTravelerSchema = new mongoose.Schema({
   // Bus assignment
   bus: { type: mongoose.Schema.Types.ObjectId, ref: 'EventBus' },
 
-  // Room group assignment (family grouping)
+  // Booking assignment (groups multiple rooms as one booking)
+  booking_id: { type: String },
+
+  // Room group assignment (identifies specific room within booking)
   room_group_id: { type: String },
 
   note: { type: String },
@@ -100,7 +103,8 @@ export const EventHotelSchema = new mongoose.Schema(
     // Room groups - each group represents people sharing a room
     room_groups: [
       {
-        group_id: { type: String, required: true }, // Unique identifier for the group
+        group_id: { type: String }, // Unique identifier for the group
+        booking_id: { type: String }, // Links multiple rooms to the same booking
         room_type: { type: mongoose.Schema.Types.ObjectId, ref: 'RoomType' },
         hotel: { type: mongoose.Schema.Types.ObjectId, ref: 'PartnerHotel' },
         room_number: { type: String },

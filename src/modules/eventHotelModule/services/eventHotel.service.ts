@@ -30,7 +30,7 @@ export interface IEventHotel {
   departure_city?: string;
   arrival_city?: string;
   travelers: any[];
-  room_groups: any[];
+  room_groups?: any[];
   buses: Types.ObjectId[];
   hotel?: Types.ObjectId;
   print_columns?: any;
@@ -203,7 +203,7 @@ export class EventHotelService {
       updateData.documentId = undefined;
     }
 
-    if (updateEventDto.room_groups) {
+    if (updateEventDto?.room_groups) {
       console.log('room_groups before processing:', JSON.stringify(updateEventDto.room_groups, null, 2));
 
       updateData.room_groups = updateEventDto.room_groups.map((group) => {
