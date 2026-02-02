@@ -62,7 +62,7 @@ export const HotelReservationSchema = new mongoose.Schema(
         created_at: { type: Date, default: Date.now },
       },
     ],
-
+    maps_url: { type: String },
     is_deleted: { type: Boolean, default: false },
   },
   {

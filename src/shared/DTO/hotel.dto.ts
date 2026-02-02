@@ -230,6 +230,10 @@ export class CreateHotelReservationDto {
   @IsString()
   hotel_name: string;
 
+  @IsOptional()
+  @IsString()
+  maps_url?: string;
+
   @Type(() => Date)
   @IsDate()
   check_in_date: Date;
@@ -281,6 +285,10 @@ export class UpdateHotelReservationDto {
   @IsOptional()
   @IsString()
   hotel_partner?: string;
+
+  @IsOptional()
+  @IsString()
+  maps_url?: string;
 
   @IsOptional()
   @IsString()
