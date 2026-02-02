@@ -49,11 +49,11 @@ export class EventHotelService {
     private transactionService: TransactionServiceService,
   ) { }
 
-  private validateTravelerPassport(traveler: any, departureDate: Date, departureCity?: string, arrivalCity?: string) {
+  private validateTravelerPassport(traveler: any, departureDate: Date, departureCity?: string, arrivalCity?: string, location?: string) {
     const isIstanbulOrStamboll = (city?: string) =>
       city?.toLowerCase() === 'istanbul' || city?.toLowerCase() === 'stamboll';
 
-    if (isIstanbulOrStamboll(departureCity) || isIstanbulOrStamboll(arrivalCity)) {
+    if (isIstanbulOrStamboll(location)) {
       if (!traveler.passport_expiry_date) {
         throw new BadRequestException(`Data e skadimit të pasaportës është e detyrueshme për destinacionin Stamboll (${traveler.first_name || ''} ${traveler.last_name || ''})`);
       }
@@ -331,7 +331,7 @@ export class EventHotelService {
 
     const batchGroupId = `G-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     const processedTravelers = addTravelerDto.travelers.map((traveler) => {
-      this.validateTravelerPassport(traveler, event.date, event.departure_city, event.arrival_city);
+      this.validateTravelerPassport(traveler, event.date, event.departure_city, event.arrival_city, event.location);
       return {
         ...traveler,
         room_group_id: traveler.room_group_id || batchGroupId,
