@@ -44,6 +44,7 @@ export class UpdateRoomTypeDto {
 }
 
 export class RoomTypeQueryDto {
+  @IsOptional()
   @IsString()
   agency: string;
 
@@ -407,6 +408,7 @@ export class PartnerHotelQueryDto {
   @Type(() => Boolean)
   is_active?: boolean;
 
+  @IsOptional()
   @IsString()
   agency: string;
 

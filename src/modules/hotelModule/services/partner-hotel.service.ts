@@ -46,9 +46,11 @@ export class PartnerHotelService {
       limit = 10,
     } = query;
 
-    const filter: any = {
-      // agency: new Types.ObjectId(agency),
-    };
+    const filter: any = {};
+
+    if (agency) {
+      filter.agency = new Types.ObjectId(agency);
+    }
 
     if (name) {
       filter.name = { $regex: name, $options: 'i' };
@@ -87,12 +89,13 @@ export class PartnerHotelService {
     };
   }
 
-  async findAllActive(agencyId: string): Promise<IPartnerHotel[]> {
+  async findAllActive(agencyId?: string): Promise<IPartnerHotel[]> {
+    const filter: any = { is_active: true };
+    if (agencyId) {
+      filter.agency = new Types.ObjectId(agencyId);
+    }
     return await this.partnerHotelModel
-      .find({
-        is_active: true,
-        agency: new Types.ObjectId(agencyId),
-      })
+      .find(filter)
       .populate('agency')
       .sort({ name: 1 })
       .exec();

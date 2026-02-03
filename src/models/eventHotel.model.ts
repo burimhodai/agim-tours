@@ -65,6 +65,11 @@ const EventTravelerSchema = new mongoose.Schema({
   note: { type: String },
   pickup_location: { type: String },
   pickup_time: { type: String },
+  status: {
+    type: String,
+    enum: ['active', 'cancelled'],
+    default: 'active',
+  },
 });
 
 // Main Event Hotel Schema

@@ -112,6 +112,15 @@ export class EventHotelController {
     return await this.eventService.removeTraveler(eventId, travelerId, employeeId);
   }
 
+  @Patch(':id/travelers/:travelerId/reactivate')
+  async reactivateTraveler(
+    @Param('id') eventId: string,
+    @Param('travelerId') travelerId: string,
+    @Query('employee') employeeId?: string,
+  ) {
+    return await this.eventService.reactivateTraveler(eventId, travelerId, employeeId);
+  }
+
   @Post(':id/refund-travelers')
   async refundTravelers(
     @Param('id') eventId: string,

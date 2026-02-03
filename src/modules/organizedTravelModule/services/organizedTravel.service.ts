@@ -731,6 +731,7 @@ export class OrganizedTravelService {
 
     const traveler = travel.travelers[travelerIndex];
     travel.travelers[travelerIndex].status = 'cancelled';
+    travel.markModified('travelers');
 
     await this.addLog(
       travelId,
@@ -763,6 +764,7 @@ export class OrganizedTravelService {
 
     const traveler = travel.travelers[travelerIndex];
     travel.travelers[travelerIndex].status = 'active';
+    travel.markModified('travelers');
 
     await this.addLog(
       travelId,

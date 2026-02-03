@@ -833,27 +833,58 @@ export class EventHotelService {
       throw new NotFoundException('Ngjarja nuk u gjet');
     }
 
-    const traveler = event.travelers.find((t: any) => t._id.toString() === travelerId);
-
-    // Delete related transactions
-    await this.transactionService.deleteByEventTraveler(eventId, travelerId);
-    await this.transactionService.deleteByEventTraveler(
-      eventId,
-      `${travelerId}_debt`,
+    const travelerIndex = event.travelers.findIndex(
+      (t: any) => t._id.toString() === travelerId,
     );
 
-    if (traveler) {
-      await this.addLog(
-        eventId,
-        'Udhëtari u fshi',
-        `U fshi udhëtari: ${traveler.first_name} ${traveler.last_name}`,
-        employeeId
-      );
+    if (travelerIndex === -1) {
+      throw new NotFoundException('Udhëtari nuk u gjet');
     }
 
-    event.travelers = event.travelers.filter(
-      (t: any) => t._id.toString() !== travelerId,
+    const traveler = event.travelers[travelerIndex];
+    event.travelers[travelerIndex].status = 'cancelled';
+    event.markModified('travelers');
+
+    await this.addLog(
+      eventId,
+      'Udhëtari u anulua',
+      `Udhëtari ${traveler.first_name} ${traveler.last_name} u anulua nga ngjarja`,
+      employeeId
     );
+
+    return await event.save();
+  }
+
+  async reactivateTraveler(
+    eventId: string,
+    travelerId: string,
+    employeeId?: string,
+  ): Promise<IEventHotel> {
+    const event = await this.eventModel.findById(eventId);
+
+    if (!event) {
+      throw new NotFoundException('Ngjarja nuk u gjet');
+    }
+
+    const travelerIndex = event.travelers.findIndex(
+      (t: any) => t._id.toString() === travelerId,
+    );
+
+    if (travelerIndex === -1) {
+      throw new NotFoundException('Udhëtari nuk u gjet');
+    }
+
+    const traveler = event.travelers[travelerIndex];
+    event.travelers[travelerIndex].status = 'active';
+    event.markModified('travelers');
+
+    await this.addLog(
+      eventId,
+      'Udhëtari u reaktivizua',
+      `Udhëtari ${traveler.first_name} ${traveler.last_name} u reaktivizua në ngjarje`,
+      employeeId
+    );
+
     return await event.save();
   }
 
