@@ -37,7 +37,7 @@ export class RoomTypeService {
     const filter: any = {};
 
     if (agency) {
-      filter.agency = new Types.ObjectId(agency);
+      // filter.agency = new Types.ObjectId(agency);
     }
 
     const skip = (page - 1) * limit;

@@ -17,7 +17,7 @@ export class PartnerHotelService {
   constructor(
     @InjectModel('PartnerHotel')
     private partnerHotelModel: Model<IPartnerHotel>,
-  ) {}
+  ) { }
 
   async create(
     createPartnerHotelDto: CreatePartnerHotelDto,
@@ -47,7 +47,7 @@ export class PartnerHotelService {
     } = query;
 
     const filter: any = {
-      agency: new Types.ObjectId(agency),
+      // agency: new Types.ObjectId(agency),
     };
 
     if (name) {
