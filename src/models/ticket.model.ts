@@ -96,7 +96,11 @@ export const TicketSchema = new mongoose.Schema(
         nationality: { type: String },
         luggage: [
           {
-            type: { type: String }, // Name of the luggage type
+            type: { type: String },
+            category: {
+              type: String,
+              enum: ['CHECKIN_LUGGAGE', 'HAND_BAG'],
+            },
             weight_in_kg: Number,
             price: Number,
             quantity: { type: Number, default: 1 },
@@ -105,6 +109,10 @@ export const TicketSchema = new mongoose.Schema(
         return_luggage: [
           {
             type: { type: String },
+            category: {
+              type: String,
+              enum: ['CHECKIN_LUGGAGE', 'HAND_BAG'],
+            },
             weight_in_kg: Number,
             price: Number,
             quantity: { type: Number, default: 1 },

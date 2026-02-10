@@ -36,6 +36,10 @@ export class PlaneLuggageDto {
   type?: string;
 
   @IsOptional()
+  @IsString()
+  category?: string;
+
+  @IsOptional()
   @IsNumber()
   quantity?: number;
 

@@ -14,10 +14,17 @@ export interface ILog {
   created_at?: Date;
 }
 
+export enum LuggageCategory {
+  CHECKIN_LUGGAGE = 'CHECKIN_LUGGAGE',
+  HAND_BAG = 'HAND_BAG',
+}
+
 export interface ILuggage {
   type?: string;
+  category?: LuggageCategory;
   weight_in_kg?: number;
   price?: number;
+  quantity?: number;
 }
 
 export interface IPassenger {

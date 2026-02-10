@@ -5,8 +5,8 @@ export const LuggageTypeSchema = new mongoose.Schema(
     name: { type: String, required: true }, // e.g., "20kg", "10kg", "Handbag"
     category: {
       type: String,
-      enum: ['luggage', 'handbag'],
-      default: 'luggage',
+      enum: ['CHECKIN_LUGGAGE', 'HAND_BAG'],
+      default: 'CHECKIN_LUGGAGE',
     },
     agency: {
       type: mongoose.Schema.Types.ObjectId,
