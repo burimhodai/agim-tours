@@ -156,15 +156,22 @@ export class TravelerDto {
   @IsDate()
   date_of_birth: Date;
 
+  @IsOptional()
   @IsString()
-  place_of_birth: string;
+  place_of_birth?: string;
 
   @IsOptional()
   @IsEnum(RoomTypes)
   room_type?: RoomTypes;
 
+  @IsOptional()
   @IsString()
-  departure_place: string;
+  departure_place?: string;
+
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  passport_expiry_date?: Date;
 
   @IsOptional()
   @IsBoolean()
@@ -185,11 +192,6 @@ export class TravelerDto {
   @IsOptional()
   @IsString()
   room_group_id?: string;
-
-  @IsOptional()
-  @Type(() => Date)
-  @IsDate()
-  passport_expiry_date?: Date;
 }
 
 // ===================================

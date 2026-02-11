@@ -36,14 +36,14 @@ export const HotelReservationSchema = new mongoose.Schema(
         passport_number: { type: String, required: true },
         passport_expiry_date: { type: Date },
         date_of_birth: { type: Date, required: true },
-        place_of_birth: { type: String, required: true },
+        place_of_birth: { type: String },
         room_type: {
           type: String,
           enum: Object.values(RoomTypes),
           default: RoomTypes.DOUBLE,
         },
         room_group_id: { type: String }, // Links traveler to a room group
-        departure_place: { type: String, required: true },
+        departure_place: { type: String },
         show_in_hotel_list: { type: Boolean, default: true },
         show_in_border_list: { type: Boolean, default: true },
         show_in_guide_list: { type: Boolean, default: true },

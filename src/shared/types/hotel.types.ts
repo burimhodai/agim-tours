@@ -51,9 +51,9 @@ export interface ITraveler {
   passport_number: string;
   passport_expiry_date?: Date;
   date_of_birth: Date;
-  place_of_birth: string;
+  place_of_birth?: string;
   room_type: string;
-  departure_place: string;
+  departure_place?: string;
   show_in_hotel_list: boolean;
   show_in_border_list: boolean;
   show_in_guide_list: boolean;
