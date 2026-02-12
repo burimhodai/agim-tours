@@ -48,6 +48,7 @@ const EventTravelerSchema = new mongoose.Schema({
   show_in_hotel_list: { type: Boolean, default: true },
   show_in_border_list: { type: Boolean, default: true },
   show_in_guide_list: { type: Boolean, default: true },
+  show_in_bus_list: { type: Boolean, default: true },
 
   // Room and hotel assignment
   room_type: { type: mongoose.Schema.Types.ObjectId, ref: 'RoomType' },

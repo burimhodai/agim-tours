@@ -31,6 +31,7 @@ const OrganizedTravelerSchema = new mongoose.Schema({
   // Which lists to show this traveler in (no hotel list for organized travel)
   show_in_border_list: { type: Boolean, default: true },
   show_in_guide_list: { type: Boolean, default: true },
+  show_in_bus_list: { type: Boolean, default: true },
 
   // Bus assignment
   bus: { type: mongoose.Schema.Types.ObjectId, ref: 'EventBus' },
