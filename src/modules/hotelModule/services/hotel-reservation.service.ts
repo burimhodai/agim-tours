@@ -54,6 +54,9 @@ export class HotelReservationService {
       employee: createReservationDto.employee
         ? new Types.ObjectId(createReservationDto.employee)
         : undefined,
+      operator: createReservationDto.operator
+        ? new Types.ObjectId(createReservationDto.operator)
+        : undefined,
     };
     if (createReservationDto.travelers) {
       createReservationDto.travelers.forEach(traveler => {
@@ -128,6 +131,7 @@ export class HotelReservationService {
         .populate('hotel_partner')
         .populate('employee', 'email')
         .populate('agency')
+        .populate('operator')
         .sort({ check_in_date: -1 })
         .skip(skip)
         .limit(limit)
@@ -157,6 +161,7 @@ export class HotelReservationService {
       .populate('hotel_partner')
       .populate('employee', 'email')
       .populate('agency')
+      .populate('operator')
       .populate('logs.employee', 'email')
       .exec();
 
@@ -180,6 +185,7 @@ export class HotelReservationService {
       .populate('hotel_partner')
       .populate('employee', 'email')
       .populate('agency')
+      .populate('operator')
       .exec();
 
     if (!reservation) {
@@ -205,6 +211,11 @@ export class HotelReservationService {
         updateReservationDto.hotel_partner,
       );
     }
+    if (updateReservationDto.operator) {
+      updateData.operator = new Types.ObjectId(
+        updateReservationDto.operator,
+      );
+    }
     if (updateReservationDto.travelers) {
       updateReservationDto.travelers.forEach(traveler => {
         this.validateTravelerPassport(traveler, updateReservationDto.check_in_date || new Date(), updateReservationDto.departure_city, updateReservationDto.arrival_city);
@@ -225,6 +236,7 @@ export class HotelReservationService {
       .populate('hotel_partner')
       .populate('employee', 'email')
       .populate('agency')
+      .populate('operator')
       .exec();
 
     if (!reservation) {
@@ -285,6 +297,7 @@ export class HotelReservationService {
       .populate('hotel_partner')
       .populate('employee', 'email')
       .populate('agency')
+      .populate('operator')
       .populate('logs.employee', 'email')
       .exec();
 
@@ -317,6 +330,7 @@ export class HotelReservationService {
       .populate('hotel_partner')
       .populate('employee', 'email')
       .populate('agency')
+      .populate('operator')
       .exec();
 
     if (!reservation) {

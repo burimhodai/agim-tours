@@ -45,6 +45,17 @@ export interface IPartnerHotel extends Document {
   updatedAt: Date;
 }
 
+// Operator Interface
+export interface IOperator extends Document {
+  _id: Types.ObjectId;
+  name: string;
+  logo: string;
+  agency: Types.ObjectId;
+  isDeleted: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Traveler Interface
 export interface ITraveler {
   full_name: string;
@@ -80,6 +91,8 @@ export interface IHotelReservation extends Document {
   arrival_city?: string;
   status: ReservationStatus;
   notes?: string;
+  maps_url?: string;
+  operator?: Types.ObjectId | IOperator;
   travelers: ITraveler[];
   employee?: Types.ObjectId;
   agency?: Types.ObjectId;

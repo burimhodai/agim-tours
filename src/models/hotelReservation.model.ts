@@ -63,6 +63,7 @@ export const HotelReservationSchema = new mongoose.Schema(
       },
     ],
     maps_url: { type: String },
+    operator: { type: mongoose.Schema.Types.ObjectId, ref: 'Operator' },
     is_deleted: { type: Boolean, default: false },
   },
   {

@@ -237,6 +237,10 @@ export class CreateHotelReservationDto {
   @IsString()
   maps_url?: string;
 
+  @IsOptional()
+  @IsString()
+  operator?: string;
+
   @Type(() => Date)
   @IsDate()
   check_in_date: Date;
@@ -292,6 +296,10 @@ export class UpdateHotelReservationDto {
   @IsOptional()
   @IsString()
   maps_url?: string;
+
+  @IsOptional()
+  @IsString()
+  operator?: string;
 
   @IsOptional()
   @IsString()
@@ -423,4 +431,29 @@ export class PartnerHotelQueryDto {
   @IsNumber()
   @Type(() => Number)
   limit?: number;
+}
+
+// ===================================
+// OPERATOR DTOs
+// ===================================
+
+export class CreateOperatorDto {
+  @IsString()
+  name: string;
+
+  @IsString()
+  logo: string;
+
+  @IsString()
+  agency: string;
+}
+
+export class UpdateOperatorDto {
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  logo?: string;
 }
