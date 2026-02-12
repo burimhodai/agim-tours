@@ -24,8 +24,11 @@ export class OperatorController {
     }
 
     @Get()
-    async findAll(@Query('agency') agencyId: string) {
-        return await this.operatorService.findAll(agencyId);
+    async findAll(
+        @Query('agency') agencyId: string,
+        @Query('type') type: string,
+    ) {
+        return await this.operatorService.findAll(agencyId, type);
     }
 
     @Get(':id')

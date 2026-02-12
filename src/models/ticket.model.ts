@@ -79,6 +79,7 @@ export const TicketSchema = new mongoose.Schema(
 
     agency: { type: mongoose.Schema.Types.ObjectId, ref: 'Agency' },
     operator: { type: String },
+    operatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Operator' },
 
     passengers: [
       {

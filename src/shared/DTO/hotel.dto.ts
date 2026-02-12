@@ -441,8 +441,12 @@ export class CreateOperatorDto {
   @IsString()
   name: string;
 
+  @IsOptional()
   @IsString()
-  logo: string;
+  logo?: string;
+
+  @IsString()
+  type: string;
 
   @IsString()
   agency: string;
@@ -456,4 +460,8 @@ export class UpdateOperatorDto {
   @IsOptional()
   @IsString()
   logo?: string;
+
+  @IsOptional()
+  @IsString()
+  type?: string;
 }

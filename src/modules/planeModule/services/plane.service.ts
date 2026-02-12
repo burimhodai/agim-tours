@@ -299,6 +299,10 @@ export class PlaneService {
       filter.operator = { $regex: operator, $options: 'i' };
     }
 
+    if (query.operatorId) {
+      filter.operatorId = query.operatorId;
+    }
+
     if (route_number) {
       filter.route_number = route_number;
     }

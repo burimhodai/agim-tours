@@ -178,6 +178,10 @@ export class CreatePlaneTicketDto {
 
   @IsOptional()
   @IsString()
+  operatorId?: string;
+
+  @IsOptional()
+  @IsString()
   agency?: string;
 
   @IsOptional()
@@ -283,6 +287,10 @@ export class UpdatePlaneTicketDto {
 
   @IsOptional()
   @IsString()
+  operatorId?: string;
+
+  @IsOptional()
+  @IsString()
   agency?: string;
 
   @IsOptional()
@@ -380,6 +388,10 @@ export class PlaneTicketQueryDto {
   @IsOptional()
   @IsString()
   operator?: string;
+
+  @IsOptional()
+  @IsString()
+  operatorId?: string;
 
   @IsOptional()
   @IsString()

@@ -79,6 +79,7 @@ export interface ITicket extends Document {
 
   agency?: Types.ObjectId;
   operator?: string;
+  operatorId?: string;
 
   passengers?: IPassenger[];
 

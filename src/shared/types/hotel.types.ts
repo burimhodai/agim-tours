@@ -17,6 +17,11 @@ export enum ReservationStatus {
   COMPLETED = 'completed',
 }
 
+export enum OperatorType {
+  HOTEL = 'hotel',
+  PLANE = 'plane',
+}
+
 // Room Type Interface
 export interface IRoomType extends Document {
   _id: Types.ObjectId;
@@ -49,7 +54,8 @@ export interface IPartnerHotel extends Document {
 export interface IOperator extends Document {
   _id: Types.ObjectId;
   name: string;
-  logo: string;
+  logo?: string;
+  type: OperatorType;
   agency: Types.ObjectId;
   isDeleted: boolean;
   createdAt: Date;

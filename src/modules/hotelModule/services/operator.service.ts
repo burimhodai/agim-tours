@@ -27,10 +27,13 @@ export class OperatorService {
         return await operator.save();
     }
 
-    async findAll(agencyId?: string): Promise<IOperator[]> {
+    async findAll(agencyId?: string, type?: string): Promise<IOperator[]> {
         const filter: any = { isDeleted: false };
         if (agencyId) {
             filter.agency = new Types.ObjectId(agencyId);
+        }
+        if (type) {
+            filter.type = type;
         }
         return await this.operatorModel
             .find(filter)
