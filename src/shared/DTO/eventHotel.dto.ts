@@ -313,6 +313,10 @@ export class CreateEventDto {
     @IsOptional()
     @IsString()
     documentId?: string;
+
+    @IsOptional()
+    @IsString()
+    documentMkId?: string;
 }
 
 // Update Event DTO
@@ -408,6 +412,10 @@ export class UpdateEventDto {
     @IsOptional()
     @IsString()
     documentId?: string;
+
+    @IsOptional()
+    @IsString()
+    documentMkId?: string;
 }
 
 // Add Traveler DTO

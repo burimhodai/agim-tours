@@ -194,6 +194,10 @@ export class CreateOrganizedTravelDto {
   @IsOptional()
   @IsString()
   documentId?: string;
+
+  @IsOptional()
+  @IsString()
+  documentMkId?: string;
 }
 
 // Update Organized Travel DTO
@@ -271,6 +275,10 @@ export class UpdateOrganizedTravelDto {
   @IsOptional()
   @IsString()
   documentId?: string;
+
+  @IsOptional()
+  @IsString()
+  documentMkId?: string;
 }
 
 // Add Travelers DTO

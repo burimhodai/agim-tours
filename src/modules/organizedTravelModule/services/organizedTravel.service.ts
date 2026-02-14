@@ -89,6 +89,9 @@ export class OrganizedTravelService {
       documentId: createDto.documentId
         ? new Types.ObjectId(createDto.documentId)
         : undefined,
+      documentMkId: createDto.documentMkId
+        ? new Types.ObjectId(createDto.documentMkId)
+        : undefined,
       buses: createDto.buses?.map((id) => new Types.ObjectId(id)) || [],
     };
 
@@ -129,6 +132,7 @@ export class OrganizedTravelService {
       .populate('buses')
       .populate('travelers.bus')
       .populate('documentId')
+      .populate('documentMkId')
       .exec();
 
     return { trips, total, page, totalPages };
@@ -143,6 +147,7 @@ export class OrganizedTravelService {
       .populate('buses')
       .populate('travelers.bus')
       .populate('documentId')
+      .populate('documentMkId')
       .exec();
 
     if (!travel) {
@@ -182,12 +187,20 @@ export class OrganizedTravelService {
       updateData.documentId = undefined;
     }
 
+    if (updateDto.documentMkId && updateDto.documentMkId !== '') {
+      updateData.documentMkId = new Types.ObjectId(updateDto.documentMkId);
+    } else if (updateDto.documentMkId === '') {
+      updateData.documentMkId = undefined;
+    }
+
     const travel = await this.travelModel
       .findByIdAndUpdate(id, { $set: updateData }, { new: true })
       .populate('agency')
       .populate('employee')
       .populate('buses')
       .populate('travelers.bus')
+      .populate('documentId')
+      .populate('documentMkId')
       .exec();
 
     if (!travel) {

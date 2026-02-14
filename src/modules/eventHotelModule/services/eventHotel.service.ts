@@ -94,6 +94,9 @@ export class EventHotelService {
       documentId: createEventDto.documentId
         ? new Types.ObjectId(createEventDto.documentId)
         : undefined,
+      documentMkId: createEventDto.documentMkId
+        ? new Types.ObjectId(createEventDto.documentMkId)
+        : undefined,
       buses: createEventDto.buses?.map((id) => new Types.ObjectId(id)) || [],
     };
 
@@ -138,6 +141,7 @@ export class EventHotelService {
       .populate('room_groups.room_type')
       .populate('room_groups.hotel')
       .populate('documentId')
+      .populate('documentMkId')
       .exec();
 
     return { events, total, page, totalPages };
@@ -156,6 +160,7 @@ export class EventHotelService {
       .populate('room_groups.room_type')
       .populate('room_groups.hotel')
       .populate('documentId')
+      .populate('documentMkId')
       .exec();
 
     if (!event) {
@@ -201,6 +206,12 @@ export class EventHotelService {
       updateData.documentId = new Types.ObjectId(updateEventDto.documentId);
     } else if (updateEventDto.documentId === '') {
       updateData.documentId = undefined;
+    }
+
+    if (updateEventDto.documentMkId && updateEventDto.documentMkId !== '') {
+      updateData.documentMkId = new Types.ObjectId(updateEventDto.documentMkId);
+    } else if (updateEventDto.documentMkId === '') {
+      updateData.documentMkId = undefined;
     }
 
     if (updateEventDto?.room_groups) {
@@ -281,6 +292,8 @@ export class EventHotelService {
       .populate('travelers.bus')
       .populate('room_groups.room_type')
       .populate('room_groups.hotel')
+      .populate('documentId')
+      .populate('documentMkId')
       .exec();
 
     if (!event) {
