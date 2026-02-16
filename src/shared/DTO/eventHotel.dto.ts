@@ -130,6 +130,10 @@ export class EventTravelerDto {
     show_in_guide_list?: boolean;
 
     @IsOptional()
+    @IsBoolean()
+    show_in_bus_list?: boolean;
+
+    @IsOptional()
     @IsString()
     room_type?: string;
 

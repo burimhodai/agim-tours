@@ -73,11 +73,19 @@ export class OrganizedTravelerDto {
 
   @IsOptional()
   @IsBoolean()
+  show_in_hotel_list?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
   show_in_border_list?: boolean;
 
   @IsOptional()
   @IsBoolean()
   show_in_guide_list?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  show_in_bus_list?: boolean;
 
   @IsOptional()
   @IsString()
