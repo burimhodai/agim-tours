@@ -29,9 +29,9 @@ export class OperatorService {
 
     async findAll(agencyId?: string, type?: string): Promise<IOperator[]> {
         const filter: any = { isDeleted: false };
-        if (agencyId) {
-            filter.agency = new Types.ObjectId(agencyId);
-        }
+        // if (agencyId) {
+        //     filter.agency = new Types.ObjectId(agencyId);
+        // }
         if (type) {
             filter.type = type;
         }
