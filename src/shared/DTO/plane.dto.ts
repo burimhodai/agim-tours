@@ -3,6 +3,7 @@ import {
   IsBoolean,
   IsDate,
   IsEnum,
+  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
@@ -58,9 +59,11 @@ export class PlanePassengerDto {
   title?: string;
 
   @IsString()
+  @IsNotEmpty()
   first_name: string;
 
   @IsString()
+  @IsNotEmpty()
   last_name: string;
 
   @IsOptional()
