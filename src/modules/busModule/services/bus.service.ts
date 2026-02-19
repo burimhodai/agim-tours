@@ -376,11 +376,12 @@ export class BusService {
       updateBusTicketDto.employee,
     );
 
-    // Create INCOME transactions for each new payment chunk
     if (newChunksAdded.length > 0) {
-      // Fetch the employee to get their agency
       const employee = await this.userModel.findById(updateBusTicketDto.employee).exec();
       const employeeAgencyId = employee?.agency?.toString();
+
+      const wasUnpaid =
+        currentTicket.payment_status === PaymentStatusTypes.UNPAID;
 
       for (const chunk of newChunksAdded) {
         await this.transactionService.create({
@@ -395,6 +396,10 @@ export class BusService {
           user: updateBusTicketDto.employee,
           description: `Pagesë - Biletë autobusi (${ticket.uid})`,
         });
+
+        if (wasUnpaid) {
+          await this.transactionService.reduceDebtByTicket(id, chunk.amount);
+        }
       }
     }
 

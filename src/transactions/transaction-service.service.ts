@@ -133,11 +133,122 @@ export class TransactionServiceService {
   }
 
   async settleDebt(ticketId: string): Promise<ITransaction | null> {
-    // Convert debt to income when ticket is paid
     return await this.updateByTicket(ticketId, {
       type: TransactionTypes.INCOME,
       status: TransactionStatus.SETTLED,
     });
+  }
+
+  async reduceDebtByTicket(
+    ticketId: string,
+    paidAmount: number,
+  ): Promise<ITransaction | null> {
+    if (!Types.ObjectId.isValid(ticketId)) {
+      return null;
+    }
+
+    const debtTransaction = await this.transactionModel
+      .findOne({
+        ticket: new Types.ObjectId(ticketId),
+        type: TransactionTypes.DEBT,
+        status: TransactionStatus.PENDING,
+      })
+      .exec();
+
+    if (!debtTransaction) {
+      return null;
+    }
+
+    const newAmount = (debtTransaction.amount || 0) - paidAmount;
+
+    if (newAmount <= 0) {
+      debtTransaction.amount = 0;
+      debtTransaction.type = TransactionTypes.INCOME;
+      debtTransaction.status = TransactionStatus.SETTLED;
+      debtTransaction.description = (debtTransaction.description || '')
+        .replace('Borxh - ', '')
+        .replace(' e papaguar', ' - Paguar plotësisht');
+    } else {
+      debtTransaction.amount = newAmount;
+    }
+
+    return await debtTransaction.save();
+  }
+
+  async reduceDebtByEventTraveler(
+    eventId: string,
+    travelerId: string,
+    paidAmount: number,
+  ): Promise<ITransaction | null> {
+    if (!Types.ObjectId.isValid(eventId)) {
+      return null;
+    }
+
+    const debtTransaction = await this.transactionModel
+      .findOne({
+        event: new Types.ObjectId(eventId),
+        travelerId: travelerId,
+        type: TransactionTypes.DEBT,
+        status: TransactionStatus.PENDING,
+      })
+      .exec();
+
+    if (!debtTransaction) {
+      return null;
+    }
+
+    const newAmount = (debtTransaction.amount || 0) - paidAmount;
+
+    if (newAmount <= 0) {
+      debtTransaction.amount = 0;
+      debtTransaction.type = TransactionTypes.INCOME;
+      debtTransaction.status = TransactionStatus.SETTLED;
+      debtTransaction.description = (debtTransaction.description || '')
+        .replace('Borxh - ', '')
+        .replace(' e papaguar', ' - Paguar plotësisht');
+    } else {
+      debtTransaction.amount = newAmount;
+    }
+
+    return await debtTransaction.save();
+  }
+
+  async reduceDebtByOrganizedTravelTraveler(
+    organizedTravelId: string,
+    travelerId: string,
+    paidAmount: number,
+  ): Promise<ITransaction | null> {
+    if (!Types.ObjectId.isValid(organizedTravelId)) {
+      return null;
+    }
+
+    const debtTransaction = await this.transactionModel
+      .findOne({
+        organizedTravel: new Types.ObjectId(organizedTravelId),
+        travelerId: travelerId,
+        type: TransactionTypes.DEBT,
+        status: TransactionStatus.PENDING,
+      })
+      .exec();
+
+    if (!debtTransaction) {
+      return null;
+    }
+
+    const newAmount = (debtTransaction.amount || 0) - paidAmount;
+
+    if (newAmount <= 0) {
+      debtTransaction.amount = 0;
+      debtTransaction.type = TransactionTypes.INCOME;
+      debtTransaction.status = TransactionStatus.SETTLED;
+      debtTransaction.description = (debtTransaction.description || '')
+        .replace('Borxh - ', '')
+        .replace(' e papaguar', ' - Paguar plotësisht');
+    } else {
+      debtTransaction.amount = newAmount;
+    }
+
+    return await debtTransaction.save();
   }
 
   // Find transaction by event and traveler
