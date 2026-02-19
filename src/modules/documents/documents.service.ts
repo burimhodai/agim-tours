@@ -64,7 +64,11 @@ export class DocumentsService {
         if (!doc) {
             throw new BadRequestException('Document not found');
         }
-        await cloudinary.v2.uploader.destroy(doc.publicId, { resource_type: 'auto' });
+        try {
+            await cloudinary.v2.uploader.destroy(doc.publicId, { resource_type: 'raw' });
+        } catch (e) {
+            console.error('Cloudinary delete failed:', e);
+        }
         await this.documentModel.deleteOne({ _id: id }).exec();
     }
 }

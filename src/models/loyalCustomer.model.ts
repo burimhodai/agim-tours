@@ -33,6 +33,7 @@ export const LoyalCustomerSchema = new mongoose.Schema(
     email: { type: String },
     passport_number: { type: String },
     passport_expiry_date: { type: Date },
+    passport_issue_date: { type: Date },
     date_of_birth: { type: Date },
     nationality: { type: String },
     address: { type: String },

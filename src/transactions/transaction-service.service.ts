@@ -126,7 +126,7 @@ export class TransactionServiceService {
     }
 
     const result = await this.transactionModel
-      .deleteOne({ ticket: new Types.ObjectId(ticketId) })
+      .deleteMany({ ticket: new Types.ObjectId(ticketId) })
       .exec();
 
     return result.deletedCount > 0;

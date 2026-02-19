@@ -476,6 +476,8 @@ export class PlaneService {
       throw new NotFoundException('Plane ticket not found');
     }
 
+    await this.transactionService.deleteByTicket(id);
+
     await this.addLogInternal(
       id,
       'Bileta u fshi',
