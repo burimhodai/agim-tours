@@ -20,13 +20,31 @@ import {
 export class TransactionServiceService {
   constructor(
     @InjectModel('Transaction') private transactionModel: Model<ITransaction>,
+    @InjectModel('Agency') private agencyModel: Model<any>,
   ) { }
 
   async create(
     createTransactionDto: CreateTransactionDto,
   ): Promise<ITransaction> {
+    let description = createTransactionDto.description || '';
+
+    if (createTransactionDto.agency) {
+      try {
+        const agencyDoc = await this.agencyModel
+          .findById(createTransactionDto.agency)
+          .select('name')
+          .lean();
+        if (agencyDoc?.name && !description.includes(agencyDoc.name)) {
+          description = description
+            ? `${description} - ${agencyDoc.name}`
+            : agencyDoc.name;
+        }
+      } catch (e) { }
+    }
+
     const transactionData = {
       ...createTransactionDto,
+      description,
       agency: createTransactionDto.agency
         ? new Types.ObjectId(createTransactionDto.agency)
         : undefined,

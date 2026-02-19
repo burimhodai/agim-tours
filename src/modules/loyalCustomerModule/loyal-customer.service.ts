@@ -3,19 +3,22 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
 interface CreateLoyalCustomerDto {
+  title?: string;
   first_name: string;
   last_name: string;
   phone?: string;
   email?: string;
   passport_number?: string;
+  passport_expiry_date?: Date;
   date_of_birth?: Date;
+  nationality?: string;
   address?: string;
   city?: string;
   country?: string;
   notes?: string;
 }
 
-interface UpdateLoyalCustomerDto extends Partial<CreateLoyalCustomerDto> {}
+interface UpdateLoyalCustomerDto extends Partial<CreateLoyalCustomerDto> { }
 
 interface AddPurchaseDto {
   ticket_type: 'bus' | 'plane' | 'hotel' | 'event';
@@ -34,7 +37,7 @@ export class LoyalCustomerService {
     @InjectModel('LoyalCustomer')
     private readonly loyalCustomerModel: Model<any>,
     @InjectModel('Agency') private readonly agencyModel: Model<any>,
-  ) {}
+  ) { }
 
   private async getAgencyId(agency: any): Promise<any> {
     if (agency && agency._id) return agency._id;
