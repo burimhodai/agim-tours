@@ -442,6 +442,8 @@ export class BusService {
       throw new NotFoundException('Bus ticket not found');
     }
 
+    await this.transactionService.deleteByTicket(id);
+
     await this.addLogInternal(
       id,
       'Bileta u fshi',

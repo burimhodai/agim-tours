@@ -221,6 +221,8 @@ export class OrganizedTravelService {
       throw new NotFoundException('Udhëtimi nuk u gjet');
     }
 
+    // await this.transactionService.deleteByOrganizedTravel(id);
+
     return { message: 'Udhëtimi u çaktivizua me sukses' };
   }
 

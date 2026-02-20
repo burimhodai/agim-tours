@@ -434,6 +434,30 @@ export class TransactionServiceService {
     return result.deletedCount > 0;
   }
 
+  async deleteByEvent(eventId: string): Promise<boolean> {
+    if (!Types.ObjectId.isValid(eventId)) {
+      return false;
+    }
+
+    const result = await this.transactionModel
+      .deleteMany({ event: new Types.ObjectId(eventId) })
+      .exec();
+
+    return result.deletedCount > 0;
+  }
+
+  async deleteByOrganizedTravel(organizedTravelId: string): Promise<boolean> {
+    if (!Types.ObjectId.isValid(organizedTravelId)) {
+      return false;
+    }
+
+    const result = await this.transactionModel
+      .deleteMany({ organizedTravel: new Types.ObjectId(organizedTravelId) })
+      .exec();
+
+    return result.deletedCount > 0;
+  }
+
   async findAll(query: TransactionQueryDto): Promise<ITransaction[]> {
     const { date, date_from, date_to, type, status, agency, user } = query;
 

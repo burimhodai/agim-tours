@@ -99,6 +99,7 @@ export class ReportsService {
         $lte: dateRange.to,
       },
       status: { $ne: 'canceled' },
+      is_deleted: { $ne: true },
     };
 
     if (agency) {
