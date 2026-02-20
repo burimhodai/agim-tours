@@ -409,10 +409,6 @@ export class PlaneService {
       const employee = await this.userModel.findById(updatePlaneTicketDto.employee).exec();
       const employeeAgencyId = employee?.agency?.toString();
 
-      const wasUnpaid =
-        currentTicket.payment_status === PaymentStatusTypes.UNPAID ||
-        currentTicket.payment_status === PaymentStatusTypes.NOT_PAID;
-
       for (const chunk of newChunksAdded) {
         await this.transactionService.create({
           amount: chunk.amount,
@@ -427,9 +423,7 @@ export class PlaneService {
           description: `Pagesë - Biletë avioni (${ticket.uid})`,
         });
 
-        if (wasUnpaid) {
-          await this.transactionService.reduceDebtByTicket(id, chunk.amount);
-        }
+        await this.transactionService.reduceDebtByTicket(id, chunk.amount, chunk.currency);
       }
     }
 

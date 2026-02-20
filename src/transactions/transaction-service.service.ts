@@ -15,6 +15,7 @@ import {
   TransactionQueryDto,
   UpdateTransactionDto,
 } from 'src/shared/DTO/transaction.dto';
+import { CurrencyTypes } from 'src/shared/types/currency.types';
 
 @Injectable()
 export class TransactionServiceService {
@@ -22,6 +23,37 @@ export class TransactionServiceService {
     @InjectModel('Transaction') private transactionModel: Model<ITransaction>,
     @InjectModel('Agency') private agencyModel: Model<any>,
   ) { }
+
+  private convertCurrency(
+    amount: number,
+    fromCurrency: string,
+    toCurrency: string,
+  ): number {
+    if (fromCurrency === toCurrency) return amount;
+
+    const rates: Record<string, Record<string, number>> = {
+      [CurrencyTypes.EURO]: {
+        [CurrencyTypes.CHF]: 0.93,
+        [CurrencyTypes.MKD]: 61.5,
+      },
+      [CurrencyTypes.CHF]: {
+        [CurrencyTypes.EURO]: 1.075,
+        [CurrencyTypes.MKD]: 66.13,
+      },
+      [CurrencyTypes.MKD]: {
+        [CurrencyTypes.EURO]: 0.01626,
+        [CurrencyTypes.CHF]: 0.01512,
+      },
+    };
+
+    const from = fromCurrency.toLowerCase();
+    const to = toCurrency.toLowerCase();
+
+    const rate = rates[from]?.[to];
+    if (!rate) return amount;
+
+    return Math.round(amount * rate * 100) / 100;
+  }
 
   async create(
     createTransactionDto: CreateTransactionDto,
@@ -142,6 +174,7 @@ export class TransactionServiceService {
   async reduceDebtByTicket(
     ticketId: string,
     paidAmount: number,
+    paymentCurrency?: string,
   ): Promise<ITransaction | null> {
     if (!Types.ObjectId.isValid(ticketId)) {
       return null;
@@ -159,7 +192,12 @@ export class TransactionServiceService {
       return null;
     }
 
-    const newAmount = (debtTransaction.amount || 0) - paidAmount;
+    let convertedAmount = paidAmount;
+    if (paymentCurrency && debtTransaction.currency && paymentCurrency.toLowerCase() !== debtTransaction.currency.toLowerCase()) {
+      convertedAmount = this.convertCurrency(paidAmount, paymentCurrency, debtTransaction.currency);
+    }
+
+    const newAmount = (debtTransaction.amount || 0) - convertedAmount;
 
     if (newAmount <= 0) {
       debtTransaction.amount = 0;

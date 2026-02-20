@@ -176,7 +176,7 @@ export class BusService {
         user: createBusTicketDto.employee,
         description: 'Biletë autobusi',
       });
-    } else if (createBusTicketDto.payment_status === PaymentStatusTypes.UNPAID) {
+    } else if (createBusTicketDto.payment_status === PaymentStatusTypes.UNPAID || createBusTicketDto.payment_status === PaymentStatusTypes.NOT_PAID) {
       // Unpaid - create DEBT transaction
       await this.transactionService.create({
         amount: createBusTicketDto.price,
@@ -380,9 +380,6 @@ export class BusService {
       const employee = await this.userModel.findById(updateBusTicketDto.employee).exec();
       const employeeAgencyId = employee?.agency?.toString();
 
-      const wasUnpaid =
-        currentTicket.payment_status === PaymentStatusTypes.UNPAID;
-
       for (const chunk of newChunksAdded) {
         await this.transactionService.create({
           amount: chunk.amount,
@@ -397,9 +394,7 @@ export class BusService {
           description: `Pagesë - Biletë autobusi (${ticket.uid})`,
         });
 
-        if (wasUnpaid) {
-          await this.transactionService.reduceDebtByTicket(id, chunk.amount);
-        }
+        await this.transactionService.reduceDebtByTicket(id, chunk.amount, chunk.currency);
       }
     }
 
@@ -412,15 +407,15 @@ export class BusService {
       const isPaidNow =
         updateBusTicketDto.payment_status === PaymentStatusTypes.PAID;
       const wasUnpaid =
-        currentTicket.payment_status === PaymentStatusTypes.UNPAID;
+        currentTicket.payment_status === PaymentStatusTypes.UNPAID ||
+        currentTicket.payment_status === PaymentStatusTypes.NOT_PAID;
 
       if (isPaidNow && wasUnpaid) {
-        // Debt is being settled - convert to income
         await this.transactionService.settleDebt(id);
       } else if (
-        updateBusTicketDto.payment_status === PaymentStatusTypes.UNPAID
+        updateBusTicketDto.payment_status === PaymentStatusTypes.UNPAID ||
+        updateBusTicketDto.payment_status === PaymentStatusTypes.NOT_PAID
       ) {
-        // Changing to unpaid - update transaction to debt
         await this.transactionService.updateByTicket(id, {
           type: TransactionTypes.DEBT,
           status: TransactionStatus.PENDING,
