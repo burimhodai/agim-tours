@@ -129,6 +129,7 @@ export const TicketSchema = new mongoose.Schema(
     // Attached document for ticket PDF
     documentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Document' },
     route_number: { type: String },
+    return_route_number: { type: String },
   },
   {
     timestamps: true,

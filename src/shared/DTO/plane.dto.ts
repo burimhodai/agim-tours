@@ -209,6 +209,10 @@ export class CreatePlaneTicketDto {
   @IsOptional()
   @IsString()
   original_booking_reference?: string;
+
+  @IsOptional()
+  @IsString()
+  return_route_number?: string;
 }
 
 export class UpdatePlaneTicketDto {
@@ -319,6 +323,10 @@ export class UpdatePlaneTicketDto {
   @IsOptional()
   @IsString()
   original_booking_reference?: string;
+
+  @IsOptional()
+  @IsString()
+  return_route_number?: string;
 
   @IsOptional()
   @IsString()
