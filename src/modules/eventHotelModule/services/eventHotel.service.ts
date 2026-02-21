@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { IUser } from 'src/shared/types/user.types';
 import {
   CreateEventDto,
   UpdateEventDto,
@@ -46,6 +47,7 @@ export interface IEventHotel {
 export class EventHotelService {
   constructor(
     @InjectModel('EventHotel') private eventModel: Model<IEventHotel>,
+    @InjectModel('User') private userModel: Model<IUser>,
     private transactionService: TransactionServiceService,
   ) { }
 
@@ -337,6 +339,7 @@ export class EventHotelService {
     id: string,
     addTravelerDto: AddTravelerDto,
     performingAgencyId?: string,
+    employeeId?: string,
   ): Promise<IEventHotel> {
     const event = await this.eventModel.findById(id);
 
@@ -367,7 +370,7 @@ export class EventHotelService {
       id,
       'Udhëtarët u shtuan',
       `U shtuan udhëtarët: ${travelerNames}`,
-      addTravelerDto.employee
+      employeeId || addTravelerDto.employee
     );
 
     // Create transactions for each traveler with a price
@@ -381,6 +384,7 @@ export class EventHotelService {
           traveler,
           performingAgencyId || savedEvent.agency?.toString(),
           savedEvent.name,
+          employeeId || addTravelerDto.employee,
         );
       }
     }
@@ -394,7 +398,17 @@ export class EventHotelService {
     traveler: any,
     agencyId?: string,
     eventName?: string,
+    employeeId?: string,
   ): Promise<void> {
+    let finalAgencyId = agencyId;
+
+    if (!finalAgencyId && employeeId && Types.ObjectId.isValid(employeeId)) {
+      const employee = await this.userModel.findById(employeeId).exec();
+      if (employee?.agency) {
+        finalAgencyId = employee.agency.toString();
+      }
+    }
+
     const isUnpaid = traveler.payment_status === PaymentStatusTypes.UNPAID;
     const isPartiallyPaid =
       traveler.payment_status === PaymentStatusTypes.PARTIALLY_PAID;
@@ -412,8 +426,9 @@ export class EventHotelService {
         status: TransactionStatus.SETTLED,
         event: eventId,
         travelerId: travelerId,
-        agency: agencyId,
-        description: `Ngjarje: ${eventName} - Udhëtar: ${travelerName}`,
+        agency: finalAgencyId,
+        user: employeeId,
+        description: `Ngjarje: ${eventName} - Udhëtar: ${travelerName} (Paguar)`,
       });
     } else if (isPartiallyPaid && traveler.paid_amount > 0) {
       // Partially paid - create income for paid amount and debt for remaining
@@ -424,34 +439,9 @@ export class EventHotelService {
         status: TransactionStatus.SETTLED,
         event: eventId,
         travelerId: travelerId,
-        agency: agencyId,
+        agency: finalAgencyId,
+        user: employeeId,
         description: `Ngjarje: ${eventName} - Udhëtar: ${travelerName} (Pagesa e pjesshme)`,
-      });
-
-      const remainingAmount = traveler.price - traveler.paid_amount;
-      if (remainingAmount > 0) {
-        await this.transactionService.create({
-          amount: remainingAmount,
-          currency: traveler.currency,
-          type: TransactionTypes.DEBT,
-          status: TransactionStatus.PENDING,
-          event: eventId,
-          travelerId: `${travelerId}_debt`,
-          agency: agencyId,
-          description: `Borxh - Ngjarje: ${eventName} - Udhëtar: ${travelerName}`,
-        });
-      }
-    } else if (isUnpaid) {
-      // Unpaid - create debt transaction
-      await this.transactionService.create({
-        amount: traveler.price,
-        currency: traveler.currency,
-        type: TransactionTypes.DEBT,
-        status: TransactionStatus.PENDING,
-        event: eventId,
-        travelerId: travelerId,
-        agency: agencyId,
-        description: `Borxh - Ngjarje: ${eventName} - Udhëtar: ${travelerName}`,
       });
     }
   }
@@ -529,7 +519,10 @@ export class EventHotelService {
           oldTraveler.toObject(),
           newTraveler,
           performingAgencyId || event.agency?.toString(),
-          event.name
+          event.name,
+          undefined,
+          undefined,
+          employeeId
         );
       } else if (!oldTraveler && newTraveler.price > 0) {
         const createdTraveler = savedEvent.travelers.find(
@@ -538,13 +531,14 @@ export class EventHotelService {
             t.last_name === newTraveler.last_name &&
             t.room_group_id === roomGroupId
         );
-        if (createdTraveler) {
+        if (createdTraveler && createdTraveler.price && createdTraveler.price > 0) {
           await this.createTravelerTransaction(
             eventId,
             createdTraveler._id.toString(),
             createdTraveler,
             performingAgencyId || event.agency?.toString(),
-            event.name
+            event.name,
+            employeeId,
           );
         }
       }
@@ -614,6 +608,9 @@ export class EventHotelService {
         updatedTraveler,
         performingAgencyId || event.agency?.toString(),
         event.name,
+        undefined,
+        undefined,
+        employeeId || travelerData.employee,
       );
     }
 
@@ -629,11 +626,21 @@ export class EventHotelService {
     eventName?: string,
     customRefundAmount?: number,
     customRefundCurrency?: string,
+    employeeId?: string,
   ): Promise<void> {
     const oldStatus = oldTraveler.payment_status;
     const newStatus = newTraveler.payment_status;
     const travelerName =
       `${newTraveler.first_name || ''} ${newTraveler.last_name || ''}`.trim();
+
+    let finalAgencyId = agencyId;
+
+    if (!finalAgencyId && employeeId && Types.ObjectId.isValid(employeeId)) {
+      const employee = await this.userModel.findById(employeeId).exec();
+      if (employee?.agency) {
+        finalAgencyId = employee.agency.toString();
+      }
+    }
 
     // If changing from unpaid/partial to paid, settle the debt and record income
     if (newStatus === PaymentStatusTypes.PAID) {
@@ -650,7 +657,8 @@ export class EventHotelService {
           status: TransactionStatus.SETTLED,
           event: eventId,
           travelerId: travelerId,
-          agency: agencyId,
+          agency: finalAgencyId,
+          user: employeeId,
           description: `Ngjarje: ${eventName} - Udhëtar: ${travelerName} (Paguar)`,
         });
       } else if (oldStatus === PaymentStatusTypes.PARTIALLY_PAID) {
@@ -669,7 +677,8 @@ export class EventHotelService {
             status: TransactionStatus.SETTLED,
             event: eventId,
             travelerId: `${travelerId}_final`,
-            agency: agencyId,
+            agency: finalAgencyId,
+            user: employeeId,
             description: `Ngjarje: ${eventName} - Udhëtar: ${travelerName} (Pagesa finale)`,
           });
         }
@@ -688,7 +697,8 @@ export class EventHotelService {
           status: TransactionStatus.SETTLED,
           event: eventId,
           travelerId: `${travelerId}_payment_${Date.now()}`,
-          agency: agencyId,
+          agency: finalAgencyId,
+          user: employeeId,
           description: `Ngjarje: ${eventName} - Udhëtar: ${travelerName} (Pagesa e pjesshme)`,
         });
       } else if (paidAmount < previousPaidAmount) {
@@ -701,7 +711,8 @@ export class EventHotelService {
           status: TransactionStatus.SETTLED,
           event: eventId,
           travelerId: `${travelerId}_refund_${Date.now()}`,
-          agency: agencyId,
+          agency: finalAgencyId,
+          user: employeeId,
           description: `Rimbursim - Ngjarje: ${eventName} - Udhëtar: ${travelerName} (Pjesërisht)`,
         });
       }
@@ -727,7 +738,8 @@ export class EventHotelService {
             status: TransactionStatus.PENDING,
             event: eventId,
             travelerId: `${travelerId}_debt`,
-            agency: agencyId,
+            agency: finalAgencyId,
+            user: employeeId,
             description: `Borxh - Ngjarje: ${eventName} - Udhëtar: ${travelerName}`,
           });
         }
@@ -746,7 +758,8 @@ export class EventHotelService {
           status: TransactionStatus.SETTLED,
           event: eventId,
           travelerId: `${travelerId}_refund_${Date.now()}`,
-          agency: agencyId,
+          agency: finalAgencyId,
+          user: employeeId,
           description: `Rimbursim - Ngjarje: ${eventName} - Udhëtar: ${travelerName}${customRefundAmount !== undefined ? ' (Shumë e personalizuar)' : ' (i plotë)'}`,
         });
       }
@@ -832,6 +845,9 @@ export class EventHotelService {
       event.travelers[travelerIndex].toObject(),
       performingAgencyId || event.agency?.toString(),
       event.name,
+      undefined,
+      undefined,
+      employeeId
     );
 
     return savedEvent;
@@ -1051,7 +1067,8 @@ export class EventHotelService {
           agency || event.agency?.toString(),
           event.name,
           amount,
-          currency
+          currency,
+          employee
         );
 
         // Set the final status to UNPAID/NOT_PAID as requested

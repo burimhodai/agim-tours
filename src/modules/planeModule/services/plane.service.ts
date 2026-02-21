@@ -370,10 +370,8 @@ export class PlaneService {
     }
 
     const updateData: any = { ...updatePlaneTicketDto };
+    // Removed auto-update of ticket.agency to allow using 'agency' field for transaction attribution
 
-    if (updatePlaneTicketDto.agency) {
-      updateData.agency = new Types.ObjectId(updatePlaneTicketDto.agency);
-    }
 
     const oldPaymentChunks = currentTicket.payment_chunks || [];
     const newPaymentChunks = updatePlaneTicketDto.payment_chunks || [];
@@ -416,9 +414,9 @@ export class PlaneService {
           type: TransactionTypes.INCOME,
           status: TransactionStatus.SETTLED,
           ticket: id,
-          agency: employeeAgencyId || (ticket.agency instanceof Types.ObjectId
+          agency: updatePlaneTicketDto.agency || employeeAgencyId || (ticket.agency instanceof Types.ObjectId
             ? ticket.agency.toString()
-            : (ticket.agency as any)?._id?.toString() || updatePlaneTicketDto.agency),
+            : (ticket.agency as any)?._id?.toString() || ''),
           user: updatePlaneTicketDto.employee,
           description: `Pagesë - Biletë avioni (${ticket.uid})`,
         });
@@ -629,6 +627,9 @@ export class PlaneService {
       ticket.payment_status === PaymentStatusTypes.UNPAID ||
       ticket.payment_status === PaymentStatusTypes.NOT_PAID;
 
+    const employee = await this.userModel.findById(cancelTicketDto.employee).exec();
+    const employeeAgencyId = employee?.agency?.toString();
+
     if (wasUnpaid) {
       await this.transactionService.deleteByTicket(id);
     } else {
@@ -649,10 +650,10 @@ export class PlaneService {
             type: TransactionTypes.OUTCOME,
             status: TransactionStatus.SETTLED,
             ticket: ticket._id.toString(),
-            agency: ticket.agency instanceof Types.ObjectId
+            agency: cancelTicketDto.agency || employeeAgencyId || (ticket.agency instanceof Types.ObjectId
               ? ticket.agency.toString()
-              : (ticket.agency as any)?._id?.toString() || '',
-            user: ticket.employee?.toString(),
+              : (ticket.agency as any)?._id?.toString() || ''),
+            user: cancelTicketDto.employee,
             description: `Rimbursim - Biletë avioni e anuluar (${ticket.uid})`,
           });
         }
@@ -719,10 +720,10 @@ export class PlaneService {
         type: TransactionTypes.OUTCOME,
         status: TransactionStatus.SETTLED,
         ticket: ticket._id.toString(),
-        agency: employeeAgencyId || (ticket.agency instanceof Types.ObjectId
+        agency: refundDto.agency || employeeAgencyId || (ticket.agency instanceof Types.ObjectId
           ? ticket.agency.toString()
           : (ticket.agency as any)?._id?.toString() || ''),
-        user: ticket.employee?.toString(),
+        user: refundDto.employee,
         description: `Rimbursim - Biletë avioni e anuluar (${ticket.uid})`,
       });
     }

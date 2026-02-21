@@ -4,6 +4,7 @@ import { OrganizedTravelSchema } from 'src/models/organizedTravel.model';
 import { EventBusSchema } from 'src/models/eventHotel.model';
 import { TransactionSchema } from 'src/models/transaction.model';
 import { AgencySchema } from 'src/models/agency.model';
+import { UserSchema } from 'src/models/user.model';
 import { OrganizedTravelService } from './services/organizedTravel.service';
 import { OrganizedTravelController } from './controllers/organizedTravel.controller';
 import { TransactionServiceService } from 'src/transactions/transaction-service.service';
@@ -15,6 +16,7 @@ import { TransactionServiceService } from 'src/transactions/transaction-service.
       { name: 'EventBus', schema: EventBusSchema },
       { name: 'Transaction', schema: TransactionSchema },
       { name: 'Agency', schema: AgencySchema },
+      { name: 'User', schema: UserSchema },
     ]),
   ],
   controllers: [OrganizedTravelController],

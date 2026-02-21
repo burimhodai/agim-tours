@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { IUser } from 'src/shared/types/user.types';
 import {
   CreateOrganizedTravelDto,
   UpdateOrganizedTravelDto,
@@ -43,6 +44,7 @@ export class OrganizedTravelService {
   constructor(
     @InjectModel('OrganizedTravel')
     private travelModel: Model<IOrganizedTravel>,
+    @InjectModel('User') private userModel: Model<IUser>,
     private transactionService: TransactionServiceService,
   ) { }
 
@@ -244,14 +246,13 @@ export class OrganizedTravelService {
     id: string,
     addTravelersDto: AddOrganizedTravelersDto,
     performingAgencyId?: string,
+    employeeId?: string,
   ): Promise<IOrganizedTravel> {
     const travel = await this.travelModel.findById(id);
 
     if (!travel) {
       throw new NotFoundException('Udhëtimi nuk u gjet');
     }
-
-    const employeeId = addTravelersDto.employee;
 
     const batchGroupId = `G-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     const processedTravelers = addTravelersDto.travelers.map((traveler) => ({
@@ -269,7 +270,7 @@ export class OrganizedTravelService {
       id,
       'Udhëtarët u shtuan',
       `U shtuan udhëtarët: ${travelerNames}`,
-      employeeId
+      employeeId || addTravelersDto.employee
     );
 
     // Create transactions for each traveler with a price
@@ -283,6 +284,7 @@ export class OrganizedTravelService {
           traveler,
           performingAgencyId || savedTravel.agency?.toString(),
           savedTravel.name,
+          employeeId || addTravelersDto.employee,
         );
       }
     }
@@ -296,7 +298,17 @@ export class OrganizedTravelService {
     traveler: any,
     agencyId?: string,
     travelName?: string,
+    employeeId?: string,
   ): Promise<void> {
+    let finalAgencyId = agencyId;
+
+    if (!finalAgencyId && employeeId && Types.ObjectId.isValid(employeeId)) {
+      const employee = await this.userModel.findById(employeeId).exec();
+      if (employee?.agency) {
+        finalAgencyId = employee.agency.toString();
+      }
+    }
+
     const isUnpaid = traveler.payment_status === PaymentStatusTypes.UNPAID;
     const isPartiallyPaid =
       traveler.payment_status === PaymentStatusTypes.PARTIALLY_PAID;
@@ -314,8 +326,9 @@ export class OrganizedTravelService {
         status: TransactionStatus.SETTLED,
         organizedTravel: travelId,
         travelerId: travelerId,
-        agency: agencyId,
-        description: `Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName}`,
+        agency: finalAgencyId,
+        user: employeeId,
+        description: `Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName} (Paguar)`,
       });
     } else if (isPartiallyPaid && traveler.paid_amount > 0) {
       // Partially paid - create income for paid amount and debt for remaining
@@ -326,34 +339,9 @@ export class OrganizedTravelService {
         status: TransactionStatus.SETTLED,
         organizedTravel: travelId,
         travelerId: travelerId,
-        agency: agencyId,
+        agency: finalAgencyId,
+        user: employeeId,
         description: `Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName} (Pagesa e pjesshme)`,
-      });
-
-      const remainingAmount = traveler.price - traveler.paid_amount;
-      if (remainingAmount > 0) {
-        await this.transactionService.create({
-          amount: remainingAmount,
-          currency: traveler.currency,
-          type: TransactionTypes.DEBT,
-          status: TransactionStatus.PENDING,
-          organizedTravel: travelId,
-          travelerId: `${travelerId}_debt`,
-          agency: agencyId,
-          description: `Borxh - Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName}`,
-        });
-      }
-    } else if (isUnpaid) {
-      // Unpaid - create debt transaction
-      await this.transactionService.create({
-        amount: traveler.price,
-        currency: traveler.currency,
-        type: TransactionTypes.DEBT,
-        status: TransactionStatus.PENDING,
-        organizedTravel: travelId,
-        travelerId: travelerId,
-        agency: agencyId,
-        description: `Borxh - Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName}`,
       });
     }
   }
@@ -423,7 +411,10 @@ export class OrganizedTravelService {
           oldTraveler.toObject(),
           newTraveler,
           performingAgencyId || travel.agency?.toString(),
-          travel.name
+          travel.name,
+          undefined,
+          undefined,
+          employeeId
         );
       } else if (!oldTraveler && newTraveler.price > 0) {
         const createdTraveler = savedTravel.travelers.find(
@@ -432,13 +423,14 @@ export class OrganizedTravelService {
             t.last_name === newTraveler.last_name &&
             t.group_id === groupId
         );
-        if (createdTraveler) {
+        if (createdTraveler && createdTraveler.price && createdTraveler.price > 0) {
           await this.createTravelerTransaction(
             travelId,
             createdTraveler._id.toString(),
             createdTraveler,
             performingAgencyId || travel.agency?.toString(),
-            travel.name
+            travel.name,
+            employeeId,
           );
         }
       }
@@ -500,6 +492,9 @@ export class OrganizedTravelService {
         updatedTraveler,
         performingAgencyId || travel.agency?.toString(),
         travel.name,
+        undefined,
+        undefined,
+        employeeId,
       );
     }
 
@@ -515,11 +510,21 @@ export class OrganizedTravelService {
     travelName?: string,
     customRefundAmount?: number,
     customRefundCurrency?: string,
+    employeeId?: string,
   ): Promise<void> {
     const oldStatus = oldTraveler.payment_status;
     const newStatus = newTraveler.payment_status;
     const travelerName =
       `${newTraveler.first_name || ''} ${newTraveler.last_name || ''}`.trim();
+
+    let finalAgencyId = agencyId;
+
+    if (!finalAgencyId && employeeId && Types.ObjectId.isValid(employeeId)) {
+      const employee = await this.userModel.findById(employeeId).exec();
+      if (employee?.agency) {
+        finalAgencyId = employee.agency.toString();
+      }
+    }
 
     // If changing from unpaid/partial to paid, settle the debt and record income
     if (newStatus === PaymentStatusTypes.PAID) {
@@ -536,7 +541,8 @@ export class OrganizedTravelService {
           status: TransactionStatus.SETTLED,
           organizedTravel: travelId,
           travelerId: travelerId,
-          agency: agencyId,
+          agency: finalAgencyId,
+          user: employeeId,
           description: `Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName} (Paguar)`,
         });
       } else if (oldStatus === PaymentStatusTypes.PARTIALLY_PAID) {
@@ -555,7 +561,8 @@ export class OrganizedTravelService {
             status: TransactionStatus.SETTLED,
             organizedTravel: travelId,
             travelerId: `${travelerId}_final`,
-            agency: agencyId,
+            agency: finalAgencyId,
+            user: employeeId,
             description: `Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName} (Pagesa finale)`,
           });
         }
@@ -574,7 +581,8 @@ export class OrganizedTravelService {
           status: TransactionStatus.SETTLED,
           organizedTravel: travelId,
           travelerId: `${travelerId}_payment_${Date.now()}`,
-          agency: agencyId,
+          agency: finalAgencyId,
+          user: employeeId,
           description: `Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName} (Pagesa e pjesshme)`,
         });
       } else if (paidAmount < previousPaidAmount) {
@@ -587,7 +595,8 @@ export class OrganizedTravelService {
           status: TransactionStatus.SETTLED,
           organizedTravel: travelId,
           travelerId: `${travelerId}_refund_${Date.now()}`,
-          agency: agencyId,
+          agency: finalAgencyId,
+          user: employeeId,
           description: `Rimbursim - Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName} (Pjesërisht)`,
         });
       }
@@ -597,25 +606,25 @@ export class OrganizedTravelService {
       if (remainingDebt > 0) {
         const existingDebt = await this.transactionService.findByOrganizedTravelTraveler(travelId, `${travelerId}_debt`);
         if (existingDebt) {
-          await this.transactionService.updateByOrganizedTravelTraveler(
-            travelId,
-            `${travelerId}_debt`,
-            {
-              amount: remainingDebt,
-              description: `Borxh - Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName} (Mbetja: ${remainingDebt})`,
-            },
-          );
+          // await this.transactionService.updateByOrganizedTravelTraveler(
+          //   travelId,
+          //   `${travelerId}_debt`,
+          //   {
+          //     amount: remainingDebt,
+          //     description: `Borxh - Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName} (Mbetja: ${remainingDebt})`,
+          // },
+          // );
         } else {
-          await this.transactionService.create({
-            amount: remainingDebt,
-            currency: newTraveler.currency,
-            type: TransactionTypes.DEBT,
-            status: TransactionStatus.PENDING,
-            organizedTravel: travelId,
-            travelerId: `${travelerId}_debt`,
-            agency: agencyId,
-            description: `Borxh - Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName}`,
-          });
+          // await this.transactionService.create({
+          //   amount: remainingDebt,
+          //   currency: newTraveler.currency,
+          //   type: TransactionTypes.DEBT,
+          //   status: TransactionStatus.PENDING,
+          //   organizedTravel: travelId,
+          //   travelerId: `${travelerId}_debt`,
+          //   agency: agencyId,
+          //   description: `Borxh - Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName}`,
+          // });
         }
       } else {
         await this.transactionService.deleteByOrganizedTravelTraveler(travelId, `${travelerId}_debt`);
@@ -632,7 +641,8 @@ export class OrganizedTravelService {
           status: TransactionStatus.SETTLED,
           organizedTravel: travelId,
           travelerId: `${travelerId}_refund_${Date.now()}`,
-          agency: agencyId,
+          agency: finalAgencyId,
+          user: employeeId,
           description: `Rimbursim - Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName}${customRefundAmount !== undefined ? ' (Shumë e personalizuar)' : ' (i plotë)'}`,
         });
       }
@@ -653,16 +663,16 @@ export class OrganizedTravelService {
         `${travelerId}_debt`,
       );
 
-      await this.transactionService.create({
-        amount: newTraveler.price,
-        currency: newTraveler.currency,
-        type: TransactionTypes.DEBT,
-        status: TransactionStatus.PENDING,
-        organizedTravel: travelId,
-        travelerId: travelerId,
-        agency: agencyId,
-        description: `Borxh - Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName}`,
-      });
+      // await this.transactionService.create({
+      //   amount: newTraveler.price,
+      //   currency: newTraveler.currency,
+      //   type: TransactionTypes.DEBT,
+      //   status: TransactionStatus.PENDING,
+      //   organizedTravel: travelId,
+      //   travelerId: travelerId,
+      //   agency: agencyId,
+      //   description: `Borxh - Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName}`,
+      // });
     }
   }
 
@@ -720,6 +730,9 @@ export class OrganizedTravelService {
       travel.travelers[travelerIndex].toObject(),
       performingAgencyId || travel.agency?.toString(),
       travel.name,
+      undefined,
+      undefined,
+      employeeId
     );
 
     return savedTravel;
@@ -911,7 +924,8 @@ export class OrganizedTravelService {
           agency || travel.agency?.toString(),
           travel.name,
           amount,
-          currency
+          currency,
+          employee
         );
 
         await this.addLog(

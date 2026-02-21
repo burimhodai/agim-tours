@@ -340,10 +340,8 @@ export class BusService {
     }
 
     const updateData: any = { ...updateBusTicketDto };
+    // Removed auto-update of ticket.agency to allow using 'agency' field for transaction attribution
 
-    if (updateBusTicketDto.agency) {
-      updateData.agency = new Types.ObjectId(updateBusTicketDto.agency);
-    }
 
     // Detect new payment chunks before updating
     const oldPaymentChunks = currentTicket.payment_chunks || [];
@@ -387,9 +385,9 @@ export class BusService {
           type: TransactionTypes.INCOME,
           status: TransactionStatus.SETTLED,
           ticket: id,
-          agency: employeeAgencyId || (ticket.agency instanceof Types.ObjectId
+          agency: updateBusTicketDto.agency || employeeAgencyId || (ticket.agency instanceof Types.ObjectId
             ? ticket.agency.toString()
-            : (ticket.agency as any)?._id?.toString() || updateBusTicketDto.agency),
+            : (ticket.agency as any)?._id?.toString() || ''),
           user: updateBusTicketDto.employee,
           description: `Pagesë - Biletë autobusi (${ticket.uid})`,
         });
@@ -590,7 +588,6 @@ export class BusService {
 
     const { refund_chunks, note } = cancelTicketDto;
 
-    // 1. Update ticket status
     ticket.status = 'canceled';
     if (note) {
       ticket.note = ticket.note
@@ -598,16 +595,16 @@ export class BusService {
         : `Anulimi: ${note}`;
     }
 
-    // 2. Handle transactions
     const wasUnpaid =
       ticket.payment_status === PaymentStatusTypes.UNPAID ||
       ticket.payment_status === PaymentStatusTypes.NOT_PAID;
 
+    const employee = await this.userModel.findById(cancelTicketDto.employee).exec();
+    const employeeAgencyId = employee?.agency?.toString();
+
     if (wasUnpaid) {
-      // If it's unpaid, we just delete the debt transaction
       await this.transactionService.deleteByTicket(id);
     } else {
-      // If it was paid or partially paid, handle refunds if provided
       if (refund_chunks && refund_chunks.length > 0) {
         if (!ticket.payment_chunks) {
           ticket.payment_chunks = [];
@@ -625,10 +622,10 @@ export class BusService {
             type: TransactionTypes.OUTCOME,
             status: TransactionStatus.SETTLED,
             ticket: ticket._id.toString(),
-            agency: ticket.agency instanceof Types.ObjectId
+            agency: cancelTicketDto.agency || employeeAgencyId || (ticket.agency instanceof Types.ObjectId
               ? ticket.agency.toString()
-              : (ticket.agency as any)?._id?.toString() || '',
-            user: ticket.employee?.toString(),
+              : (ticket.agency as any)?._id?.toString() || ''),
+            user: cancelTicketDto.employee,
             description: `Rimbursim - Biletë autobusi e anuluar (${ticket.uid})`,
           });
         }
@@ -674,12 +671,10 @@ export class BusService {
       throw new BadRequestException('Duhet të shtoni së paku një rimbursim');
     }
 
-    // Add refund chunks and create transactions
     if (!ticket.payment_chunks) {
       ticket.payment_chunks = [];
     }
 
-    // Fetch the employee to get their agency
     const employee = await this.userModel.findById(refundDto.employee).exec();
     const employeeAgencyId = employee?.agency?.toString();
 
@@ -696,10 +691,10 @@ export class BusService {
         type: TransactionTypes.OUTCOME,
         status: TransactionStatus.SETTLED,
         ticket: ticket._id.toString(),
-        agency: employeeAgencyId || (ticket.agency instanceof Types.ObjectId
+        agency: refundDto.agency || employeeAgencyId || (ticket.agency instanceof Types.ObjectId
           ? ticket.agency.toString()
           : (ticket.agency as any)?._id?.toString() || ''),
-        user: ticket.employee?.toString(),
+        user: refundDto.employee,
         description: `Rimbursim - Biletë autobusi e anuluar (${ticket.uid})`,
       });
     }

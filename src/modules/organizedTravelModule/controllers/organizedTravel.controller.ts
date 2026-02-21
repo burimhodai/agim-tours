@@ -65,8 +65,9 @@ export class OrganizedTravelController {
     @Param('id') id: string,
     @Body() addTravelersDto: AddOrganizedTravelersDto,
     @Body('agency') performingAgencyId?: string,
+    @Body('employee') employeeId?: string,
   ) {
-    return await this.travelService.addTravelers(id, addTravelersDto, performingAgencyId);
+    return await this.travelService.addTravelers(id, addTravelersDto, performingAgencyId, employeeId);
   }
 
   @Put(':id/travelers/:travelerId')

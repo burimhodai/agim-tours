@@ -65,8 +65,9 @@ export class EventHotelController {
     @Param('id') id: string,
     @Body() addTravelerDto: AddTravelerDto,
     @Body('agency') performingAgencyId?: string,
+    @Body('employee') employeeId?: string,
   ) {
-    return await this.eventService.addTravelers(id, addTravelerDto, performingAgencyId);
+    return await this.eventService.addTravelers(id, addTravelerDto, performingAgencyId, employeeId);
   }
 
   @Put(':id/travelers/:travelerId')

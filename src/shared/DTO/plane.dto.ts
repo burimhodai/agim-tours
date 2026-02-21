@@ -361,6 +361,10 @@ export class CancelTicketDto {
   @IsOptional()
   @IsString()
   employee?: string;
+
+  @IsOptional()
+  @IsString()
+  agency?: string;
 }
 
 export class PlaneTicketQueryDto {
