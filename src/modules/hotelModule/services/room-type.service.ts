@@ -61,16 +61,18 @@ export class RoomTypeService {
     };
   }
 
-  async findById(id: string, agencyId: string): Promise<IRoomType> {
+  async findById(id: string, agencyId?: string): Promise<IRoomType> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid room type ID');
     }
 
+    const filter: any = { _id: id };
+    if (agencyId && Types.ObjectId.isValid(agencyId)) {
+      filter.agency = new Types.ObjectId(agencyId);
+    }
+
     const roomType = await this.roomTypeModel
-      .findOne({
-        _id: id,
-        agency: new Types.ObjectId(agencyId),
-      })
+      .findOne(filter)
       .populate('agency')
       .exec();
 
@@ -83,16 +85,21 @@ export class RoomTypeService {
 
   async update(
     id: string,
-    agencyId: string,
+    agencyId: string | undefined,
     updateRoomTypeDto: UpdateRoomTypeDto,
   ): Promise<IRoomType> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid room type ID');
     }
 
+    const filter: any = { _id: id };
+    if (agencyId && Types.ObjectId.isValid(agencyId)) {
+      filter.agency = new Types.ObjectId(agencyId);
+    }
+
     const roomType = await this.roomTypeModel
       .findOneAndUpdate(
-        { _id: id, agency: new Types.ObjectId(agencyId) },
+        filter,
         { $set: updateRoomTypeDto },
         { new: true },
       )
@@ -106,13 +113,18 @@ export class RoomTypeService {
     return roomType;
   }
 
-  async delete(id: string, agencyId: string): Promise<{ message: string }> {
+  async delete(id: string, agencyId?: string): Promise<{ message: string }> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid room type ID');
     }
 
+    const filter: any = { _id: id };
+    if (agencyId && Types.ObjectId.isValid(agencyId)) {
+      filter.agency = new Types.ObjectId(agencyId);
+    }
+
     const result = await this.roomTypeModel
-      .findOneAndDelete({ _id: id, agency: new Types.ObjectId(agencyId) })
+      .findOneAndDelete(filter)
       .exec();
 
     if (!result) {

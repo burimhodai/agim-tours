@@ -15,35 +15,35 @@ import {
   PartnerHotelQueryDto,
 } from 'src/shared/DTO/hotel.dto';
 
-@Controller('partner-hotels')
+@Controller('hotel')
 export class PartnerHotelController {
-  constructor(private readonly partnerHotelService: PartnerHotelService) {}
+  constructor(private readonly partnerHotelService: PartnerHotelService) { }
 
-  @Post()
+  @Post('partners')
   async create(@Body() createPartnerHotelDto: CreatePartnerHotelDto) {
     return await this.partnerHotelService.create(createPartnerHotelDto);
   }
 
-  @Get()
+  @Get('partners')
   async findAll(@Query() query: PartnerHotelQueryDto) {
     return await this.partnerHotelService.findAll(query);
   }
 
-  @Get('active')
+  @Get('partners/active')
   async findAllActive(@Query('agency') agencyId: string) {
     return await this.partnerHotelService.findAllActive(agencyId);
   }
 
-  @Get(':id')
-  async findById(@Param('id') id: string, @Query('agency') agencyId: string) {
+  @Get('partners/:id')
+  async findById(@Param('id') id: string, @Query('agency') agencyId?: string) {
     return await this.partnerHotelService.findById(id, agencyId);
   }
 
-  @Patch(':id')
+  @Patch('partners/:id')
   async update(
     @Param('id') id: string,
-    @Query('agency') agencyId: string,
     @Body() updatePartnerHotelDto: UpdatePartnerHotelDto,
+    @Query('agency') agencyId?: string,
   ) {
     return await this.partnerHotelService.update(
       id,
@@ -52,16 +52,16 @@ export class PartnerHotelController {
     );
   }
 
-  @Patch(':id/toggle-active')
+  @Patch('partners/:id/toggle-active')
   async toggleActive(
     @Param('id') id: string,
-    @Query('agency') agencyId: string,
+    @Query('agency') agencyId?: string,
   ) {
     return await this.partnerHotelService.toggleActive(id, agencyId);
   }
 
-  @Delete(':id')
-  async delete(@Param('id') id: string, @Query('agency') agencyId: string) {
+  @Delete('partners/:id')
+  async delete(@Param('id') id: string, @Query('agency') agencyId?: string) {
     return await this.partnerHotelService.delete(id, agencyId);
   }
 }

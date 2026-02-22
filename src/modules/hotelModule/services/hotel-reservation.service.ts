@@ -147,17 +147,22 @@ export class HotelReservationService {
     };
   }
 
-  async findById(id: string, agencyId: string): Promise<IHotelReservation> {
+  async findById(id: string, agencyId?: string): Promise<IHotelReservation> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid reservation ID');
     }
 
+    const filter: any = {
+      _id: id,
+      is_deleted: { $ne: true },
+    };
+
+    if (agencyId && Types.ObjectId.isValid(agencyId)) {
+      filter.agency = new Types.ObjectId(agencyId);
+    }
+
     const reservation = await this.reservationModel
-      .findOne({
-        _id: id,
-        is_deleted: { $ne: true },
-        agency: new Types.ObjectId(agencyId),
-      })
+      .findOne(filter)
       .populate('hotel_partner')
       .populate('employee', 'email')
       .populate('agency')
@@ -174,14 +179,19 @@ export class HotelReservationService {
 
   async findByBookingId(
     bookingId: string,
-    agencyId: string,
+    agencyId?: string,
   ): Promise<IHotelReservation> {
+    const filter: any = {
+      hotel_booking_id: { $regex: bookingId, $options: 'i' },
+      is_deleted: { $ne: true },
+    };
+
+    if (agencyId && Types.ObjectId.isValid(agencyId)) {
+      filter.agency = new Types.ObjectId(agencyId);
+    }
+
     const reservation = await this.reservationModel
-      .findOne({
-        hotel_booking_id: { $regex: bookingId, $options: 'i' },
-        is_deleted: { $ne: true },
-        agency: new Types.ObjectId(agencyId),
-      })
+      .findOne(filter)
       .populate('hotel_partner')
       .populate('employee', 'email')
       .populate('agency')
@@ -197,7 +207,7 @@ export class HotelReservationService {
 
   async update(
     id: string,
-    agencyId: string,
+    agencyId: string | undefined,
     updateReservationDto: UpdateHotelReservationDto,
   ): Promise<IHotelReservation> {
     if (!Types.ObjectId.isValid(id)) {
@@ -222,14 +232,18 @@ export class HotelReservationService {
       });
     }
 
+    const filter: any = {
+      _id: id,
+      is_deleted: { $ne: true },
+    };
+
+    if (agencyId && Types.ObjectId.isValid(agencyId)) {
+      filter.agency = new Types.ObjectId(agencyId);
+    }
 
     const reservation = await this.reservationModel
       .findOneAndUpdate(
-        {
-          _id: id,
-          is_deleted: { $ne: true },
-          agency: new Types.ObjectId(agencyId),
-        },
+        filter,
         { $set: updateData },
         { new: true },
       )
@@ -246,16 +260,18 @@ export class HotelReservationService {
     return reservation;
   }
 
-  async delete(id: string, agencyId: string): Promise<{ message: string }> {
+  async delete(id: string, agencyId?: string): Promise<{ message: string }> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid reservation ID');
     }
 
+    const filter: any = { _id: id };
+    if (agencyId && Types.ObjectId.isValid(agencyId)) {
+      filter.agency = new Types.ObjectId(agencyId);
+    }
+
     const result = await this.reservationModel.findOneAndUpdate(
-      {
-        _id: id,
-        agency: new Types.ObjectId(agencyId),
-      },
+      filter,
       { is_deleted: true },
       { new: true },
     );
@@ -269,7 +285,7 @@ export class HotelReservationService {
 
   async addLog(
     id: string,
-    agencyId: string,
+    agencyId: string | undefined,
     addLogDto: AddReservationLogDto,
   ): Promise<IHotelReservation> {
     if (!Types.ObjectId.isValid(id)) {
@@ -284,13 +300,18 @@ export class HotelReservationService {
       created_at: new Date(),
     };
 
+    const filter: any = {
+      _id: id,
+      is_deleted: { $ne: true },
+    };
+
+    if (agencyId && Types.ObjectId.isValid(agencyId)) {
+      filter.agency = new Types.ObjectId(agencyId);
+    }
+
     const reservation = await this.reservationModel
       .findOneAndUpdate(
-        {
-          _id: id,
-          is_deleted: { $ne: true },
-          agency: new Types.ObjectId(agencyId),
-        },
+        filter,
         { $push: { logs: logEntry } },
         { new: true },
       )
@@ -310,20 +331,25 @@ export class HotelReservationService {
 
   async updateStatus(
     id: string,
-    agencyId: string,
+    agencyId: string | undefined,
     status: ReservationStatus,
   ): Promise<IHotelReservation> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid reservation ID');
     }
 
+    const filter: any = {
+      _id: id,
+      is_deleted: { $ne: true },
+    };
+
+    if (agencyId && Types.ObjectId.isValid(agencyId)) {
+      filter.agency = new Types.ObjectId(agencyId);
+    }
+
     const reservation = await this.reservationModel
       .findOneAndUpdate(
-        {
-          _id: id,
-          is_deleted: { $ne: true },
-          agency: new Types.ObjectId(agencyId),
-        },
+        filter,
         { $set: { status } },
         { new: true },
       )

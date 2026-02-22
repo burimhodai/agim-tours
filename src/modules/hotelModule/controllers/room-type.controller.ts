@@ -15,36 +15,36 @@ import {
   RoomTypeQueryDto,
 } from 'src/shared/DTO/hotel.dto';
 
-@Controller('room-types')
+@Controller('hotel')
 export class RoomTypeController {
-  constructor(private readonly roomTypeService: RoomTypeService) {}
+  constructor(private readonly roomTypeService: RoomTypeService) { }
 
-  @Post()
+  @Post('room-types')
   async create(@Body() createRoomTypeDto: CreateRoomTypeDto) {
     return await this.roomTypeService.create(createRoomTypeDto);
   }
 
-  @Get()
+  @Get('room-types')
   async findAll(@Query() query: RoomTypeQueryDto) {
     return await this.roomTypeService.findAll(query);
   }
 
-  @Get(':id')
-  async findById(@Param('id') id: string, @Query('agency') agencyId: string) {
+  @Get('room-types/:id')
+  async findById(@Param('id') id: string, @Query('agency') agencyId?: string) {
     return await this.roomTypeService.findById(id, agencyId);
   }
 
-  @Patch(':id')
+  @Patch('room-types/:id')
   async update(
     @Param('id') id: string,
-    @Query('agency') agencyId: string,
     @Body() updateRoomTypeDto: UpdateRoomTypeDto,
+    @Query('agency') agencyId?: string,
   ) {
     return await this.roomTypeService.update(id, agencyId, updateRoomTypeDto);
   }
 
-  @Delete(':id')
-  async delete(@Param('id') id: string, @Query('agency') agencyId: string) {
+  @Delete('room-types/:id')
+  async delete(@Param('id') id: string, @Query('agency') agencyId?: string) {
     return await this.roomTypeService.delete(id, agencyId);
   }
 }

@@ -101,16 +101,18 @@ export class PartnerHotelService {
       .exec();
   }
 
-  async findById(id: string, agencyId: string): Promise<IPartnerHotel> {
+  async findById(id: string, agencyId?: string): Promise<IPartnerHotel> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid partner hotel ID');
     }
 
+    const filter: any = { _id: id };
+    if (agencyId && Types.ObjectId.isValid(agencyId)) {
+      filter.agency = new Types.ObjectId(agencyId);
+    }
+
     const partnerHotel = await this.partnerHotelModel
-      .findOne({
-        _id: id,
-        agency: new Types.ObjectId(agencyId),
-      })
+      .findOne(filter)
       .populate('agency')
       .exec();
 
@@ -123,16 +125,21 @@ export class PartnerHotelService {
 
   async update(
     id: string,
-    agencyId: string,
+    agencyId: string | undefined,
     updatePartnerHotelDto: UpdatePartnerHotelDto,
   ): Promise<IPartnerHotel> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid partner hotel ID');
     }
 
+    const filter: any = { _id: id };
+    if (agencyId && Types.ObjectId.isValid(agencyId)) {
+      filter.agency = new Types.ObjectId(agencyId);
+    }
+
     const partnerHotel = await this.partnerHotelModel
       .findOneAndUpdate(
-        { _id: id, agency: new Types.ObjectId(agencyId) },
+        filter,
         { $set: updatePartnerHotelDto },
         { new: true },
       )
@@ -146,13 +153,18 @@ export class PartnerHotelService {
     return partnerHotel;
   }
 
-  async delete(id: string, agencyId: string): Promise<{ message: string }> {
+  async delete(id: string, agencyId?: string): Promise<{ message: string }> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid partner hotel ID');
     }
 
+    const filter: any = { _id: id };
+    if (agencyId && Types.ObjectId.isValid(agencyId)) {
+      filter.agency = new Types.ObjectId(agencyId);
+    }
+
     const result = await this.partnerHotelModel
-      .findOneAndDelete({ _id: id, agency: new Types.ObjectId(agencyId) })
+      .findOneAndDelete(filter)
       .exec();
 
     if (!result) {
@@ -162,16 +174,18 @@ export class PartnerHotelService {
     return { message: 'Partner hotel deleted successfully' };
   }
 
-  async toggleActive(id: string, agencyId: string): Promise<IPartnerHotel> {
+  async toggleActive(id: string, agencyId?: string): Promise<IPartnerHotel> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid partner hotel ID');
     }
 
+    const filter: any = { _id: id };
+    if (agencyId && Types.ObjectId.isValid(agencyId)) {
+      filter.agency = new Types.ObjectId(agencyId);
+    }
+
     const partnerHotel = await this.partnerHotelModel
-      .findOne({
-        _id: id,
-        agency: new Types.ObjectId(agencyId),
-      })
+      .findOne(filter)
       .exec();
 
     if (!partnerHotel) {

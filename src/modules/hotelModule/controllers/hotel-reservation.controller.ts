@@ -18,43 +18,43 @@ import {
 } from 'src/shared/DTO/hotel.dto';
 import { ReservationStatus } from 'src/shared/types/hotel.types';
 
-@Controller('hotel-reservations')
+@Controller('hotel')
 export class HotelReservationController {
-  constructor(private readonly reservationService: HotelReservationService) {}
+  constructor(private readonly reservationService: HotelReservationService) { }
 
-  @Post()
+  @Post('reservations')
   async create(@Body() createReservationDto: CreateHotelReservationDto) {
     return await this.reservationService.create(createReservationDto);
   }
 
-  @Get()
+  @Get('reservations')
   async findAll(@Query() query: HotelReservationQueryDto) {
     return await this.reservationService.findAll(query);
   }
 
-  @Get('stats/by-partner')
+  @Get('reservations/stats/by-partner')
   async getStatsByPartner(@Query('agency') agencyId: string) {
     return await this.reservationService.getStatsByPartner(agencyId);
   }
 
-  @Get('booking/:bookingId')
+  @Get('reservations/booking/:bookingId')
   async findByBookingId(
     @Param('bookingId') bookingId: string,
-    @Query('agency') agencyId: string,
+    @Query('agency') agencyId?: string,
   ) {
     return await this.reservationService.findByBookingId(bookingId, agencyId);
   }
 
-  @Get(':id')
-  async findById(@Param('id') id: string, @Query('agency') agencyId: string) {
+  @Get('reservations/:id')
+  async findById(@Param('id') id: string, @Query('agency') agencyId?: string) {
     return await this.reservationService.findById(id, agencyId);
   }
 
-  @Put(':id')
+  @Put('reservations/:id')
   async update(
     @Param('id') id: string,
-    @Query('agency') agencyId: string,
     @Body() updateReservationDto: UpdateHotelReservationDto,
+    @Query('agency') agencyId?: string,
   ) {
     return await this.reservationService.update(
       id,
@@ -63,25 +63,25 @@ export class HotelReservationController {
     );
   }
 
-  @Delete(':id')
-  async delete(@Param('id') id: string, @Query('agency') agencyId: string) {
+  @Delete('reservations/:id')
+  async delete(@Param('id') id: string, @Query('agency') agencyId?: string) {
     return await this.reservationService.delete(id, agencyId);
   }
 
-  @Post(':id/logs')
+  @Post('reservations/:id/logs')
   async addLog(
     @Param('id') id: string,
-    @Query('agency') agencyId: string,
     @Body() addLogDto: AddReservationLogDto,
+    @Query('agency') agencyId?: string,
   ) {
     return await this.reservationService.addLog(id, agencyId, addLogDto);
   }
 
-  @Patch(':id/status')
+  @Patch('reservations/:id/status')
   async updateStatus(
     @Param('id') id: string,
-    @Query('agency') agencyId: string,
     @Body('status') status: ReservationStatus,
+    @Query('agency') agencyId?: string,
   ) {
     return await this.reservationService.updateStatus(id, agencyId, status);
   }
