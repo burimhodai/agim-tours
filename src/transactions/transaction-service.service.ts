@@ -541,4 +541,18 @@ export class TransactionServiceService {
     const total = debts.reduce((sum, debt) => sum + (debt.amount || 0), 0);
     return { total, count: debts.length };
   }
+
+  async remove(id: string): Promise<boolean> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid transaction ID');
+    }
+
+    const result = await this.transactionModel.deleteOne({ _id: id }).exec();
+
+    if (result.deletedCount === 0) {
+      throw new NotFoundException('Transaction not found');
+    }
+
+    return true;
+  }
 }
