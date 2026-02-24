@@ -4,7 +4,7 @@ import { Model } from 'mongoose';
 
 @Injectable()
 export class LuggageService {
-  constructor(@InjectModel('LuggageType') private luggageModel: Model<any>) {}
+  constructor(@InjectModel('LuggageType') private luggageModel: Model<any>) { }
 
   async findAll(agencyId: string) {
     return this.luggageModel.find({ agency: agencyId }).exec();
@@ -12,5 +12,13 @@ export class LuggageService {
 
   async create(data: any, agencyId: string) {
     return this.luggageModel.create({ ...data, agency: agencyId });
+  }
+
+  async update(id: string, data: any) {
+    return this.luggageModel.findByIdAndUpdate(id, data, { new: true }).exec();
+  }
+
+  async remove(id: string) {
+    return this.luggageModel.findByIdAndDelete(id).exec();
   }
 }
