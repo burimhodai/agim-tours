@@ -7,6 +7,7 @@ import { TransactionSchema } from 'src/models/transaction.model';
 import { UserSchema } from 'src/models/user.model';
 import { AgencySchema } from 'src/models/agency.model';
 import { TransactionServiceService } from 'src/transactions/transaction-service.service';
+import { MailModule } from '../mailModule/mail.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { TransactionServiceService } from 'src/transactions/transaction-service.
       { name: 'User', schema: UserSchema },
       { name: 'Agency', schema: AgencySchema },
     ]),
+    MailModule,
   ],
   controllers: [PlaneController],
   providers: [PlaneService, TransactionServiceService],

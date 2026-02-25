@@ -20,6 +20,7 @@ import { TransactionSchema } from './models/transaction.model';
 import { TransactionControllerController } from './transactions/transaction-controller.controller';
 import { TransactionServiceService } from './transactions/transaction-service.service';
 import { DocumentsModule } from './modules/documents/documents.module';
+import { MailModule } from './modules/mailModule/mail.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { DocumentsModule } from './modules/documents/documents.module';
     LoyalCustomerModule,
     LuggageModule,
     DocumentsModule,
+    MailModule,
   ],
   controllers: [AppController, TransactionControllerController],
   providers: [AppService, TransactionServiceService],

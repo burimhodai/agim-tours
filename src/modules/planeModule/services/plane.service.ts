@@ -20,6 +20,7 @@ import {
   TransactionStatus,
 } from 'src/shared/types/transaction.types';
 import { TransactionServiceService } from 'src/transactions/transaction-service.service';
+import { MailService } from '../../mailModule/services/mail.service';
 
 @Injectable()
 export class PlaneService {
@@ -27,6 +28,7 @@ export class PlaneService {
     @InjectModel('Ticket') private ticketModel: Model<ITicket>,
     @InjectModel('User') private userModel: Model<IUser>,
     private transactionService: TransactionServiceService,
+    private mailService: MailService,
   ) { }
 
   private generatePlaneUid(): string {
@@ -448,6 +450,16 @@ export class PlaneService {
           description: 'Borxh - Biletë avioni e papaguar',
         });
       }
+    }
+
+    if (updatePlaneTicketDto.price !== undefined && currentTicket.price !== updatePlaneTicketDto.price) {
+      this.mailService.sendPriceChangeEmail(
+        currentTicket.price,
+        updatePlaneTicketDto.price,
+        updatePlaneTicketDto.currency || currentTicket.currency || 'EUR',
+        ticket.uid || 'N/A',
+        id,
+      ).catch(err => console.error('Failed to send price change email:', err));
     }
 
     return ticket;
