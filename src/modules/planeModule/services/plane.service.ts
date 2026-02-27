@@ -453,6 +453,34 @@ export class PlaneService {
     }
 
     if (updatePlaneTicketDto.price !== undefined && currentTicket.price !== updatePlaneTicketDto.price) {
+      await this.transactionService.handleTicketPriceChange(
+        id,
+        currentTicket.price,
+        updatePlaneTicketDto.price,
+        updatePlaneTicketDto.currency || currentTicket.currency || 'EUR',
+        updatePlaneTicketDto.agency || (ticket.agency instanceof Types.ObjectId
+          ? ticket.agency.toString()
+          : (ticket.agency as any)?._id?.toString() || ''),
+        updatePlaneTicketDto.employee || currentTicket.employee?.toString() || '',
+      );
+
+      // Recalculate payment status based on total paid vs new price
+      const totalPaid = (ticket.payment_chunks || []).reduce((sum, chunk) => sum + chunk.amount, 0);
+      let newStatus = ticket.payment_status;
+
+      if (totalPaid <= 0) {
+        newStatus = PaymentStatusTypes.UNPAID;
+      } else if (totalPaid < ticket.price) {
+        newStatus = PaymentStatusTypes.PARTIALLY_PAID;
+      } else {
+        newStatus = PaymentStatusTypes.PAID;
+      }
+
+      if (newStatus !== ticket.payment_status) {
+        ticket.payment_status = newStatus;
+        await this.ticketModel.updateOne({ _id: id }, { $set: { payment_status: newStatus } });
+      }
+
       this.mailService.sendPriceChangeEmail(
         currentTicket.price,
         updatePlaneTicketDto.price,

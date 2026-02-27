@@ -396,11 +396,41 @@ export class BusService {
       }
     }
 
-    // Handle payment status change - update transaction (only for non-partial payments)
+    if (updateBusTicketDto.price !== undefined && currentTicket.price !== updateBusTicketDto.price) {
+      await this.transactionService.handleTicketPriceChange(
+        id,
+        currentTicket.price,
+        updateBusTicketDto.price,
+        updateBusTicketDto.currency || currentTicket.currency || 'EUR',
+        updateBusTicketDto.agency || (ticket.agency instanceof Types.ObjectId
+          ? ticket.agency.toString()
+          : (ticket.agency as any)?._id?.toString() || ''),
+        updateBusTicketDto.employee || currentTicket.employee?.toString() || '',
+      );
+
+      // Recalculate payment status based on total paid vs new price
+      const totalPaid = (ticket.payment_chunks || []).reduce((sum, chunk) => sum + chunk.amount, 0);
+      let newStatus = ticket.payment_status;
+
+      if (totalPaid <= 0) {
+        newStatus = PaymentStatusTypes.UNPAID;
+      } else if (totalPaid < ticket.price) {
+        newStatus = PaymentStatusTypes.PARTIALLY_PAID;
+      } else {
+        newStatus = PaymentStatusTypes.PAID;
+      }
+
+      if (newStatus !== ticket.payment_status) {
+        ticket.payment_status = newStatus;
+        await this.ticketModel.updateOne({ _id: id }, { $set: { payment_status: newStatus } });
+      }
+    }
+
+    // Handle manual payment status change - update transaction (only for non-partial payments)
     if (
       updateBusTicketDto.payment_status &&
       updateBusTicketDto.payment_status !== currentTicket.payment_status &&
-      newChunksAdded.length === 0 // Only handle if not adding payment chunks
+      newChunksAdded.length === 0
     ) {
       const isPaidNow =
         updateBusTicketDto.payment_status === PaymentStatusTypes.PAID;

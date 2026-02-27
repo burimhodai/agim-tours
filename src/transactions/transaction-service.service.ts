@@ -542,6 +542,48 @@ export class TransactionServiceService {
     return { total, count: debts.length };
   }
 
+  async handleTicketPriceChange(
+    ticketId: string,
+    oldPrice: number,
+    newPrice: number,
+    currency: string,
+    agencyId: string,
+    userId: string,
+  ) {
+    const diff = newPrice - oldPrice;
+    if (diff === 0) return;
+
+    let debtTx = await this.transactionModel.findOne({
+      ticket: new Types.ObjectId(ticketId),
+      type: TransactionTypes.DEBT,
+      status: TransactionStatus.PENDING,
+    });
+
+    if (debtTx) {
+      debtTx.amount += diff;
+      if (debtTx.amount <= 0) {
+        debtTx.amount = 0;
+        debtTx.status = TransactionStatus.SETTLED;
+        debtTx.type = TransactionTypes.INCOME;
+        debtTx.description = (debtTx.description || '')
+          .replace('Borxh - ', '')
+          .replace(' e papaguar', ' - Paguar plotësisht');
+      }
+      await debtTx.save();
+    } else if (diff > 0) {
+      await this.create({
+        amount: diff,
+        currency: currency as any,
+        type: TransactionTypes.DEBT,
+        status: TransactionStatus.PENDING,
+        ticket: ticketId,
+        agency: agencyId,
+        user: userId,
+        description: `Borxh nga rritja e çmimit - Biletë avioni`,
+      });
+    }
+  }
+
   async remove(id: string): Promise<boolean> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid transaction ID');
