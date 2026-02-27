@@ -135,6 +135,30 @@ export class TransactionServiceService {
       .exec();
   }
 
+  async findByTicketDebt(ticketId: string): Promise<ITransaction | null> {
+    if (!Types.ObjectId.isValid(ticketId)) {
+      return null;
+    }
+
+    return await this.transactionModel
+      .findOne({
+        ticket: new Types.ObjectId(ticketId),
+        type: TransactionTypes.DEBT,
+        status: TransactionStatus.PENDING,
+      })
+      .exec();
+  }
+
+  async findAllByTicket(ticketId: string): Promise<ITransaction[]> {
+    if (!Types.ObjectId.isValid(ticketId)) {
+      return [];
+    }
+
+    return await this.transactionModel
+      .find({ ticket: new Types.ObjectId(ticketId) })
+      .exec();
+  }
+
   async updateByTicket(
     ticketId: string,
     updateData: UpdateTransactionDto,
@@ -146,6 +170,27 @@ export class TransactionServiceService {
     return await this.transactionModel
       .findOneAndUpdate(
         { ticket: new Types.ObjectId(ticketId) },
+        { $set: updateData },
+        { new: true },
+      )
+      .exec();
+  }
+
+  async updateDebtByTicket(
+    ticketId: string,
+    updateData: UpdateTransactionDto,
+  ): Promise<ITransaction | null> {
+    if (!Types.ObjectId.isValid(ticketId)) {
+      return null;
+    }
+
+    return await this.transactionModel
+      .findOneAndUpdate(
+        {
+          ticket: new Types.ObjectId(ticketId),
+          type: TransactionTypes.DEBT,
+          status: TransactionStatus.PENDING,
+        },
         { $set: updateData },
         { new: true },
       )

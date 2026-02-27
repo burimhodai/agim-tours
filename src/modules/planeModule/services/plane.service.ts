@@ -371,15 +371,27 @@ export class PlaneService {
       throw new NotFoundException('Plane ticket not found');
     }
 
-    const updateData: any = { ...updatePlaneTicketDto };
-    // Removed auto-update of ticket.agency to allow using 'agency' field for transaction attribution
+    console.log('[PLANE UPDATE V2] === UPDATE CALLED ===');
+    console.log('[PLANE UPDATE V2] Received DTO:', JSON.stringify(updatePlaneTicketDto, null, 2));
+    console.log('[PLANE UPDATE V2] Current ticket price:', currentTicket.price, 'typeof:', typeof currentTicket.price);
+    console.log('[PLANE UPDATE V2] DTO price:', updatePlaneTicketDto.price, 'typeof:', typeof updatePlaneTicketDto.price);
 
+    const updateData: any = { ...updatePlaneTicketDto };
+
+    const oldPrice = currentTicket.price;
+    const newPrice = updatePlaneTicketDto.price !== undefined ? updatePlaneTicketDto.price : oldPrice;
+    const priceChanged = updatePlaneTicketDto.price !== undefined && oldPrice !== newPrice;
+
+    console.log('[PLANE UPDATE] oldPrice:', oldPrice, 'newPrice:', newPrice, 'priceChanged:', priceChanged);
+    console.log('[PLANE UPDATE] dto.price:', updatePlaneTicketDto.price, 'dto.payment_status:', updatePlaneTicketDto.payment_status);
 
     const oldPaymentChunks = currentTicket.payment_chunks || [];
     const newPaymentChunks = updatePlaneTicketDto.payment_chunks || [];
     const newChunksAdded = newPaymentChunks.length > oldPaymentChunks.length
       ? newPaymentChunks.slice(oldPaymentChunks.length)
       : [];
+
+    console.log('[PLANE UPDATE] oldChunks:', oldPaymentChunks.length, 'newChunks:', newPaymentChunks.length, 'newChunksAdded:', newChunksAdded.length);
 
     const ticket = await this.ticketModel
       .findOneAndUpdate(
@@ -396,6 +408,14 @@ export class PlaneService {
       throw new NotFoundException('Plane ticket not found');
     }
 
+    const agencyId = updatePlaneTicketDto.agency || (ticket.agency instanceof Types.ObjectId
+      ? ticket.agency.toString()
+      : (ticket.agency as any)?._id?.toString() || '');
+    const employeeId = updatePlaneTicketDto.employee || currentTicket.employee?.toString() || '';
+    const currency = updatePlaneTicketDto.currency || currentTicket.currency || 'euro';
+
+    console.log('[PLANE UPDATE] agencyId:', agencyId, 'employeeId:', employeeId, 'currency:', currency);
+
     const changesDescription = this.getChangesDescription(currentTicket.toObject(), updateData);
 
     await this.addLogInternal(
@@ -406,9 +426,6 @@ export class PlaneService {
     );
 
     if (newChunksAdded.length > 0) {
-      const employee = await this.userModel.findById(updatePlaneTicketDto.employee).exec();
-      const employeeAgencyId = employee?.agency?.toString();
-
       for (const chunk of newChunksAdded) {
         await this.transactionService.create({
           amount: chunk.amount,
@@ -416,81 +433,95 @@ export class PlaneService {
           type: TransactionTypes.INCOME,
           status: TransactionStatus.SETTLED,
           ticket: id,
-          agency: updatePlaneTicketDto.agency || employeeAgencyId || (ticket.agency instanceof Types.ObjectId
-            ? ticket.agency.toString()
-            : (ticket.agency as any)?._id?.toString() || ''),
-          user: updatePlaneTicketDto.employee,
+          agency: agencyId,
+          user: employeeId,
           description: `Pagesë - Biletë avioni (${ticket.uid})`,
         });
-
-        await this.transactionService.reduceDebtByTicket(id, chunk.amount, chunk.currency);
       }
     }
 
-    if (
-      updatePlaneTicketDto.payment_status &&
-      updatePlaneTicketDto.payment_status !== currentTicket.payment_status &&
-      newChunksAdded.length === 0
-    ) {
-      const isPaidNow =
-        updatePlaneTicketDto.payment_status === PaymentStatusTypes.PAID;
-      const wasUnpaid =
-        currentTicket.payment_status === PaymentStatusTypes.UNPAID ||
-        currentTicket.payment_status === PaymentStatusTypes.NOT_PAID;
+    const newChunksTotal = newChunksAdded.reduce((sum: number, c: any) => sum + (c.amount > 0 ? c.amount : 0), 0);
+    const priceDiff = newPrice - oldPrice;
 
-      if (isPaidNow && wasUnpaid) {
-        await this.transactionService.settleDebt(id);
-      } else if (
-        updatePlaneTicketDto.payment_status === PaymentStatusTypes.UNPAID ||
-        updatePlaneTicketDto.payment_status === PaymentStatusTypes.NOT_PAID
-      ) {
-        await this.transactionService.updateByTicket(id, {
-          type: TransactionTypes.DEBT,
-          status: TransactionStatus.PENDING,
-          description: 'Borxh - Biletë avioni e papaguar',
-        });
-      }
+    console.log('[PLANE UPDATE] priceDiff:', priceDiff, 'newChunksTotal:', newChunksTotal);
+
+    if (priceChanged && priceDiff > 0) {
+      console.log('[PLANE UPDATE] Price increased by', priceDiff, '- creating new debt');
+      await this.transactionService.create({
+        amount: priceDiff,
+        currency: currency as any,
+        type: TransactionTypes.DEBT,
+        status: TransactionStatus.PENDING,
+        ticket: id,
+        agency: agencyId,
+        user: employeeId,
+        description: 'Borxh - Biletë avioni e papaguar',
+      });
+    } else if (priceChanged && priceDiff < 0) {
+      const reduction = Math.abs(priceDiff);
+      console.log('[PLANE UPDATE] Price decreased by', reduction, '- settling from debts');
+      await this.settleDebtAmount(id, reduction);
     }
 
-    if (updatePlaneTicketDto.price !== undefined && currentTicket.price !== updatePlaneTicketDto.price) {
-      await this.transactionService.handleTicketPriceChange(
-        id,
-        currentTicket.price,
-        updatePlaneTicketDto.price,
-        updatePlaneTicketDto.currency || currentTicket.currency || 'EUR',
-        updatePlaneTicketDto.agency || (ticket.agency instanceof Types.ObjectId
-          ? ticket.agency.toString()
-          : (ticket.agency as any)?._id?.toString() || ''),
-        updatePlaneTicketDto.employee || currentTicket.employee?.toString() || '',
+    if (newChunksTotal > 0) {
+      console.log('[PLANE UPDATE] New payment of', newChunksTotal, '- settling from debts');
+      await this.settleDebtAmount(id, newChunksTotal);
+    }
+
+    const statusStr = String(ticket.payment_status || '');
+    const statusChanged = updatePlaneTicketDto.payment_status &&
+      updatePlaneTicketDto.payment_status !== currentTicket.payment_status;
+
+    if (statusChanged && (statusStr === 'paid' || statusStr === PaymentStatusTypes.PAID)) {
+      console.log('[PLANE UPDATE] Status changed to paid - settling all debts');
+      const allTxs = await this.transactionService.findAllByTicket(id);
+      const pendingDebts = allTxs.filter(
+        (t: any) => (t.type === TransactionTypes.DEBT || t.type === 'debt') && (t.status === TransactionStatus.PENDING || t.status === 'pending')
       );
-
-      // Recalculate payment status based on total paid vs new price
-      const totalPaid = (ticket.payment_chunks || []).reduce((sum, chunk) => sum + chunk.amount, 0);
-      let newStatus = ticket.payment_status;
-
-      if (totalPaid <= 0) {
-        newStatus = PaymentStatusTypes.UNPAID;
-      } else if (totalPaid < ticket.price) {
-        newStatus = PaymentStatusTypes.PARTIALLY_PAID;
-      } else {
-        newStatus = PaymentStatusTypes.PAID;
+      for (const dt of pendingDebts) {
+        dt.type = TransactionTypes.INCOME;
+        dt.status = TransactionStatus.SETTLED;
+        dt.description = (dt.description || '').replace('Borxh - ', '').replace(' e papaguar', ' - Paguar plotësisht');
+        await dt.save();
       }
+    }
 
-      if (newStatus !== ticket.payment_status) {
-        ticket.payment_status = newStatus;
-        await this.ticketModel.updateOne({ _id: id }, { $set: { payment_status: newStatus } });
-      }
-
+    if (priceChanged) {
       this.mailService.sendPriceChangeEmail(
-        currentTicket.price,
-        updatePlaneTicketDto.price,
-        updatePlaneTicketDto.currency || currentTicket.currency || 'EUR',
+        oldPrice,
+        newPrice,
+        currency,
         ticket.uid || 'N/A',
         id,
       ).catch(err => console.error('Failed to send price change email:', err));
     }
 
     return ticket;
+  }
+
+  private async settleDebtAmount(ticketId: string, amount: number): Promise<void> {
+    const allTxs = await this.transactionService.findAllByTicket(ticketId);
+    const pendingDebts = allTxs
+      .filter((t: any) => (t.type === TransactionTypes.DEBT || t.type === 'debt') && (t.status === TransactionStatus.PENDING || t.status === 'pending'))
+      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    let remaining = amount;
+    for (const dt of pendingDebts) {
+      if (remaining <= 0) break;
+      if (dt.amount <= remaining) {
+        remaining -= dt.amount;
+        console.log('[SETTLE] Fully settling debt tx:', dt.amount);
+        dt.type = TransactionTypes.INCOME;
+        dt.status = TransactionStatus.SETTLED;
+        dt.description = (dt.description || '').replace('Borxh - ', '').replace(' e papaguar', ' - Paguar plotësisht');
+        await dt.save();
+      } else {
+        console.log('[SETTLE] Reducing debt tx from', dt.amount, 'by', remaining);
+        dt.amount = dt.amount - remaining;
+        remaining = 0;
+        await dt.save();
+      }
+    }
   }
 
   async delete(id: string, employeeId?: string): Promise<{ message: string }> {

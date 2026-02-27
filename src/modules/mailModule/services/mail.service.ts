@@ -30,7 +30,7 @@ export class MailService {
 
         const mailOptions = {
             from: `"Agim Tours" <${this.configService.get<string>('SMTP_USER')}>`,
-            to: 'besir.dauti@outlook.com',
+            to: 'b2bagimtours@gmail.com',
             subject: `Njoftim: Ndryshim i çmimit për biletën ${ticketUid}`,
             html: `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
