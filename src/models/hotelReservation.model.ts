@@ -9,6 +9,16 @@ export const HotelReservationSchema = new mongoose.Schema(
       ref: 'PartnerHotel',
     },
     hotel_name: { type: String, required: true },
+    price: { type: Number, default: 0 },
+    currency: { type: String, default: 'euro' },
+    payment_status: { type: String, default: 'not_paid' },
+    payment_chunks: [
+      {
+        amount: Number,
+        currency: String,
+        payment_date: Date,
+      },
+    ],
     check_in_date: { type: Date, required: true },
     check_out_date: { type: Date, required: true },
     departure_city: { type: String },

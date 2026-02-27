@@ -220,6 +220,8 @@ export class HotelReservationService {
       updateData.hotel_partner = new Types.ObjectId(
         updateReservationDto.hotel_partner,
       );
+    } else if (updateReservationDto.hotel_partner === null || updateReservationDto.hotel_partner === undefined) {
+      updateData.hotel_partner = null;
     }
     if (updateReservationDto.operator) {
       updateData.operator = new Types.ObjectId(

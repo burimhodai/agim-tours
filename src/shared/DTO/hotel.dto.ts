@@ -11,6 +11,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ReservationStatus, RoomTypes } from '../types/hotel.types';
+import { PaymentChunkDto } from './payment-chunk.dto';
 
 export class CreateRoomTypeDto {
   @IsString()
@@ -227,11 +228,30 @@ export class CreateHotelReservationDto {
   @IsString()
   hotel_booking_id: string;
 
+  @IsOptional()
   @IsString()
-  hotel_partner: string;
+  hotel_partner?: string;
 
   @IsString()
   hotel_name: string;
+
+  @IsOptional()
+  @IsNumber()
+  price?: number;
+
+  @IsOptional()
+  @IsString()
+  currency?: string;
+
+  @IsOptional()
+  @IsString()
+  payment_status?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PaymentChunkDto)
+  payment_chunks?: PaymentChunkDto[];
 
   @IsOptional()
   @IsString()
@@ -295,15 +315,34 @@ export class UpdateHotelReservationDto {
 
   @IsOptional()
   @IsString()
+  hotel_name?: string;
+
+  @IsOptional()
+  @IsNumber()
+  price?: number;
+
+  @IsOptional()
+  @IsString()
+  currency?: string;
+
+  @IsOptional()
+  @IsString()
+  payment_status?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PaymentChunkDto)
+  payment_chunks?: PaymentChunkDto[];
+
+  @IsOptional()
+  @IsString()
   maps_url?: string;
 
   @IsOptional()
   @IsString()
   operator?: string;
 
-  @IsOptional()
-  @IsString()
-  hotel_name?: string;
 
   @IsOptional()
   @Type(() => Date)

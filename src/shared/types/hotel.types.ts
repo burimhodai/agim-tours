@@ -89,8 +89,12 @@ export interface ILogEntry {
 export interface IHotelReservation extends Document {
   _id: Types.ObjectId;
   hotel_booking_id: string;
-  hotel_partner: Types.ObjectId;
+  hotel_partner?: Types.ObjectId;
   hotel_name: string;
+  price?: number;
+  currency?: string;
+  payment_status?: string;
+  payment_chunks?: any[];
   check_in_date: Date;
   check_out_date: Date;
   departure_city?: string;
