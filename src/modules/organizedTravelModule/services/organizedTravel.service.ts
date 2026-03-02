@@ -612,7 +612,7 @@ export class OrganizedTravelService {
           //   {
           //     amount: remainingDebt,
           //     description: `Borxh - Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName} (Mbetja: ${remainingDebt})`,
-          // },
+          //   },
           // );
         } else {
           // await this.transactionService.create({
@@ -622,7 +622,8 @@ export class OrganizedTravelService {
           //   status: TransactionStatus.PENDING,
           //   organizedTravel: travelId,
           //   travelerId: `${travelerId}_debt`,
-          //   agency: agencyId,
+          //   agency: finalAgencyId,
+          //   user: employeeId,
           //   description: `Borxh - Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName}`,
           // });
         }
@@ -670,7 +671,8 @@ export class OrganizedTravelService {
       //   status: TransactionStatus.PENDING,
       //   organizedTravel: travelId,
       //   travelerId: travelerId,
-      //   agency: agencyId,
+      //   agency: finalAgencyId,
+      //   user: employeeId,
       //   description: `Borxh - Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName}`,
       // });
     }

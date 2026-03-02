@@ -30,6 +30,10 @@ export class LuggageDto {
 export class PassengerDto {
   @IsOptional()
   @IsString()
+  title?: string;
+
+  @IsOptional()
+  @IsString()
   first_name?: string;
 
   @IsOptional()
@@ -43,6 +47,21 @@ export class PassengerDto {
   @IsOptional()
   @IsString()
   passport_number?: string;
+
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  birthdate?: Date;
+
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  passport_expiry_date?: Date;
+
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  passport_issue_date?: Date;
 
   @IsOptional()
   @IsArray()

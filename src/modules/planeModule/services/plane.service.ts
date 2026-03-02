@@ -32,12 +32,17 @@ export class PlaneService {
   ) { }
 
   private generatePlaneUid(): string {
-    // Generate random 5-6 digit number
     const numDigits = Math.random() < 0.5 ? 5 : 6;
     const min = Math.pow(10, numDigits - 1);
     const max = Math.pow(10, numDigits) - 1;
     const randomNum = Math.floor(Math.random() * (max - min + 1)) + min;
     return `A${randomNum}`;
+  }
+
+  private async getEmployeeAgencyId(employeeId?: string): Promise<string> {
+    if (!employeeId || !Types.ObjectId.isValid(employeeId)) return '';
+    const employee = await this.userModel.findById(employeeId).exec();
+    return employee?.agency?.toString() || '';
   }
 
   private async addLogInternal(
@@ -165,17 +170,20 @@ export class PlaneService {
       ],
     };
 
-    console.log('Saving Ticket Data:', JSON.stringify(ticketData, null, 2));
-
     const newTicket = new this.ticketModel(ticketData);
     const savedTicket = await newTicket.save();
 
-    console.log('Saved Ticket Result:', savedTicket);
-
     const paymentChunks = createPlaneTicketDto.payment_chunks || [];
     const hasPaymentChunks = paymentChunks.length > 0;
+    const ticketCurrency = createPlaneTicketDto.currency || 'euro';
+    const agencyId = await this.getEmployeeAgencyId(createPlaneTicketDto.employee);
 
     try {
+      const isPaid = createPlaneTicketDto.payment_status === PaymentStatusTypes.PAID;
+      const isPartiallyPaid = createPlaneTicketDto.payment_status === PaymentStatusTypes.PARTIALLY_PAID;
+      const isUnpaid = createPlaneTicketDto.payment_status === PaymentStatusTypes.UNPAID ||
+        createPlaneTicketDto.payment_status === PaymentStatusTypes.NOT_PAID;
+
       if (hasPaymentChunks) {
         for (const chunk of paymentChunks) {
           await this.transactionService.create({
@@ -184,43 +192,68 @@ export class PlaneService {
             type: TransactionTypes.INCOME,
             status: TransactionStatus.SETTLED,
             ticket: savedTicket._id.toString(),
-            agency: createPlaneTicketDto.agency,
+            agency: agencyId,
             user: createPlaneTicketDto.employee,
             description: `Pagesë - Biletë avioni (${savedTicket.uid})`,
           });
         }
-      } else if (createPlaneTicketDto.payment_status === PaymentStatusTypes.PAID) {
+
+        if (isPartiallyPaid) {
+          const paidTotal = paymentChunks.reduce((sum, c) => sum + c.amount, 0);
+          const debtAmount = createPlaneTicketDto.price - paidTotal;
+          if (debtAmount > 0) {
+            await this.transactionService.create({
+              amount: debtAmount,
+              currency: ticketCurrency as any,
+              type: TransactionTypes.DEBT,
+              status: TransactionStatus.PENDING,
+              ticket: savedTicket._id.toString(),
+              agency: agencyId,
+              user: createPlaneTicketDto.employee,
+              description: `Borxh - Biletë avioni e papaguar (${savedTicket.uid})`,
+            });
+          }
+        }
+      } else if (isPaid) {
         await this.transactionService.create({
           amount: createPlaneTicketDto.price,
-          currency: createPlaneTicketDto.currency,
+          currency: ticketCurrency as any,
           type: TransactionTypes.INCOME,
           status: TransactionStatus.SETTLED,
           ticket: savedTicket._id.toString(),
-          agency: createPlaneTicketDto.agency,
+          agency: agencyId,
           user: createPlaneTicketDto.employee,
-          description: 'Biletë avioni',
+          description: `Pagesë - Biletë avioni (${savedTicket.uid})`,
         });
-      } else if (
-        createPlaneTicketDto.payment_status === PaymentStatusTypes.UNPAID ||
-        createPlaneTicketDto.payment_status === PaymentStatusTypes.NOT_PAID
-      ) {
+      } else if (isPartiallyPaid) {
         await this.transactionService.create({
           amount: createPlaneTicketDto.price,
-          currency: createPlaneTicketDto.currency,
+          currency: ticketCurrency as any,
           type: TransactionTypes.DEBT,
           status: TransactionStatus.PENDING,
           ticket: savedTicket._id.toString(),
-          agency: createPlaneTicketDto.agency,
+          agency: agencyId,
           user: createPlaneTicketDto.employee,
-          description: 'Borxh - Biletë avioni e papaguar',
+          description: `Borxh - Biletë avioni e papaguar (${savedTicket.uid})`,
+        });
+      } else if (isUnpaid) {
+        await this.transactionService.create({
+          amount: createPlaneTicketDto.price,
+          currency: ticketCurrency as any,
+          type: TransactionTypes.DEBT,
+          status: TransactionStatus.PENDING,
+          ticket: savedTicket._id.toString(),
+          agency: agencyId,
+          user: createPlaneTicketDto.employee,
+          description: `Borxh - Biletë avioni e papaguar (${savedTicket.uid})`,
         });
       }
     } catch (txError) {
-      console.error('Transaction creation failed:', txError);
     }
 
     return savedTicket;
   }
+
 
   async findAll(query: PlaneTicketQueryDto): Promise<{
     tickets: ITicket[];
@@ -325,7 +358,6 @@ export class PlaneService {
         .exec(),
       this.ticketModel.countDocuments(filter).exec(),
     ]);
-    console.log(tickets);
     return {
       tickets,
       total,
@@ -371,27 +403,17 @@ export class PlaneService {
       throw new NotFoundException('Plane ticket not found');
     }
 
-    console.log('[PLANE UPDATE V2] === UPDATE CALLED ===');
-    console.log('[PLANE UPDATE V2] Received DTO:', JSON.stringify(updatePlaneTicketDto, null, 2));
-    console.log('[PLANE UPDATE V2] Current ticket price:', currentTicket.price, 'typeof:', typeof currentTicket.price);
-    console.log('[PLANE UPDATE V2] DTO price:', updatePlaneTicketDto.price, 'typeof:', typeof updatePlaneTicketDto.price);
-
     const updateData: any = { ...updatePlaneTicketDto };
 
     const oldPrice = currentTicket.price;
     const newPrice = updatePlaneTicketDto.price !== undefined ? updatePlaneTicketDto.price : oldPrice;
     const priceChanged = updatePlaneTicketDto.price !== undefined && oldPrice !== newPrice;
 
-    console.log('[PLANE UPDATE] oldPrice:', oldPrice, 'newPrice:', newPrice, 'priceChanged:', priceChanged);
-    console.log('[PLANE UPDATE] dto.price:', updatePlaneTicketDto.price, 'dto.payment_status:', updatePlaneTicketDto.payment_status);
-
     const oldPaymentChunks = currentTicket.payment_chunks || [];
     const newPaymentChunks = updatePlaneTicketDto.payment_chunks || [];
     const newChunksAdded = newPaymentChunks.length > oldPaymentChunks.length
       ? newPaymentChunks.slice(oldPaymentChunks.length)
       : [];
-
-    console.log('[PLANE UPDATE] oldChunks:', oldPaymentChunks.length, 'newChunks:', newPaymentChunks.length, 'newChunksAdded:', newChunksAdded.length);
 
     const ticket = await this.ticketModel
       .findOneAndUpdate(
@@ -408,13 +430,9 @@ export class PlaneService {
       throw new NotFoundException('Plane ticket not found');
     }
 
-    const agencyId = updatePlaneTicketDto.agency || (ticket.agency instanceof Types.ObjectId
-      ? ticket.agency.toString()
-      : (ticket.agency as any)?._id?.toString() || '');
     const employeeId = updatePlaneTicketDto.employee || currentTicket.employee?.toString() || '';
+    const agencyId = await this.getEmployeeAgencyId(employeeId);
     const currency = updatePlaneTicketDto.currency || currentTicket.currency || 'euro';
-
-    console.log('[PLANE UPDATE] agencyId:', agencyId, 'employeeId:', employeeId, 'currency:', currency);
 
     const changesDescription = this.getChangesDescription(currentTicket.toObject(), updateData);
 
@@ -443,10 +461,7 @@ export class PlaneService {
     const newChunksTotal = newChunksAdded.reduce((sum: number, c: any) => sum + (c.amount > 0 ? c.amount : 0), 0);
     const priceDiff = newPrice - oldPrice;
 
-    console.log('[PLANE UPDATE] priceDiff:', priceDiff, 'newChunksTotal:', newChunksTotal);
-
     if (priceChanged && priceDiff > 0) {
-      console.log('[PLANE UPDATE] Price increased by', priceDiff, '- creating new debt');
       await this.transactionService.create({
         amount: priceDiff,
         currency: currency as any,
@@ -455,16 +470,14 @@ export class PlaneService {
         ticket: id,
         agency: agencyId,
         user: employeeId,
-        description: 'Borxh - Biletë avioni e papaguar',
+        description: `Borxh - Biletë avioni e papaguar (${ticket.uid})`,
       });
     } else if (priceChanged && priceDiff < 0) {
       const reduction = Math.abs(priceDiff);
-      console.log('[PLANE UPDATE] Price decreased by', reduction, '- settling from debts');
       await this.settleDebtAmount(id, reduction);
     }
 
     if (newChunksTotal > 0) {
-      console.log('[PLANE UPDATE] New payment of', newChunksTotal, '- settling from debts');
       await this.settleDebtAmount(id, newChunksTotal);
     }
 
@@ -473,7 +486,6 @@ export class PlaneService {
       updatePlaneTicketDto.payment_status !== currentTicket.payment_status;
 
     if (statusChanged && (statusStr === 'paid' || statusStr === PaymentStatusTypes.PAID)) {
-      console.log('[PLANE UPDATE] Status changed to paid - settling all debts');
       const allTxs = await this.transactionService.findAllByTicket(id);
       const pendingDebts = allTxs.filter(
         (t: any) => (t.type === TransactionTypes.DEBT || t.type === 'debt') && (t.status === TransactionStatus.PENDING || t.status === 'pending')
@@ -499,6 +511,7 @@ export class PlaneService {
     return ticket;
   }
 
+
   private async settleDebtAmount(ticketId: string, amount: number): Promise<void> {
     const allTxs = await this.transactionService.findAllByTicket(ticketId);
     const pendingDebts = allTxs
@@ -510,13 +523,11 @@ export class PlaneService {
       if (remaining <= 0) break;
       if (dt.amount <= remaining) {
         remaining -= dt.amount;
-        console.log('[SETTLE] Fully settling debt tx:', dt.amount);
         dt.type = TransactionTypes.INCOME;
         dt.status = TransactionStatus.SETTLED;
         dt.description = (dt.description || '').replace('Borxh - ', '').replace(' e papaguar', ' - Paguar plotësisht');
         await dt.save();
       } else {
-        console.log('[SETTLE] Reducing debt tx from', dt.amount, 'by', remaining);
         dt.amount = dt.amount - remaining;
         remaining = 0;
         await dt.save();
@@ -698,8 +709,7 @@ export class PlaneService {
       ticket.payment_status === PaymentStatusTypes.UNPAID ||
       ticket.payment_status === PaymentStatusTypes.NOT_PAID;
 
-    const employee = await this.userModel.findById(cancelTicketDto.employee).exec();
-    const employeeAgencyId = employee?.agency?.toString();
+    const employeeAgencyId = await this.getEmployeeAgencyId(cancelTicketDto.employee);
 
     if (wasUnpaid) {
       await this.transactionService.deleteByTicket(id);
@@ -721,9 +731,7 @@ export class PlaneService {
             type: TransactionTypes.OUTCOME,
             status: TransactionStatus.SETTLED,
             ticket: ticket._id.toString(),
-            agency: cancelTicketDto.agency || employeeAgencyId || (ticket.agency instanceof Types.ObjectId
-              ? ticket.agency.toString()
-              : (ticket.agency as any)?._id?.toString() || ''),
+            agency: employeeAgencyId,
             user: cancelTicketDto.employee,
             description: `Rimbursim - Biletë avioni e anuluar (${ticket.uid})`,
           });
@@ -774,9 +782,7 @@ export class PlaneService {
       ticket.payment_chunks = [];
     }
 
-    // Fetch the employee to get their agency
-    const employee = await this.userModel.findById(refundDto.employee).exec();
-    const employeeAgencyId = employee?.agency?.toString();
+    const employeeAgencyId = await this.getEmployeeAgencyId(refundDto.employee);
 
     for (const chunk of refund_chunks) {
       ticket.payment_chunks.push({
@@ -791,9 +797,7 @@ export class PlaneService {
         type: TransactionTypes.OUTCOME,
         status: TransactionStatus.SETTLED,
         ticket: ticket._id.toString(),
-        agency: refundDto.agency || employeeAgencyId || (ticket.agency instanceof Types.ObjectId
-          ? ticket.agency.toString()
-          : (ticket.agency as any)?._id?.toString() || ''),
+        agency: employeeAgencyId,
         user: refundDto.employee,
         description: `Rimbursim - Biletë avioni e anuluar (${ticket.uid})`,
       });

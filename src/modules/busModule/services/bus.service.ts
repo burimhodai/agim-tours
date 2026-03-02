@@ -121,12 +121,18 @@ export class BusService {
   }
 
   async create(createBusTicketDto: CreateBusTicketDto): Promise<ITicket> {
+    let finalAgencyId = createBusTicketDto.agency;
+    if (!finalAgencyId && createBusTicketDto.employee && Types.ObjectId.isValid(createBusTicketDto.employee)) {
+      const employee = await this.userModel.findById(createBusTicketDto.employee).exec();
+      if (employee?.agency) finalAgencyId = employee.agency.toString();
+    }
+
     const ticketData = {
       ...createBusTicketDto,
       uid: this.generateBusUid(),
       ticket_type: TicketTypes.BUS,
-      agency: createBusTicketDto.agency
-        ? new Types.ObjectId(createBusTicketDto.agency)
+      agency: finalAgencyId
+        ? new Types.ObjectId(finalAgencyId)
         : undefined,
       employee: createBusTicketDto.employee
         ? new Types.ObjectId(createBusTicketDto.employee)
@@ -159,7 +165,7 @@ export class BusService {
           type: TransactionTypes.INCOME,
           status: TransactionStatus.SETTLED,
           ticket: savedTicket._id.toString(),
-          agency: createBusTicketDto.agency,
+          agency: finalAgencyId,
           user: createBusTicketDto.employee,
           description: `Pagesë - Biletë autobusi (${savedTicket.uid})`,
         });
@@ -172,7 +178,7 @@ export class BusService {
         type: TransactionTypes.INCOME,
         status: TransactionStatus.SETTLED,
         ticket: savedTicket._id.toString(),
-        agency: createBusTicketDto.agency,
+        agency: finalAgencyId,
         user: createBusTicketDto.employee,
         description: 'Biletë autobusi',
       });
@@ -184,7 +190,7 @@ export class BusService {
         type: TransactionTypes.DEBT,
         status: TransactionStatus.PENDING,
         ticket: savedTicket._id.toString(),
-        agency: createBusTicketDto.agency,
+        agency: finalAgencyId,
         user: createBusTicketDto.employee,
         description: 'Borxh - Biletë autobusi e papaguar',
       });

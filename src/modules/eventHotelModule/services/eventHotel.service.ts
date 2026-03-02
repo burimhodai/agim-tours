@@ -784,7 +784,8 @@ export class EventHotelService {
         status: TransactionStatus.PENDING,
         event: eventId,
         travelerId: travelerId,
-        agency: agencyId,
+        agency: finalAgencyId,
+        user: employeeId,
         description: `Borxh - Ngjarje: ${eventName} - Udhëtar: ${travelerName}`,
       });
     }
