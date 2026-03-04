@@ -451,11 +451,11 @@ export class PlaneService {
       JSON.stringify(oldChunksSimplified) !== JSON.stringify(newChunksSimplified);
 
     if (priceChanged || chunksChanged) {
-      await this.transactionService.deleteByTicket(id);
-
       const finalChunks = ticket.payment_chunks || [];
+      const oldChunkCount = (currentTicket.payment_chunks || []).length;
+      const newlyAddedChunks = finalChunks.slice(oldChunkCount);
 
-      for (const chunk of finalChunks) {
+      for (const chunk of newlyAddedChunks) {
         if (chunk.amount > 0) {
           await this.transactionService.create({
             amount: chunk.amount,
@@ -495,7 +495,19 @@ export class PlaneService {
       const remainingDebt =
         Math.round((newPrice - totalPaidInTicketCurrency) * 100) / 100;
 
-      if (remainingDebt > 0) {
+      const existingDebt = await this.transactionService.findByTicketDebt(id);
+      if (existingDebt) {
+        if (remainingDebt > 0) {
+          await this.transactionService.update(
+            (existingDebt as any)._id.toString(),
+            { amount: remainingDebt },
+          );
+        } else {
+          await this.transactionService.remove(
+            (existingDebt as any)._id.toString(),
+          );
+        }
+      } else if (remainingDebt > 0) {
         await this.transactionService.create({
           amount: remainingDebt,
           currency: ticketCurrency as any,
