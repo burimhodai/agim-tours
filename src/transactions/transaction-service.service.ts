@@ -220,6 +220,8 @@ export class TransactionServiceService {
     ticketId: string,
     paidAmount: number,
     paymentCurrency?: string,
+    agencyId?: string,
+    userId?: string,
   ): Promise<ITransaction | null> {
     if (!Types.ObjectId.isValid(ticketId)) {
       return null;
@@ -237,9 +239,20 @@ export class TransactionServiceService {
       return null;
     }
 
+    if (agencyId) debtTransaction.agency = new Types.ObjectId(agencyId);
+    if (userId) debtTransaction.user = new Types.ObjectId(userId);
+
     let convertedAmount = paidAmount;
-    if (paymentCurrency && debtTransaction.currency && paymentCurrency.toLowerCase() !== debtTransaction.currency.toLowerCase()) {
-      convertedAmount = this.convertCurrency(paidAmount, paymentCurrency, debtTransaction.currency);
+    if (
+      paymentCurrency &&
+      debtTransaction.currency &&
+      paymentCurrency.toLowerCase() !== debtTransaction.currency.toLowerCase()
+    ) {
+      convertedAmount = this.convertCurrency(
+        paidAmount,
+        paymentCurrency,
+        debtTransaction.currency,
+      );
     }
 
     const newAmount = (debtTransaction.amount || 0) - convertedAmount;
@@ -605,6 +618,9 @@ export class TransactionServiceService {
     });
 
     if (debtTx) {
+      if (agencyId) debtTx.agency = new Types.ObjectId(agencyId);
+      if (userId) debtTx.user = new Types.ObjectId(userId);
+
       debtTx.amount += diff;
       if (debtTx.amount <= 0) {
         debtTx.amount = 0;

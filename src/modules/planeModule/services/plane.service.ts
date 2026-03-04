@@ -173,18 +173,25 @@ export class PlaneService {
     const newTicket = new this.ticketModel(ticketData);
     const savedTicket = await newTicket.save();
 
-    const paymentChunks = createPlaneTicketDto.payment_chunks || [];
-    const hasPaymentChunks = paymentChunks.length > 0;
+    const employeeId =
+      createPlaneTicketDto.employee || savedTicket.employee?.toString() || '';
+    const agencyId = await this.getEmployeeAgencyId(employeeId);
     const ticketCurrency = createPlaneTicketDto.currency || 'euro';
-    const agencyId = await this.getEmployeeAgencyId(createPlaneTicketDto.employee);
 
     try {
-      const isPaid = createPlaneTicketDto.payment_status === PaymentStatusTypes.PAID;
-      const isPartiallyPaid = createPlaneTicketDto.payment_status === PaymentStatusTypes.PARTIALLY_PAID;
-      const isUnpaid = createPlaneTicketDto.payment_status === PaymentStatusTypes.UNPAID ||
-        createPlaneTicketDto.payment_status === PaymentStatusTypes.NOT_PAID;
+      await this.transactionService.create({
+        amount: createPlaneTicketDto.price,
+        currency: ticketCurrency as any,
+        type: TransactionTypes.DEBT,
+        status: TransactionStatus.PENDING,
+        ticket: savedTicket._id.toString(),
+        agency: agencyId,
+        user: employeeId,
+        description: `Borxh - Biletë avioni e papaguar (${savedTicket.uid})`,
+      });
 
-      if (hasPaymentChunks) {
+      const paymentChunks = createPlaneTicketDto.payment_chunks || [];
+      if (paymentChunks.length > 0) {
         for (const chunk of paymentChunks) {
           await this.transactionService.create({
             amount: chunk.amount,
@@ -193,63 +200,34 @@ export class PlaneService {
             status: TransactionStatus.SETTLED,
             ticket: savedTicket._id.toString(),
             agency: agencyId,
-            user: createPlaneTicketDto.employee,
+            user: employeeId,
             description: `Pagesë - Biletë avioni (${savedTicket.uid})`,
           });
-        }
 
-        if (isPartiallyPaid) {
-          const paidTotal = paymentChunks.reduce((sum, c) => sum + c.amount, 0);
-          const debtAmount = createPlaneTicketDto.price - paidTotal;
-          if (debtAmount > 0) {
-            await this.transactionService.create({
-              amount: debtAmount,
-              currency: ticketCurrency as any,
-              type: TransactionTypes.DEBT,
-              status: TransactionStatus.PENDING,
-              ticket: savedTicket._id.toString(),
-              agency: agencyId,
-              user: createPlaneTicketDto.employee,
-              description: `Borxh - Biletë avioni e papaguar (${savedTicket.uid})`,
-            });
-          }
+          await this.transactionService.reduceDebtByTicket(
+            savedTicket._id.toString(),
+            chunk.amount,
+            chunk.currency,
+            agencyId,
+            employeeId,
+          );
         }
-      } else if (isPaid) {
-        await this.transactionService.create({
-          amount: createPlaneTicketDto.price,
-          currency: ticketCurrency as any,
-          type: TransactionTypes.INCOME,
-          status: TransactionStatus.SETTLED,
-          ticket: savedTicket._id.toString(),
-          agency: agencyId,
-          user: createPlaneTicketDto.employee,
-          description: `Pagesë - Biletë avioni (${savedTicket.uid})`,
-        });
-      } else if (isPartiallyPaid) {
-        await this.transactionService.create({
-          amount: createPlaneTicketDto.price,
-          currency: ticketCurrency as any,
-          type: TransactionTypes.DEBT,
-          status: TransactionStatus.PENDING,
-          ticket: savedTicket._id.toString(),
-          agency: agencyId,
-          user: createPlaneTicketDto.employee,
-          description: `Borxh - Biletë avioni e papaguar (${savedTicket.uid})`,
-        });
-      } else if (isUnpaid) {
-        await this.transactionService.create({
-          amount: createPlaneTicketDto.price,
-          currency: ticketCurrency as any,
-          type: TransactionTypes.DEBT,
-          status: TransactionStatus.PENDING,
-          ticket: savedTicket._id.toString(),
-          agency: agencyId,
-          user: createPlaneTicketDto.employee,
-          description: `Borxh - Biletë avioni e papaguar (${savedTicket.uid})`,
-        });
+      } else if (
+        createPlaneTicketDto.payment_status === PaymentStatusTypes.PAID
+      ) {
+        const debtTx = await this.transactionService.findByTicketDebt(
+          savedTicket._id.toString(),
+        );
+        if (debtTx) {
+          debtTx.type = TransactionTypes.INCOME;
+          debtTx.status = TransactionStatus.SETTLED;
+          debtTx.description = (debtTx.description || '')
+            .replace('Borxh - ', '')
+            .replace(' e papaguar', ' - Paguar plotësisht');
+          await debtTx.save();
+        }
       }
-    } catch (txError) {
-    }
+    } catch (txError) { }
 
     return savedTicket;
   }
@@ -406,14 +384,23 @@ export class PlaneService {
     const updateData: any = { ...updatePlaneTicketDto };
 
     const oldPrice = currentTicket.price;
-    const newPrice = updatePlaneTicketDto.price !== undefined ? updatePlaneTicketDto.price : oldPrice;
-    const priceChanged = updatePlaneTicketDto.price !== undefined && oldPrice !== newPrice;
+    const newPrice =
+      updatePlaneTicketDto.price !== undefined
+        ? updatePlaneTicketDto.price
+        : oldPrice;
+    const priceChanged =
+      updatePlaneTicketDto.price !== undefined && oldPrice !== newPrice;
 
-    const oldPaymentChunks = currentTicket.payment_chunks || [];
-    const newPaymentChunks = updatePlaneTicketDto.payment_chunks || [];
-    const newChunksAdded = newPaymentChunks.length > oldPaymentChunks.length
-      ? newPaymentChunks.slice(oldPaymentChunks.length)
-      : [];
+    const allChunks = updatePlaneTicketDto.payment_chunks || currentTicket.payment_chunks || [];
+    const hasAnyPayments = allChunks.length > 0;
+
+    if (priceChanged) {
+      if (hasAnyPayments) {
+        updateData.payment_status = PaymentStatusTypes.PARTIALLY_PAID;
+      } else {
+        updateData.payment_status = PaymentStatusTypes.UNPAID;
+      }
+    }
 
     const ticket = await this.ticketModel
       .findOneAndUpdate(
@@ -430,11 +417,18 @@ export class PlaneService {
       throw new NotFoundException('Plane ticket not found');
     }
 
-    const employeeId = updatePlaneTicketDto.employee || currentTicket.employee?.toString() || '';
+    const employeeId =
+      updatePlaneTicketDto.employee ||
+      currentTicket.employee?.toString() ||
+      '';
     const agencyId = await this.getEmployeeAgencyId(employeeId);
-    const currency = updatePlaneTicketDto.currency || currentTicket.currency || 'euro';
+    const ticketCurrency =
+      updatePlaneTicketDto.currency || currentTicket.currency || 'euro';
 
-    const changesDescription = this.getChangesDescription(currentTicket.toObject(), updateData);
+    const changesDescription = this.getChangesDescription(
+      currentTicket.toObject(),
+      updateData,
+    );
 
     await this.addLogInternal(
       id,
@@ -443,8 +437,12 @@ export class PlaneService {
       updatePlaneTicketDto.employee,
     );
 
-    if (newChunksAdded.length > 0) {
-      for (const chunk of newChunksAdded) {
+    await this.transactionService.deleteByTicket(id);
+
+    const finalChunks = ticket.payment_chunks || [];
+
+    for (const chunk of finalChunks) {
+      if (chunk.amount > 0) {
         await this.transactionService.create({
           amount: chunk.amount,
           currency: chunk.currency,
@@ -458,13 +456,35 @@ export class PlaneService {
       }
     }
 
-    const newChunksTotal = newChunksAdded.reduce((sum: number, c: any) => sum + (c.amount > 0 ? c.amount : 0), 0);
-    const priceDiff = newPrice - oldPrice;
+    let totalPaidInTicketCurrency = 0;
+    for (const chunk of finalChunks) {
+      if (chunk.amount <= 0) continue;
+      if (
+        chunk.currency &&
+        chunk.currency.toLowerCase() !== ticketCurrency.toLowerCase()
+      ) {
+        const rates: Record<string, Record<string, number>> = {
+          euro: { chf: 0.93, mkd: 61.5 },
+          chf: { euro: 1.075, mkd: 66.13 },
+          mkd: { euro: 0.01626, chf: 0.01512 },
+        };
+        const from = chunk.currency.toLowerCase();
+        const to = ticketCurrency.toLowerCase();
+        const rate = rates[from]?.[to] || 1;
+        totalPaidInTicketCurrency +=
+          Math.round(chunk.amount * rate * 100) / 100;
+      } else {
+        totalPaidInTicketCurrency += chunk.amount;
+      }
+    }
 
-    if (priceChanged && priceDiff > 0) {
+    const remainingDebt =
+      Math.round((newPrice - totalPaidInTicketCurrency) * 100) / 100;
+
+    if (remainingDebt > 0) {
       await this.transactionService.create({
-        amount: priceDiff,
-        currency: currency as any,
+        amount: remainingDebt,
+        currency: ticketCurrency as any,
         type: TransactionTypes.DEBT,
         status: TransactionStatus.PENDING,
         ticket: id,
@@ -472,68 +492,44 @@ export class PlaneService {
         user: employeeId,
         description: `Borxh - Biletë avioni e papaguar (${ticket.uid})`,
       });
-    } else if (priceChanged && priceDiff < 0) {
-      const reduction = Math.abs(priceDiff);
-      await this.settleDebtAmount(id, reduction);
     }
 
-    if (newChunksTotal > 0) {
-      await this.settleDebtAmount(id, newChunksTotal);
-    }
-
-    const statusStr = String(ticket.payment_status || '');
-    const statusChanged = updatePlaneTicketDto.payment_status &&
-      updatePlaneTicketDto.payment_status !== currentTicket.payment_status;
-
-    if (statusChanged && (statusStr === 'paid' || statusStr === PaymentStatusTypes.PAID)) {
-      const allTxs = await this.transactionService.findAllByTicket(id);
-      const pendingDebts = allTxs.filter(
-        (t: any) => (t.type === TransactionTypes.DEBT || t.type === 'debt') && (t.status === TransactionStatus.PENDING || t.status === 'pending')
+    if (remainingDebt <= 0 && hasAnyPayments) {
+      await this.ticketModel.updateOne(
+        { _id: id },
+        { $set: { payment_status: PaymentStatusTypes.PAID } },
       );
-      for (const dt of pendingDebts) {
-        dt.type = TransactionTypes.INCOME;
-        dt.status = TransactionStatus.SETTLED;
-        dt.description = (dt.description || '').replace('Borxh - ', '').replace(' e papaguar', ' - Paguar plotësisht');
-        await dt.save();
-      }
+    } else if (remainingDebt > 0 && hasAnyPayments) {
+      await this.ticketModel.updateOne(
+        { _id: id },
+        { $set: { payment_status: PaymentStatusTypes.PARTIALLY_PAID } },
+      );
+    } else if (!hasAnyPayments) {
+      await this.ticketModel.updateOne(
+        { _id: id },
+        { $set: { payment_status: PaymentStatusTypes.UNPAID } },
+      );
     }
 
     if (priceChanged) {
-      this.mailService.sendPriceChangeEmail(
-        oldPrice,
-        newPrice,
-        currency,
-        ticket.uid || 'N/A',
-        id,
-      ).catch(err => console.error('Failed to send price change email:', err));
+      this.mailService
+        .sendPriceChangeEmail(
+          oldPrice,
+          newPrice,
+          ticketCurrency,
+          ticket.uid || 'N/A',
+          id,
+        )
+        .catch((err) =>
+          console.error('Failed to send price change email:', err),
+        );
     }
 
     return ticket;
   }
 
 
-  private async settleDebtAmount(ticketId: string, amount: number): Promise<void> {
-    const allTxs = await this.transactionService.findAllByTicket(ticketId);
-    const pendingDebts = allTxs
-      .filter((t: any) => (t.type === TransactionTypes.DEBT || t.type === 'debt') && (t.status === TransactionStatus.PENDING || t.status === 'pending'))
-      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-    let remaining = amount;
-    for (const dt of pendingDebts) {
-      if (remaining <= 0) break;
-      if (dt.amount <= remaining) {
-        remaining -= dt.amount;
-        dt.type = TransactionTypes.INCOME;
-        dt.status = TransactionStatus.SETTLED;
-        dt.description = (dt.description || '').replace('Borxh - ', '').replace(' e papaguar', ' - Paguar plotësisht');
-        await dt.save();
-      } else {
-        dt.amount = dt.amount - remaining;
-        remaining = 0;
-        await dt.save();
-      }
-    }
-  }
 
   async delete(id: string, employeeId?: string): Promise<{ message: string }> {
     if (!Types.ObjectId.isValid(id)) {
