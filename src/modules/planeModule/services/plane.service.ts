@@ -82,6 +82,7 @@ export class PlaneService {
       booking_reference: 'Ref. i rezervimit',
       note: 'Shënim',
       checked_in: 'Check-in',
+      return_checked_in: 'Return Check-in',
     };
 
     for (const key in newData) {
@@ -437,78 +438,92 @@ export class PlaneService {
       updatePlaneTicketDto.employee,
     );
 
-    await this.transactionService.deleteByTicket(id);
+    const oldChunksSimplified = (currentTicket.payment_chunks || []).map(c => ({
+      amount: c.amount,
+      currency: c.currency
+    }));
+    const newChunksSimplified = (updatePlaneTicketDto.payment_chunks || []).map(c => ({
+      amount: c.amount,
+      currency: c.currency
+    }));
 
-    const finalChunks = ticket.payment_chunks || [];
+    const chunksChanged = updatePlaneTicketDto.payment_chunks !== undefined &&
+      JSON.stringify(oldChunksSimplified) !== JSON.stringify(newChunksSimplified);
 
-    for (const chunk of finalChunks) {
-      if (chunk.amount > 0) {
+    if (priceChanged || chunksChanged) {
+      await this.transactionService.deleteByTicket(id);
+
+      const finalChunks = ticket.payment_chunks || [];
+
+      for (const chunk of finalChunks) {
+        if (chunk.amount > 0) {
+          await this.transactionService.create({
+            amount: chunk.amount,
+            currency: chunk.currency,
+            type: TransactionTypes.INCOME,
+            status: TransactionStatus.SETTLED,
+            ticket: id,
+            agency: agencyId,
+            user: employeeId,
+            description: `Pagesë - Biletë avioni (${ticket.uid})`,
+          });
+        }
+      }
+
+      let totalPaidInTicketCurrency = 0;
+      for (const chunk of finalChunks) {
+        if (chunk.amount <= 0) continue;
+        if (
+          chunk.currency &&
+          chunk.currency.toLowerCase() !== ticketCurrency.toLowerCase()
+        ) {
+          const rates: Record<string, Record<string, number>> = {
+            euro: { chf: 0.93, mkd: 61.5 },
+            chf: { euro: 1.075, mkd: 66.13 },
+            mkd: { euro: 0.01626, chf: 0.01512 },
+          };
+          const from = chunk.currency.toLowerCase();
+          const to = ticketCurrency.toLowerCase();
+          const rate = rates[from]?.[to] || 1;
+          totalPaidInTicketCurrency +=
+            Math.round(chunk.amount * rate * 100) / 100;
+        } else {
+          totalPaidInTicketCurrency += chunk.amount;
+        }
+      }
+
+      const remainingDebt =
+        Math.round((newPrice - totalPaidInTicketCurrency) * 100) / 100;
+
+      if (remainingDebt > 0) {
         await this.transactionService.create({
-          amount: chunk.amount,
-          currency: chunk.currency,
-          type: TransactionTypes.INCOME,
-          status: TransactionStatus.SETTLED,
+          amount: remainingDebt,
+          currency: ticketCurrency as any,
+          type: TransactionTypes.DEBT,
+          status: TransactionStatus.PENDING,
           ticket: id,
           agency: agencyId,
           user: employeeId,
-          description: `Pagesë - Biletë avioni (${ticket.uid})`,
+          description: `Borxh - Biletë avioni e papaguar (${ticket.uid})`,
         });
       }
-    }
 
-    let totalPaidInTicketCurrency = 0;
-    for (const chunk of finalChunks) {
-      if (chunk.amount <= 0) continue;
-      if (
-        chunk.currency &&
-        chunk.currency.toLowerCase() !== ticketCurrency.toLowerCase()
-      ) {
-        const rates: Record<string, Record<string, number>> = {
-          euro: { chf: 0.93, mkd: 61.5 },
-          chf: { euro: 1.075, mkd: 66.13 },
-          mkd: { euro: 0.01626, chf: 0.01512 },
-        };
-        const from = chunk.currency.toLowerCase();
-        const to = ticketCurrency.toLowerCase();
-        const rate = rates[from]?.[to] || 1;
-        totalPaidInTicketCurrency +=
-          Math.round(chunk.amount * rate * 100) / 100;
-      } else {
-        totalPaidInTicketCurrency += chunk.amount;
+      if (remainingDebt <= 0 && hasAnyPayments) {
+        await this.ticketModel.updateOne(
+          { _id: id },
+          { $set: { payment_status: PaymentStatusTypes.PAID } },
+        );
+      } else if (remainingDebt > 0 && hasAnyPayments) {
+        await this.ticketModel.updateOne(
+          { _id: id },
+          { $set: { payment_status: PaymentStatusTypes.PARTIALLY_PAID } },
+        );
+      } else if (!hasAnyPayments) {
+        await this.ticketModel.updateOne(
+          { _id: id },
+          { $set: { payment_status: PaymentStatusTypes.UNPAID } },
+        );
       }
-    }
-
-    const remainingDebt =
-      Math.round((newPrice - totalPaidInTicketCurrency) * 100) / 100;
-
-    if (remainingDebt > 0) {
-      await this.transactionService.create({
-        amount: remainingDebt,
-        currency: ticketCurrency as any,
-        type: TransactionTypes.DEBT,
-        status: TransactionStatus.PENDING,
-        ticket: id,
-        agency: agencyId,
-        user: employeeId,
-        description: `Borxh - Biletë avioni e papaguar (${ticket.uid})`,
-      });
-    }
-
-    if (remainingDebt <= 0 && hasAnyPayments) {
-      await this.ticketModel.updateOne(
-        { _id: id },
-        { $set: { payment_status: PaymentStatusTypes.PAID } },
-      );
-    } else if (remainingDebt > 0 && hasAnyPayments) {
-      await this.ticketModel.updateOne(
-        { _id: id },
-        { $set: { payment_status: PaymentStatusTypes.PARTIALLY_PAID } },
-      );
-    } else if (!hasAnyPayments) {
-      await this.ticketModel.updateOne(
-        { _id: id },
-        { $set: { payment_status: PaymentStatusTypes.UNPAID } },
-      );
     }
 
     if (priceChanged) {
@@ -651,6 +666,41 @@ export class PlaneService {
       checkedIn
         ? 'Pasagjeri bëri check-in me sukses.'
         : 'Anulimi i statusit check-in.',
+      employeeId,
+    );
+
+    return ticket;
+  }
+
+  async checkInReturn(
+    id: string,
+    checkedIn: boolean,
+    employeeId?: string,
+  ): Promise<ITicket> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid ticket ID');
+    }
+
+    const ticket = await this.ticketModel
+      .findOneAndUpdate(
+        { _id: id, ticket_type: TicketTypes.PLANE, is_deleted: { $ne: true } },
+        { $set: { return_checked_in: checkedIn } },
+        { new: true },
+      )
+      .populate('employee', 'email')
+      .populate('agency')
+      .exec();
+
+    if (!ticket) {
+      throw new NotFoundException('Plane ticket not found');
+    }
+
+    await this.addLogInternal(
+      id,
+      checkedIn ? 'Return Check-in i kryer' : 'Return Check-in i anuluar',
+      checkedIn
+        ? 'Pasagjeri bëri return check-in me sukses.'
+        : 'Anulimi i statusit return check-in.',
       employeeId,
     );
 

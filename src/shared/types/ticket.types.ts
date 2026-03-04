@@ -84,6 +84,7 @@ export interface ITicket extends Document {
   passengers?: IPassenger[];
 
   checked_in?: boolean;
+  return_checked_in?: boolean;
   note?: string;
   route_number?: string;
 

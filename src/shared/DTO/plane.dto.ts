@@ -213,6 +213,10 @@ export class CreatePlaneTicketDto {
   @IsOptional()
   @IsString()
   return_route_number?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  return_checked_in?: boolean;
 }
 
 export class UpdatePlaneTicketDto {
@@ -307,6 +311,10 @@ export class UpdatePlaneTicketDto {
   @IsOptional()
   @IsBoolean()
   checked_in?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  return_checked_in?: boolean;
 
   @IsOptional()
   @IsString()

@@ -123,10 +123,10 @@ export const TicketSchema = new mongoose.Schema(
     ],
 
     checked_in: { type: Boolean, default: false },
+    return_checked_in: { type: Boolean, default: false },
     is_deleted: { type: Boolean, default: false },
     status: { type: String, enum: ['active', 'canceled'], default: 'active' },
     note: { type: String },
-    // Attached document for ticket PDF
     documentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Document' },
     route_number: { type: String },
     return_route_number: { type: String },

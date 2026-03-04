@@ -84,6 +84,15 @@ export class PlaneController {
     return await this.planeService.checkIn(id, checkedIn, employeeId);
   }
 
+  @Patch('tickets/:id/check-in-return')
+  async checkInReturn(
+    @Param('id') id: string,
+    @Body('return_checked_in') checkedIn: boolean,
+    @Body('employee') employeeId?: string,
+  ) {
+    return await this.planeService.checkInReturn(id, checkedIn, employeeId);
+  }
+
   @Patch('tickets/:id/cancel')
   async cancel(
     @Param('id') id: string,
