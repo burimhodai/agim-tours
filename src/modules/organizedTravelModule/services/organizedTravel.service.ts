@@ -850,7 +850,7 @@ export class OrganizedTravelService {
     const travel = await this.findOne(travelId);
     const travelersByBus: any = {};
 
-    travel.travelers.forEach((traveler: any) => {
+    travel.travelers.filter((t: any) => t.status === "active").forEach((traveler: any) => {
       const busId = traveler.bus?._id?.toString() || 'unassigned';
       const busName = traveler.bus?.name || 'Pa autobus';
 
@@ -869,12 +869,12 @@ export class OrganizedTravelService {
 
   async getBorderList(travelId: string): Promise<any[]> {
     const travel = await this.findOne(travelId);
-    return travel.travelers.filter((t: any) => t.show_in_border_list !== false);
+    return travel.travelers.filter((t: any) => t.status === "active" && t.show_in_border_list !== false);
   }
 
   async getGuideList(travelId: string): Promise<any[]> {
     const travel = await this.findOne(travelId);
-    return travel.travelers.filter((t: any) => t.show_in_guide_list !== false);
+    return travel.travelers.filter((t: any) => t.status === "active" && t.show_in_guide_list !== false);
   }
 
   async updatePrintColumns(

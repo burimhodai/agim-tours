@@ -969,7 +969,7 @@ export class EventHotelService {
     const event = await this.findOne(eventId);
     const travelersByBus: any = {};
 
-    event.travelers.forEach((traveler: any) => {
+    event.travelers.filter((t: any) => t.status === "active").forEach((traveler: any) => {
       const busId = traveler.bus?._id?.toString() || 'unassigned';
       const busName = traveler.bus?.name || 'Pa autobus';
 
@@ -990,7 +990,7 @@ export class EventHotelService {
     const event = await this.findOne(eventId);
     const travelersByHotel: any = {};
 
-    event.travelers.forEach((traveler: any) => {
+    event.travelers.filter((t: any) => t.status === "active").forEach((traveler: any) => {
       const hotelId = traveler.hotel?._id?.toString() || 'unassigned';
       const hotelName = traveler.hotel?.name || 'Pa hotel';
 
@@ -1009,17 +1009,17 @@ export class EventHotelService {
 
   async getHotelList(eventId: string): Promise<any[]> {
     const event = await this.findOne(eventId);
-    return event.travelers.filter((t: any) => t.show_in_hotel_list !== false);
+    return event.travelers.filter((t: any) => t.status === "active" && t.show_in_hotel_list !== false);
   }
 
   async getBorderList(eventId: string): Promise<any[]> {
     const event = await this.findOne(eventId);
-    return event.travelers.filter((t: any) => t.show_in_border_list !== false);
+    return event.travelers.filter((t: any) => t.status === "active" && t.show_in_border_list !== false);
   }
 
   async getGuideList(eventId: string): Promise<any[]> {
     const event = await this.findOne(eventId);
-    return event.travelers.filter((t: any) => t.show_in_guide_list !== false);
+    return event.travelers.filter((t: any) => t.status === "active" && t.show_in_guide_list !== false);
   }
 
   async updatePrintColumns(
