@@ -293,13 +293,19 @@ export class PlaneService {
     }
 
     if (departure_date_from || departure_date_to) {
-      filter.departure_date = {};
+      const dateFilter: any = {};
       if (departure_date_from) {
-        filter.departure_date.$gte = departure_date_from;
+        dateFilter.$gte = departure_date_from;
       }
       if (departure_date_to) {
-        filter.departure_date.$lte = departure_date_to;
+        dateFilter.$lte = departure_date_to;
       }
+      andConditions.push({
+        $or: [
+          { departure_date: dateFilter },
+          { return_date: dateFilter }
+        ]
+      });
     }
 
     if (payment_status) {
