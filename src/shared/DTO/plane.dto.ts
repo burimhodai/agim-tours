@@ -425,4 +425,8 @@ export class PlaneTicketQueryDto {
   @IsOptional()
   @IsNumber()
   limit?: number;
+
+  @IsOptional()
+  @IsString()
+  q?: string;
 }

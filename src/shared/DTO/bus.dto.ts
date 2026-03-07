@@ -317,4 +317,8 @@ export class BusTicketQueryDto {
   @IsOptional()
   @IsNumber()
   limit?: number;
+
+  @IsOptional()
+  @IsString()
+  q?: string;
 }

@@ -252,6 +252,7 @@ export class PlaneService {
       page = 1,
       limit = 10,
       agency,
+      q,
     } = query;
 
     const andConditions: any[] = [
@@ -321,6 +322,22 @@ export class PlaneService {
       filter.route_number = route_number;
     }
 
+    if (q) {
+      const searchRegex = { $regex: q, $options: 'i' };
+      filter.$or = [
+        ...(filter.$or || []),
+        { departure_location: searchRegex },
+        { destination_location: searchRegex },
+        { booking_reference: searchRegex },
+        { operator: searchRegex },
+        { note: searchRegex },
+        { 'passengers.first_name': searchRegex },
+        { 'passengers.last_name': searchRegex },
+        { 'passengers.passport_number': searchRegex },
+        { 'passengers.phone': searchRegex }
+      ];
+    }
+
     console.log('Plane Ticket Filter:', JSON.stringify(filter));
 
     const skip = (page - 1) * limit;
@@ -331,7 +348,7 @@ export class PlaneService {
         .populate('employee', 'email')
         .populate('agency')
         .populate('documentId')
-        .sort({ departure_date: -1 })
+        .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .exec(),
