@@ -14,6 +14,16 @@ import { CreateAgencyDto } from './shared/DTO/agency.dto';
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
+  @Get()
+  getHello() {
+    return { message: 'Welcome to Agim Tours API' };
+  }
+
+  @Get('health')
+  getHealth() {
+    return { status: 'ok', timestamp: new Date().toISOString() };
+  }
+
   @Post('agencies')
   async createAgency(@Body() createAgencyDto: CreateAgencyDto) {
     return await this.appService.createAgency(createAgencyDto);
