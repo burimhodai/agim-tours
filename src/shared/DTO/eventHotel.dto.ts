@@ -18,6 +18,10 @@ export class EventStartDto {
 
     @IsString()
     time: string;
+
+    @IsOptional()
+    @IsString()
+    map_url?: string;
 }
 
 // Event Bus DTOs
@@ -321,6 +325,10 @@ export class CreateEventDto {
     @IsOptional()
     @IsString()
     documentMkId?: string;
+
+    @IsOptional()
+    @IsString()
+    hotel_map_url?: string;
 }
 
 // Update Event DTO
@@ -420,6 +428,10 @@ export class UpdateEventDto {
     @IsOptional()
     @IsString()
     documentMkId?: string;
+
+    @IsOptional()
+    @IsString()
+    hotel_map_url?: string;
 }
 
 // Add Traveler DTO

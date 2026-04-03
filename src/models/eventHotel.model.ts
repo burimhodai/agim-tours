@@ -100,7 +100,7 @@ export const EventHotelSchema = new mongoose.Schema(
     },
 
     starts: {
-      type: [{ location: String, time: String }],
+      type: [{ location: String, time: String, map_url: String }],
       default: [],
     },
 
@@ -163,6 +163,8 @@ export const EventHotelSchema = new mongoose.Schema(
     // Attached document for ticket PDF
     documentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Document' },
     documentMkId: { type: mongoose.Schema.Types.ObjectId, ref: 'Document' },
+
+    hotel_map_url: { type: String },
 
     is_deleted: { type: Boolean, default: false },
   },

@@ -18,6 +18,10 @@ export class EventStartDto {
 
   @IsString()
   time: string;
+
+  @IsOptional()
+  @IsString()
+  map_url?: string;
 }
 
 // Organized Travel Traveler DTO (without hotel fields)
@@ -206,6 +210,10 @@ export class CreateOrganizedTravelDto {
   @IsOptional()
   @IsString()
   documentMkId?: string;
+
+  @IsOptional()
+  @IsString()
+  hotel_map_url?: string;
 }
 
 // Update Organized Travel DTO
@@ -287,6 +295,10 @@ export class UpdateOrganizedTravelDto {
   @IsOptional()
   @IsString()
   documentMkId?: string;
+
+  @IsOptional()
+  @IsString()
+  hotel_map_url?: string;
 }
 
 // Add Travelers DTO

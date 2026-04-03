@@ -13,7 +13,7 @@ export const EventSchema = new mongoose.Schema(
       default: CurrencyTypes.EURO,
     },
 
-    //mos e prek teposht
+    //mos e prek teposht se ndodhen cofja
     bookings: [
       {
         passengers: [
