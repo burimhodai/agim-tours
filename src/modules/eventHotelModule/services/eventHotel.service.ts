@@ -316,7 +316,7 @@ export class EventHotelService {
       throw new NotFoundException('Ngjarja nuk u gjet');
     }
 
-    // await this.transactionService.deleteByEvent(id);
+    await this.transactionService.deleteByEvent(id);
 
     return { message: 'Ngjarja u çaktivizua me sukses' };
   }
