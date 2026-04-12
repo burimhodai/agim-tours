@@ -930,9 +930,12 @@ export class EventHotelService {
       throw new NotFoundException('Ngjarja nuk u gjet');
     }
 
-    const busObjectId = new Types.ObjectId(assignBusDto.bus_id);
+    let busObjectId = undefined;
+    if (assignBusDto.bus_id && assignBusDto.bus_id !== "") {
+      busObjectId = new Types.ObjectId(assignBusDto.bus_id);
+    }
 
-    if (!event.buses.some((b: any) => b.toString() === assignBusDto.bus_id)) {
+    if (busObjectId && !event.buses.some((b: any) => b.toString() === assignBusDto.bus_id)) {
       event.buses.push(busObjectId);
     }
 
@@ -942,7 +945,7 @@ export class EventHotelService {
 
     event.travelers = event.travelers.map((traveler: any) => {
       if (assignBusDto.traveler_ids.includes(traveler._id.toString())) {
-        return { ...traveler.toObject(), bus: busObjectId };
+        return { ...traveler.toObject(), bus: busObjectId || null };
       }
       return traveler;
     });
@@ -954,10 +957,16 @@ export class EventHotelService {
       const travelerNames = assignedTravelers
         .map((t: any) => `${t.first_name} ${t.last_name}`)
         .join(', ');
+      
+      const actionLogTitle = busObjectId ? 'Autobusi u caktua' : 'Udhëtarët u hoqën nga autobusi';
+      const actionLogDesc = busObjectId
+        ? `U caktua autobusi për udhëtarët: ${travelerNames}`
+        : `U hoqën nga autobusi udhëtarët: ${travelerNames}`;
+      
       await this.addLog(
         eventId,
-        'Autobusi u caktua',
-        `U caktua autobusi për udhëtarët: ${travelerNames}`,
+        actionLogTitle,
+        actionLogDesc,
         assignBusDto.employee,
       );
     }

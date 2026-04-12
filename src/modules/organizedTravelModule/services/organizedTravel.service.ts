@@ -816,15 +816,18 @@ export class OrganizedTravelService {
       throw new NotFoundException('Udhëtimi nuk u gjet');
     }
 
-    const busObjectId = new Types.ObjectId(assignBusDto.bus_id);
+    let busObjectId = undefined;
+    if (assignBusDto.bus_id && assignBusDto.bus_id !== "") {
+      busObjectId = new Types.ObjectId(assignBusDto.bus_id);
+    }
 
-    if (!travel.buses.some((b: any) => b.toString() === assignBusDto.bus_id)) {
+    if (busObjectId && !travel.buses.some((b: any) => b.toString() === assignBusDto.bus_id)) {
       travel.buses.push(busObjectId);
     }
 
     travel.travelers = travel.travelers.map((traveler: any) => {
       if (assignBusDto.traveler_ids.includes(traveler._id.toString())) {
-        return { ...traveler.toObject(), bus: busObjectId };
+        return { ...traveler.toObject(), bus: busObjectId || null };
       }
       return traveler;
     });
@@ -836,10 +839,15 @@ export class OrganizedTravelService {
       .map((t: any) => `${t.first_name} ${t.last_name}`)
       .join(', ');
 
+    const actionLogTitle = busObjectId ? 'Autobusi u caktua' : 'Udhëtarët u hoqën nga autobusi';
+    const actionLogDesc = busObjectId
+      ? `U caktuan ${assignedTravelers} në autobusin ${(travel.buses.find((b: any) => b._id.toString() === assignBusDto.bus_id) as any)?.name || 'e ri'}`
+      : `U hoqën ${assignedTravelers} nga autobusi`;
+
     await this.addLog(
       travelId,
-      'Autobusi u caktua',
-      `U caktuan ${assignedTravelers} në autobusin ${(travel.buses.find((b: any) => b._id.toString() === assignBusDto.bus_id) as any)?.name || 'e ri'}`,
+      actionLogTitle,
+      actionLogDesc,
       assignBusDto.employee,
     );
 
