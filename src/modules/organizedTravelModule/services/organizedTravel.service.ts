@@ -213,11 +213,7 @@ export class OrganizedTravelService {
   }
 
   async delete(id: string): Promise<{ message: string }> {
-    const travel = await this.travelModel.findByIdAndUpdate(
-      id,
-      { $set: { is_deleted: true } },
-      { new: true },
-    );
+    const travel = await this.travelModel.findByIdAndDelete(id);
 
     if (!travel) {
       throw new NotFoundException('Udhëtimi nuk u gjet');
@@ -225,7 +221,7 @@ export class OrganizedTravelService {
 
     await this.transactionService.deleteByOrganizedTravel(id);
 
-    return { message: 'Udhëtimi u çaktivizua me sukses' };
+    return { message: 'Udhëtimi u fshi me sukses' };
   }
 
   async reactivate(id: string): Promise<IOrganizedTravel> {

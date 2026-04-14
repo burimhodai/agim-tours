@@ -306,11 +306,7 @@ export class EventHotelService {
   }
 
   async delete(id: string): Promise<{ message: string }> {
-    const event = await this.eventModel.findByIdAndUpdate(
-      id,
-      { $set: { is_deleted: true } },
-      { new: true },
-    );
+    const event = await this.eventModel.findByIdAndDelete(id);
 
     if (!event) {
       throw new NotFoundException('Ngjarja nuk u gjet');
@@ -318,7 +314,7 @@ export class EventHotelService {
 
     await this.transactionService.deleteByEvent(id);
 
-    return { message: 'Ngjarja u çaktivizua me sukses' };
+    return { message: 'Ngjarja u fshi me sukses' };
   }
 
   async reactivate(id: string): Promise<IEventHotel> {
