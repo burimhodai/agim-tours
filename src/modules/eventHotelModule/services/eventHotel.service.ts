@@ -144,6 +144,7 @@ export class EventHotelService {
       .populate('room_groups.hotel')
       .populate('documentId')
       .populate('documentMkId')
+      .populate('logs.employee')
       .exec();
 
     return { events, total, page, totalPages };
@@ -163,6 +164,7 @@ export class EventHotelService {
       .populate('room_groups.hotel')
       .populate('documentId')
       .populate('documentMkId')
+      .populate('logs.employee')
       .exec();
 
     if (!event) {
@@ -296,6 +298,7 @@ export class EventHotelService {
       .populate('room_groups.hotel')
       .populate('documentId')
       .populate('documentMkId')
+      .populate('logs.employee')
       .exec();
 
     if (!event) {
