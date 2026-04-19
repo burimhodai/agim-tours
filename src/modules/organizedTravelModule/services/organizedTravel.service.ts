@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { IUser } from 'src/shared/types/user.types';
@@ -45,6 +45,7 @@ export class OrganizedTravelService {
     @InjectModel('OrganizedTravel')
     private travelModel: Model<IOrganizedTravel>,
     @InjectModel('User') private userModel: Model<IUser>,
+    @InjectModel('EventBus') private busModel: Model<any>,
     private transactionService: TransactionServiceService,
   ) { }
 
@@ -251,11 +252,30 @@ export class OrganizedTravelService {
     }
 
     const batchGroupId = `G-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    const processedTravelers = addTravelersDto.travelers.map((traveler) => ({
-      ...traveler,
-      group_id: traveler.group_id || batchGroupId,
-      bus: traveler.bus ? new Types.ObjectId(traveler.bus) : undefined,
-    }));
+    const processedTravelers = [];
+    const busOccupancyIncrement: Record<string, number> = {};
+
+    for (const traveler of addTravelersDto.travelers) {
+      const busId = traveler.bus;
+      if (busId && busId !== "") {
+        const bus = await this.busModel.findById(busId);
+        if (bus && bus.capacity) {
+          const currentOccupancy = travel.travelers.filter(t => t.status === "active" && t.bus?.toString() === busId).length;
+          const alreadyAddedInThisBatch = busOccupancyIncrement[busId] || 0;
+
+          if (currentOccupancy + alreadyAddedInThisBatch >= bus.capacity) {
+            throw new BadRequestException(`Autobusi ${bus.name} ka arritur kapacitetin maksimal prej ${bus.capacity} personave.`);
+          }
+          busOccupancyIncrement[busId] = alreadyAddedInThisBatch + 1;
+        }
+      }
+
+      processedTravelers.push({
+        ...traveler,
+        group_id: traveler.group_id || batchGroupId,
+        bus: traveler.bus ? new Types.ObjectId(traveler.bus) : undefined,
+      });
+    }
 
     travel.travelers.push(...processedTravelers);
     const savedTravel = await travel.save();
@@ -457,6 +477,18 @@ export class OrganizedTravelService {
     }
 
     const oldTraveler = travel.travelers[travelerIndex].toObject();
+
+    // Check bus capacity if bus is changed
+    if (travelerData.bus && travelerData.bus !== "" && travelerData.bus !== oldTraveler.bus?.toString()) {
+      const bus = await this.busModel.findById(travelerData.bus);
+      if (bus && bus.capacity) {
+        const currentOccupancy = travel.travelers.filter(t => t.status === "active" && t.bus?.toString() === travelerData.bus).length;
+        if (currentOccupancy >= bus.capacity) {
+          throw new BadRequestException(`Autobusi ${bus.name} ka arritur kapacitetin maksimal prej ${bus.capacity} personave.`);
+        }
+      }
+    }
+
     const updatedTraveler = {
       ...oldTraveler,
       ...travelerData,
@@ -819,6 +851,22 @@ export class OrganizedTravelService {
 
     if (busObjectId && !travel.buses.some((b: any) => b.toString() === assignBusDto.bus_id)) {
       travel.buses.push(busObjectId);
+    }
+
+    // Check bus capacity
+    if (busObjectId) {
+      const bus = await this.busModel.findById(busObjectId);
+      if (bus && bus.capacity) {
+        const currentOccupancy = travel.travelers.filter(t => t.status === "active" && t.bus?.toString() === assignBusDto.bus_id).length;
+        const newTravelersCount = assignBusDto.traveler_ids.filter(id => {
+          const traveler = travel.travelers.find(t => t._id.toString() === id);
+          return traveler && traveler.bus?.toString() !== assignBusDto.bus_id;
+        }).length;
+
+        if (currentOccupancy + newTravelersCount > bus.capacity) {
+          throw new BadRequestException(`Nuk mund të shtohen më shumë udhëtarë! Autobusi ${bus.name} ka kapacitet maksimal prej ${bus.capacity} personave.`);
+        }
+      }
     }
 
     travel.travelers = travel.travelers.map((traveler: any) => {

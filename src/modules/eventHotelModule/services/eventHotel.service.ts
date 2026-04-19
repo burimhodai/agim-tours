@@ -48,6 +48,7 @@ export class EventHotelService {
   constructor(
     @InjectModel('EventHotel') private eventModel: Model<IEventHotel>,
     @InjectModel('User') private userModel: Model<IUser>,
+    @InjectModel('EventBus') private busModel: Model<any>,
     private transactionService: TransactionServiceService,
   ) { }
 
@@ -347,9 +348,27 @@ export class EventHotelService {
     }
 
     const batchGroupId = `G-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    const processedTravelers = addTravelerDto.travelers.map((traveler) => {
+    const processedTravelers = [];
+    const busOccupancyIncrement: Record<string, number> = {};
+
+    for (const traveler of addTravelerDto.travelers) {
       this.validateTravelerPassport(traveler, event.date, event.departure_city, event.arrival_city, event.location);
-      return {
+      
+      const busId = traveler.bus;
+      if (busId && busId !== "") {
+        const bus = await this.busModel.findById(busId);
+        if (bus && bus.capacity) {
+          const currentOccupancy = event.travelers.filter(t => t.status === "active" && t.bus?.toString() === busId).length;
+          const alreadyAddedInThisBatch = busOccupancyIncrement[busId] || 0;
+          
+          if (currentOccupancy + alreadyAddedInThisBatch >= bus.capacity) {
+            throw new BadRequestException(`Autobusi ${bus.name} ka arritur kapacitetin maksimal prej ${bus.capacity} personave.`);
+          }
+          busOccupancyIncrement[busId] = alreadyAddedInThisBatch + 1;
+        }
+      }
+
+      processedTravelers.push({
         ...traveler,
         room_group_id: traveler.room_group_id || batchGroupId,
         room_type: traveler.room_type
@@ -357,8 +376,8 @@ export class EventHotelService {
           : undefined,
         hotel: traveler.hotel ? new Types.ObjectId(traveler.hotel) : undefined,
         bus: traveler.bus ? new Types.ObjectId(traveler.bus) : undefined,
-      };
-    });
+      });
+    }
 
     event.travelers.push(...processedTravelers);
     const savedEvent = await event.save();
@@ -570,6 +589,18 @@ export class EventHotelService {
     this.validateTravelerPassport(travelerData, event.date, event.departure_city, event.arrival_city);
 
     const oldTraveler = event.travelers[travelerIndex].toObject();
+
+    // Check bus capacity if bus is changed
+    if (travelerData.bus && travelerData.bus !== "" && travelerData.bus !== oldTraveler.bus?.toString()) {
+      const bus = await this.busModel.findById(travelerData.bus);
+      if (bus && bus.capacity) {
+        const currentOccupancy = event.travelers.filter(t => t.status === "active" && t.bus?.toString() === travelerData.bus).length;
+        if (currentOccupancy >= bus.capacity) {
+          throw new BadRequestException(`Autobusi ${bus.name} ka arritur kapacitetin maksimal prej ${bus.capacity} personave.`);
+        }
+      }
+    }
+
     const updatedTraveler = {
       ...oldTraveler,
       ...travelerData,
@@ -936,6 +967,22 @@ export class EventHotelService {
 
     if (busObjectId && !event.buses.some((b: any) => b.toString() === assignBusDto.bus_id)) {
       event.buses.push(busObjectId);
+    }
+
+    // Check bus capacity
+    if (busObjectId) {
+      const bus = await this.busModel.findById(busObjectId);
+      if (bus && bus.capacity) {
+        const currentOccupancy = event.travelers.filter(t => t.status === "active" && t.bus?.toString() === assignBusDto.bus_id).length;
+        const newTravelersCount = assignBusDto.traveler_ids.filter(id => {
+          const traveler = event.travelers.find(t => t._id.toString() === id);
+          return traveler && traveler.bus?.toString() !== assignBusDto.bus_id;
+        }).length;
+
+        if (currentOccupancy + newTravelersCount > bus.capacity) {
+          throw new BadRequestException(`Nuk mund të shtohen më shumë udhëtarë! Autobusi ${bus.name} ka kapacitet maksimal prej ${bus.capacity} personave.`);
+        }
+      }
     }
 
     const assignedTravelers = event.travelers.filter((t: any) =>
