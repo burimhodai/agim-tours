@@ -22,6 +22,10 @@ export const TransactionSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'OrganizedTravel',
     },
+    airportTransport: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'AirportTransport',
+    },
     travelerId: { type: String }, // Traveler subdocument _id as string
     type: {
       type: String,

@@ -92,6 +92,9 @@ export class TransactionServiceService {
       organizedTravel: createTransactionDto.organizedTravel
         ? new Types.ObjectId(createTransactionDto.organizedTravel)
         : undefined,
+      airportTransport: (createTransactionDto as any).airportTransport
+        ? new Types.ObjectId((createTransactionDto as any).airportTransport)
+        : undefined,
       travelerId: createTransactionDto.travelerId,
     };
 
@@ -511,6 +514,18 @@ export class TransactionServiceService {
 
     const result = await this.transactionModel
       .deleteMany({ organizedTravel: new Types.ObjectId(organizedTravelId) })
+      .exec();
+
+    return result.deletedCount > 0;
+  }
+
+  async deleteByAirportTransport(airportTransportId: string): Promise<boolean> {
+    if (!Types.ObjectId.isValid(airportTransportId)) {
+      return false;
+    }
+
+    const result = await this.transactionModel
+      .deleteMany({ airportTransport: new Types.ObjectId(airportTransportId) })
       .exec();
 
     return result.deletedCount > 0;

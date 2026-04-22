@@ -7,4 +7,5 @@ export enum UserPermissions {
   REPORTS = 'reports',
   TRANSACTIONS = 'transactions',
   BUSES = 'buses',
+  AIRPORT_TRANSPORT = 'airport_transport',
 }

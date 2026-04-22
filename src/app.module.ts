@@ -22,6 +22,8 @@ import { TransactionServiceService } from './transactions/transaction-service.se
 import { DocumentsModule } from './modules/documents/documents.module';
 import { MailModule } from './modules/mailModule/mail.module';
 
+import { AirportTransportModule } from './modules/airportTransportModule/airportTransport.module';
+
 @Module({
   imports: [
     MongooseModule.forRootAsync({
@@ -63,6 +65,7 @@ import { MailModule } from './modules/mailModule/mail.module';
     LuggageModule,
     DocumentsModule,
     MailModule,
+    AirportTransportModule,
   ],
   controllers: [AppController, TransactionControllerController],
   providers: [AppService, TransactionServiceService],

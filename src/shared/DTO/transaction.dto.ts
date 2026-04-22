@@ -50,6 +50,10 @@ export class CreateTransactionDto {
 
   @IsOptional()
   @IsString()
+  airportTransport?: string;
+
+  @IsOptional()
+  @IsString()
   travelerId?: string;
 
   @IsOptional()
