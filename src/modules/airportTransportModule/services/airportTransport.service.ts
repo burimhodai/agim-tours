@@ -76,19 +76,17 @@ export class AirportTransportService {
     // Delete existing transactions for this transport
     await this.transactionService.deleteByAirportTransport(transport._id.toString());
 
-    if (transport.price && transport.price > 0) {
-      const type = transport.is_paid ? TransactionTypes.INCOME : TransactionTypes.DEBT;
-      const status = transport.is_paid ? TransactionStatus.SETTLED : TransactionStatus.PENDING;
-
+    // Only create income transaction if paid
+    if (transport.is_paid && transport.price && transport.price > 0) {
       await this.transactionService.create({
         amount: transport.price,
         currency: transport.currency,
-        type: type,
-        status: status,
+        type: TransactionTypes.INCOME,
+        status: TransactionStatus.SETTLED,
         airportTransport: transport._id,
         agency: transport.agency,
         user: transport.employee,
-        description: `Airport Transport: ${transport.name} ${transport.is_paid ? '(Paguar)' : '(Borxh)'}`,
+        description: `Airport Transport: ${transport.name} (Paguar)`,
         to: transport.contact_person_name || transport.name,
       });
     }
