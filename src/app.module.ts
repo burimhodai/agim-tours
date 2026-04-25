@@ -23,6 +23,7 @@ import { DocumentsModule } from './modules/documents/documents.module';
 import { MailModule } from './modules/mailModule/mail.module';
 
 import { AirportTransportModule } from './modules/airportTransportModule/airportTransport.module';
+import { DriverReportModule } from './modules/driverReportModule/driver-report.module';
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { AirportTransportModule } from './modules/airportTransportModule/airport
     DocumentsModule,
     MailModule,
     AirportTransportModule,
+    DriverReportModule,
   ],
   controllers: [AppController, TransactionControllerController],
   providers: [AppService, TransactionServiceService],
