@@ -1,18 +1,18 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
-export type DriverReportDocument = DriverReport & Document;
+export type FuelReportDocument = FuelReport & Document;
 
 @Schema({ timestamps: true })
-export class DriverReport {
+export class FuelReport {
   @Prop({ required: true })
   date: Date;
 
   @Prop({ required: true })
-  promet: number;
+  nafta: number;
 
   @Prop({ required: true })
-  tur: number;
+  litra: number;
 
   @Prop({ required: true })
   bus: string;
@@ -22,12 +22,6 @@ export class DriverReport {
 
   @Prop({ required: true })
   employee: string;
-
-  @Prop({ default: false })
-  isExtraTur: boolean;
-
-  @Prop()
-  extraTurName: string;
 }
 
-export const DriverReportSchema = SchemaFactory.createForClass(DriverReport);
+export const FuelReportSchema = SchemaFactory.createForClass(FuelReport);

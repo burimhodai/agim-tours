@@ -79,10 +79,8 @@ export class DriverReportService {
     const reports = await this.driverReportModel.find(filter).exec();
 
     const summary = {
-      nafta: reports.reduce((sum, r) => sum + r.nafta, 0),
       promet_linija: reports.reduce((sum, r) => sum + r.promet, 0),
       tur: reports.reduce((sum, r) => sum + r.tur, 0),
-      litra: reports.reduce((sum, r) => sum + r.litra, 0),
       count: reports.length,
     };
 

@@ -1,4 +1,4 @@
-import { IsDate, IsNumber, IsString } from 'class-validator';
+import { IsDate, IsNumber, IsString, IsBoolean, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateDriverReportDto {
@@ -10,16 +10,7 @@ export class CreateDriverReportDto {
   promet: number;
 
   @IsNumber()
-  nafta: number;
-
-  @IsNumber()
   tur: number;
-
-  @IsNumber()
-  perqindja: number;
-
-  @IsNumber()
-  litra: number;
 
   @IsString()
   bus: string;
@@ -29,4 +20,12 @@ export class CreateDriverReportDto {
 
   @IsString()
   employee: string;
+
+  @IsBoolean()
+  @IsOptional()
+  isExtraTur?: boolean;
+
+  @IsString()
+  @IsOptional()
+  extraTurName?: string;
 }

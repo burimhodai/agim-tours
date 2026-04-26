@@ -24,6 +24,10 @@ import { MailModule } from './modules/mailModule/mail.module';
 
 import { AirportTransportModule } from './modules/airportTransportModule/airportTransport.module';
 import { DriverReportModule } from './modules/driverReportModule/driver-report.module';
+import { ArrangementModule } from './modules/arrangementModule/arrangement.module';
+import { DriverModule } from './modules/driverModule/driver.module';
+import { ReportBusModule } from './modules/reportBusModule/report-bus.module';
+import { FuelReportModule } from './modules/fuelReportModule/fuel-report.module';
 
 @Module({
   imports: [
@@ -68,6 +72,10 @@ import { DriverReportModule } from './modules/driverReportModule/driver-report.m
     MailModule,
     AirportTransportModule,
     DriverReportModule,
+    ArrangementModule,
+    DriverModule,
+    ReportBusModule,
+    FuelReportModule,
   ],
   controllers: [AppController, TransactionControllerController],
   providers: [AppService, TransactionServiceService],

@@ -87,9 +87,11 @@ export interface ITicket extends Document {
   return_checked_in?: boolean;
   note?: string;
   route_number?: string;
+  return_route_number?: string;
 
   is_deleted?: boolean;
   status?: 'active' | 'canceled';
+  arrangement_id?: Types.ObjectId;
 
   createdAt?: Date;
   updatedAt?: Date;
