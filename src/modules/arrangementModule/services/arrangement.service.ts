@@ -97,7 +97,7 @@ export class ArrangementService {
 
     const [data, total] = await Promise.all([
       this.arrangementModel
-        .find(filter)
+        .find({})
         .populate('hotel_partner')
         .populate('agency')
         .populate('employee')
