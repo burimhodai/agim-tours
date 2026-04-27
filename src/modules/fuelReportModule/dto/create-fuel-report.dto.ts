@@ -1,4 +1,4 @@
-import { IsDate, IsNumber, IsString } from 'class-validator';
+import { IsDate, IsNumber, IsString, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateFuelReportDto {
@@ -20,4 +20,8 @@ export class CreateFuelReportDto {
 
   @IsString()
   employee: string;
+
+  @IsString()
+  @IsOptional()
+  userId?: string;
 }

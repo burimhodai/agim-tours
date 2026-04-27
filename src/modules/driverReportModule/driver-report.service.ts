@@ -31,7 +31,7 @@ export class DriverReportService {
       currency: CurrencyTypes.MKD,
       type: TransactionTypes.INCOME,
       status: TransactionStatus.SETTLED,
-      user: createDriverReportDto.employee,
+      user: createDriverReportDto.userId || createDriverReportDto.employee,
       description: `Promet nga raporti i shoferit - Bus: ${createDriverReportDto.bus}`,
     });
 

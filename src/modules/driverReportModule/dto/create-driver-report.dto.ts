@@ -28,4 +28,8 @@ export class CreateDriverReportDto {
   @IsString()
   @IsOptional()
   extraTurName?: string;
+
+  @IsString()
+  @IsOptional()
+  userId?: string;
 }

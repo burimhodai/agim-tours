@@ -22,6 +22,8 @@ export class FuelReport {
 
   @Prop({ required: true })
   employee: string;
+  @Prop()
+  userId: string;
 }
 
 export const FuelReportSchema = SchemaFactory.createForClass(FuelReport);

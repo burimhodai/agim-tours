@@ -77,22 +77,22 @@ export class TransactionServiceService {
     const transactionData = {
       ...createTransactionDto,
       description,
-      agency: createTransactionDto.agency
+      agency: createTransactionDto.agency && Types.ObjectId.isValid(createTransactionDto.agency)
         ? new Types.ObjectId(createTransactionDto.agency)
         : undefined,
-      user: createTransactionDto.user
+      user: createTransactionDto.user && Types.ObjectId.isValid(createTransactionDto.user)
         ? new Types.ObjectId(createTransactionDto.user)
         : undefined,
-      ticket: createTransactionDto.ticket
+      ticket: createTransactionDto.ticket && Types.ObjectId.isValid(createTransactionDto.ticket)
         ? new Types.ObjectId(createTransactionDto.ticket)
         : undefined,
-      event: createTransactionDto.event
+      event: createTransactionDto.event && Types.ObjectId.isValid(createTransactionDto.event)
         ? new Types.ObjectId(createTransactionDto.event)
         : undefined,
-      organizedTravel: createTransactionDto.organizedTravel
+      organizedTravel: createTransactionDto.organizedTravel && Types.ObjectId.isValid(createTransactionDto.organizedTravel)
         ? new Types.ObjectId(createTransactionDto.organizedTravel)
         : undefined,
-      airportTransport: (createTransactionDto as any).airportTransport
+      airportTransport: (createTransactionDto as any).airportTransport && Types.ObjectId.isValid((createTransactionDto as any).airportTransport)
         ? new Types.ObjectId((createTransactionDto as any).airportTransport)
         : undefined,
       travelerId: createTransactionDto.travelerId,

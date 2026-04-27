@@ -14,7 +14,7 @@ export class DriverReport {
   @Prop({ required: true })
   tur: number;
 
-  @Prop({ required: true })
+  @Prop({ required: false })
   bus: string;
 
   @Prop({ required: true })
@@ -28,6 +28,8 @@ export class DriverReport {
 
   @Prop()
   extraTurName: string;
+  @Prop()
+  userId: string;
 }
 
 export const DriverReportSchema = SchemaFactory.createForClass(DriverReport);
