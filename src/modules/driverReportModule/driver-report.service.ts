@@ -5,13 +5,17 @@ import { DriverReport, DriverReportDocument } from './entities/driver-report.ent
 import { CreateDriverReportDto } from './dto/create-driver-report.dto';
 import { UpdateDriverReportDto } from './dto/update-driver-report.dto';
 import { DriverReportQueryDto } from './dto/driver-report-query.dto';
+import { TransactionServiceService } from 'src/transactions/transaction-service.service';
+import { TransactionStatus, TransactionTypes } from 'src/shared/types/transaction.types';
+import { CurrencyTypes } from 'src/shared/types/currency.types';
 
 @Injectable()
 export class DriverReportService {
   constructor(
     @InjectModel(DriverReport.name)
     private driverReportModel: Model<DriverReportDocument>,
-  ) {}
+    private transactionService: TransactionServiceService,
+  ) { }
 
   async create(createDriverReportDto: CreateDriverReportDto) {
     const d = new Date(createDriverReportDto.date);
@@ -20,7 +24,18 @@ export class DriverReportService {
       ...createDriverReportDto,
       date: d,
     });
-    return report.save();
+    const savedReport = await report.save();
+
+    await this.transactionService.create({
+      amount: createDriverReportDto.promet,
+      currency: CurrencyTypes.MKD,
+      type: TransactionTypes.INCOME,
+      status: TransactionStatus.SETTLED,
+      user: createDriverReportDto.employee,
+      description: `Promet nga raporti i shoferit - Bus: ${createDriverReportDto.bus}`,
+    });
+
+    return savedReport;
   }
 
   async findAll(query: DriverReportQueryDto) {
