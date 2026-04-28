@@ -57,6 +57,10 @@ export class CreateTransactionDto {
   travelerId?: string;
 
   @IsOptional()
+  @IsString()
+  driverReport?: string;
+
+  @IsOptional()
   @IsEnum(TransactionTypes)
   type?: TransactionTypes;
 

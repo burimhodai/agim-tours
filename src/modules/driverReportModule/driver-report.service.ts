@@ -32,8 +32,9 @@ export class DriverReportService {
       type: TransactionTypes.INCOME,
       status: TransactionStatus.SETTLED,
       user: createDriverReportDto.userId || createDriverReportDto.employee,
+      driverReport: savedReport._id.toString(),
       description: `Promet nga raporti i shoferit - Bus: ${createDriverReportDto.bus}`,
-    });
+    } as any);
 
     return savedReport;
   }
@@ -124,6 +125,13 @@ export class DriverReportService {
     if (!report) {
       throw new NotFoundException('Driver report not found');
     }
+
+    if (updateDriverReportDto.promet !== undefined) {
+      await this.transactionService.updateByDriverReport(id, {
+        amount: updateDriverReportDto.promet,
+      });
+    }
+
     return report;
   }
 
@@ -132,6 +140,9 @@ export class DriverReportService {
     if (!report) {
       throw new NotFoundException('Driver report not found');
     }
+
+    await this.transactionService.deleteByDriverReport(id);
+
     return report;
   }
 }

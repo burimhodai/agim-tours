@@ -21,6 +21,7 @@ export interface ITransaction extends Document {
   event?: Types.ObjectId;
   organizedTravel?: Types.ObjectId;
   airportTransport?: Types.ObjectId;
+  driverReport?: Types.ObjectId;
   travelerId?: string;
   type?: TransactionTypes;
   status?: TransactionStatus;

@@ -95,6 +95,9 @@ export class TransactionServiceService {
       airportTransport: (createTransactionDto as any).airportTransport && Types.ObjectId.isValid((createTransactionDto as any).airportTransport)
         ? new Types.ObjectId((createTransactionDto as any).airportTransport)
         : undefined,
+      driverReport: (createTransactionDto as any).driverReport && Types.ObjectId.isValid((createTransactionDto as any).driverReport)
+        ? new Types.ObjectId((createTransactionDto as any).driverReport)
+        : undefined,
       travelerId: createTransactionDto.travelerId,
     };
 
@@ -529,6 +532,35 @@ export class TransactionServiceService {
       .exec();
 
     return result.deletedCount > 0;
+  }
+
+  async deleteByDriverReport(driverReportId: string): Promise<boolean> {
+    if (!Types.ObjectId.isValid(driverReportId)) {
+      return false;
+    }
+
+    const result = await this.transactionModel
+      .deleteMany({ driverReport: new Types.ObjectId(driverReportId) })
+      .exec();
+
+    return result.deletedCount > 0;
+  }
+
+  async updateByDriverReport(
+    driverReportId: string,
+    updateData: UpdateTransactionDto,
+  ): Promise<ITransaction | null> {
+    if (!Types.ObjectId.isValid(driverReportId)) {
+      return null;
+    }
+
+    return await this.transactionModel
+      .findOneAndUpdate(
+        { driverReport: new Types.ObjectId(driverReportId) },
+        { $set: updateData },
+        { new: true },
+      )
+      .exec();
   }
 
   async findAll(query: TransactionQueryDto): Promise<ITransaction[]> {
