@@ -32,4 +32,8 @@ export class CreateDriverReportDto {
   @IsString()
   @IsOptional()
   userId?: string;
+
+  @IsString()
+  @IsOptional()
+  agency?: string;
 }

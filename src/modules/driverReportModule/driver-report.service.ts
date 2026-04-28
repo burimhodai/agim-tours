@@ -32,6 +32,7 @@ export class DriverReportService {
       type: TransactionTypes.INCOME,
       status: TransactionStatus.SETTLED,
       user: createDriverReportDto.userId || createDriverReportDto.employee,
+      agency: createDriverReportDto.agency,
       driverReport: savedReport._id.toString(),
       description: `Promet nga raporti i shoferit - Bus: ${createDriverReportDto.bus}`,
     } as any);
@@ -64,6 +65,10 @@ export class DriverReportService {
       filter.driver = query.driver;
     }
 
+    if (query.agency) {
+      filter.agency = query.agency;
+    }
+
     return this.driverReportModel.find(filter).sort({ date: -1 }).exec();
   }
 
@@ -90,6 +95,10 @@ export class DriverReportService {
 
     if (query.driver) {
       filter.driver = query.driver;
+    }
+
+    if (query.agency) {
+      filter.agency = query.agency;
     }
 
     const reports = await this.driverReportModel.find(filter).exec();

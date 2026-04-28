@@ -19,4 +19,8 @@ export class DriverReportQueryDto {
   @IsOptional()
   @IsString()
   driver?: string;
+
+  @IsOptional()
+  @IsString()
+  agency?: string;
 }

@@ -47,6 +47,10 @@ export class FuelReportService {
       filter.driver = query.driver;
     }
 
+    if (query.agency) {
+      filter.agency = query.agency;
+    }
+
     return this.fuelReportModel.find(filter).sort({ date: -1 }).exec();
   }
 
@@ -73,6 +77,10 @@ export class FuelReportService {
 
     if (query.driver) {
       filter.driver = query.driver;
+    }
+
+    if (query.agency) {
+      filter.agency = query.agency;
     }
 
     const reports = await this.fuelReportModel.find(filter).exec();

@@ -16,4 +16,8 @@ export class FuelReportQueryDto {
   @IsOptional()
   @IsString()
   driver?: string;
+
+  @IsOptional()
+  @IsString()
+  agency?: string;
 }

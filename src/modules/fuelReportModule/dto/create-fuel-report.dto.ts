@@ -24,4 +24,8 @@ export class CreateFuelReportDto {
   @IsString()
   @IsOptional()
   userId?: string;
+
+  @IsString()
+  @IsOptional()
+  agency?: string;
 }

@@ -30,6 +30,9 @@ export class DriverReport {
   extraTurName: string;
   @Prop()
   userId: string;
+
+  @Prop({ required: false })
+  agency: string;
 }
 
 export const DriverReportSchema = SchemaFactory.createForClass(DriverReport);
