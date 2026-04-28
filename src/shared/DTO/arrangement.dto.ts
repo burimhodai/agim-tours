@@ -35,6 +35,10 @@ export class ArrangementRoomGroupDto {
 }
 
 export class ArrangementTravelerDto {
+  @IsOptional()
+  @IsString()
+  title?: string;
+
   @IsString()
   @IsNotEmpty()
   first_name: string;

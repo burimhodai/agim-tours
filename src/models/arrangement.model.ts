@@ -65,6 +65,7 @@ export const ArrangementSchema = new mongoose.Schema(
 
     travelers: [
       {
+        title: { type: String },
         first_name: { type: String, required: true },
         last_name: { type: String, required: true },
         phone: { type: String },

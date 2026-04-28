@@ -28,6 +28,7 @@ export interface ILuggage {
 }
 
 export interface IPassenger {
+  title?: string;
   first_name: string;
   last_name: string;
   phone?: string;

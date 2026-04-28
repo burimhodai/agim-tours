@@ -5,6 +5,7 @@ import { RoomTypes } from './hotel.types';
 import { ILuggage } from './ticket.types';
 
 export interface IArrangementTraveler {
+  title?: string;
   first_name: string;
   last_name: string;
   phone?: string;

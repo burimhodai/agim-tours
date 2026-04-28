@@ -18,6 +18,7 @@ export class ArrangementService {
 
   private mapTravelersToPassengers(travelers: any[]) {
     return travelers.map((t) => ({
+      title: t.title,
       first_name: t.first_name,
       last_name: t.last_name,
       phone: t.phone,
