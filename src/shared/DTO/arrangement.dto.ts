@@ -334,4 +334,8 @@ export class ArrangementQueryDto {
   @IsOptional()
   @IsString()
   q?: string;
+
+  @IsOptional()
+  @IsString()
+  operatorId?: string;
 }

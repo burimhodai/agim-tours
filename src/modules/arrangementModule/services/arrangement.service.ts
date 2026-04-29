@@ -91,6 +91,9 @@ export class ArrangementService {
     if (query.q) {
       filter.name = { $regex: query.q, $options: 'i' };
     }
+    if (query.operatorId) {
+      filter.operatorId = query.operatorId;
+    }
 
     const page = query.page || 1;
     const limit = query.limit || 10;
@@ -98,7 +101,7 @@ export class ArrangementService {
 
     const [data, total] = await Promise.all([
       this.arrangementModel
-        .find({})
+        .find(filter)
         .populate('hotel_partner')
         .populate('operatorId')
         .populate('agency')
