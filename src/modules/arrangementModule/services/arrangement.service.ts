@@ -100,6 +100,7 @@ export class ArrangementService {
       this.arrangementModel
         .find({})
         .populate('hotel_partner')
+        .populate('operatorId')
         .populate('agency')
         .populate('employee')
         .populate('plane_ticket_id')
