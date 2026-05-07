@@ -9,8 +9,9 @@ import { TransactionTypes, TransactionStatus } from 'src/shared/types/transactio
 export class AirportTransportService {
   constructor(
     @InjectModel('AirportTransport') private airportTransportModel: Model<any>,
+    @InjectModel('User') private userModel: Model<any>,
     private transactionService: TransactionServiceService,
-  ) {}
+  ) { }
 
   async create(createDto: CreateAirportTransportDto) {
     const newTransport = new this.airportTransportModel(createDto);
@@ -24,9 +25,9 @@ export class AirportTransportService {
     const { search, startDate, endDate, agency } = query;
     const filter: any = {};
 
-    if (agency) {
-      filter.agency = new Types.ObjectId(agency);
-    }
+    // if (agency) {
+    //   filter.agency = new Types.ObjectId(agency);
+    // }
 
     if (search) {
       filter.$or = [
@@ -59,7 +60,7 @@ export class AirportTransportService {
   async update(id: string, updateDto: UpdateAirportTransportDto) {
     const transport = await this.airportTransportModel.findByIdAndUpdate(id, updateDto, { new: true }).exec();
     if (!transport) throw new NotFoundException('Transporti i aeroportit nuk u gjet');
-    
+
     await this.handleTransaction(transport);
     return transport;
   }
@@ -67,7 +68,7 @@ export class AirportTransportService {
   async remove(id: string) {
     const transport = await this.airportTransportModel.findByIdAndDelete(id).exec();
     if (!transport) throw new NotFoundException('Transporti i aeroportit nuk u gjet');
-    
+
     await this.transactionService.deleteByAirportTransport(id);
     return { message: 'U fshi me sukses' };
   }
@@ -78,13 +79,26 @@ export class AirportTransportService {
 
     // Only create income transaction if paid
     if (transport.is_paid && transport.price && transport.price > 0) {
+      // Use employee's agency for the transaction, fallback to transport agency
+      let transactionAgency = transport.agency;
+      if (transport.employee) {
+        try {
+          const employee = await this.userModel.findById(transport.employee).select('agency').lean().exec();
+          if (employee?.agency) {
+            transactionAgency = employee.agency;
+          }
+        } catch (error) {
+          console.error('Error fetching employee agency:', error);
+        }
+      }
+
       await this.transactionService.create({
         amount: transport.price,
         currency: transport.currency,
         type: TransactionTypes.INCOME,
         status: TransactionStatus.SETTLED,
         airportTransport: transport._id,
-        agency: transport.agency,
+        agency: transactionAgency,
         user: transport.employee,
         description: `Airport Transport: ${transport.name} (Paguar)`,
         to: transport.contact_person_name || transport.name,

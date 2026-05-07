@@ -5,6 +5,9 @@ import { PaymentStatusTypes } from 'src/shared/types/payment.types';
 export enum TicketTypes {
   BUS = 'bus',
   PLANE = 'plane',
+  HOTEL = 'hotel',
+  ARRANGEMENT = 'arrangement',
+  TRANSPORT = 'transport',
 }
 
 export interface ILog {

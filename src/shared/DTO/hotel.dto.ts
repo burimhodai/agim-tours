@@ -343,6 +343,9 @@ export class UpdateHotelReservationDto {
   @IsString()
   operator?: string;
 
+  @IsOptional()
+  @IsString()
+  employee?: string;
 
   @IsOptional()
   @Type(() => Date)

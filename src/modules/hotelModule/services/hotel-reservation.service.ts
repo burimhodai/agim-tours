@@ -15,12 +15,16 @@ import {
   AddReservationLogDto,
   HotelReservationQueryDto,
 } from 'src/shared/DTO/hotel.dto';
+import { TransactionServiceService } from 'src/transactions/transaction-service.service';
+import { TransactionTypes, TransactionStatus } from 'src/shared/types/transaction.types';
+import { PaymentStatusTypes } from 'src/shared/types/payment.types';
 
 @Injectable()
 export class HotelReservationService {
   constructor(
     @InjectModel('HotelReservation')
     private reservationModel: Model<IHotelReservation>,
+    private transactionService: TransactionServiceService,
   ) { }
   private validateTravelerPassport(traveler: any, departureDate: Date, departureCity?: string, arrivalCity?: string) {
     const isIstanbulOrStamboll = (city?: string) =>
@@ -59,7 +63,7 @@ export class HotelReservationService {
         : undefined,
     };
     if (createReservationDto.travelers) {
-      createReservationDto.travelers.forEach(traveler => {
+      createReservationDto.travelers.forEach((traveler: any) => {
         this.validateTravelerPassport(traveler, createReservationDto.check_in_date, createReservationDto.departure_city, createReservationDto.arrival_city);
       });
     }
@@ -68,10 +72,90 @@ export class HotelReservationService {
     const reservation = new this.reservationModel(reservationData);
     const savedReservation = await reservation.save();
 
-    return await this.findById(
-      savedReservation._id.toString(),
-      createReservationDto.agency,
-    );
+    const employeeId = createReservationDto.employee || '';
+    const agencyId = createReservationDto.agency || '';
+
+    try {
+      const priceValue = typeof createReservationDto.price === 'string' ? parseFloat(createReservationDto.price) : createReservationDto.price;
+      console.log('[HOTEL-TX] === START ===');
+      console.log('[HOTEL-TX] Price:', priceValue, 'Currency:', createReservationDto.currency);
+      console.log('[HOTEL-TX] ReservationId:', savedReservation._id.toString());
+      console.log('[HOTEL-TX] AgencyId:', agencyId, 'EmployeeId:', employeeId);
+      
+      const debtTx = await this.transactionService.create({
+        amount: priceValue as number,
+        currency: createReservationDto.currency as any,
+        type: TransactionTypes.DEBT,
+        status: TransactionStatus.PENDING,
+        hotelReservation: savedReservation._id.toString(),
+        agency: agencyId,
+        user: employeeId,
+        description: `Borxh - Rezervim hoteli e papaguar (${savedReservation.hotel_booking_id})`,
+      });
+      console.log('[HOTEL-TX] DEBT created:', debtTx?._id?.toString(), 'type:', debtTx?.type, 'status:', debtTx?.status, 'amount:', debtTx?.amount);
+
+      const paymentChunks = createReservationDto.payment_chunks || [];
+      let totalPaidInReservationCurrency = 0;
+      const reservationCurrency = createReservationDto.currency || 'euro';
+      console.log('[HOTEL-TX] Chunks count:', paymentChunks.length);
+
+      for (const chunk of paymentChunks) {
+        console.log('[HOTEL-TX] Processing chunk:', chunk.amount, chunk.currency);
+        
+        const incomeTx = await this.transactionService.create({
+          amount: chunk.amount,
+          currency: chunk.currency as any,
+          type: TransactionTypes.INCOME,
+          status: TransactionStatus.SETTLED,
+          hotelReservation: savedReservation._id.toString(),
+          agency: agencyId,
+          user: employeeId,
+          description: `Pagesë - Rezervim hoteli (${savedReservation.hotel_booking_id})`,
+        });
+        console.log('[HOTEL-TX] INCOME created:', incomeTx?._id?.toString(), 'type:', incomeTx?.type);
+
+        const reducedTx = await this.transactionService.reduceDebtByHotelReservation(
+          savedReservation._id.toString(),
+          chunk.amount,
+          chunk.currency,
+          agencyId,
+          employeeId,
+        );
+        console.log('[HOTEL-TX] After reduceDebt:', reducedTx ? `id=${reducedTx._id} type=${reducedTx.type} status=${(reducedTx as any).status} amount=${reducedTx.amount}` : 'NULL (debt not found!)');
+
+        const converted = await this.transactionService.convertCurrency(
+          chunk.amount,
+          chunk.currency,
+          reservationCurrency,
+        );
+        totalPaidInReservationCurrency += converted;
+        console.log('[HOTEL-TX] Converted:', chunk.amount, chunk.currency, '->', converted, reservationCurrency, 'totalPaid:', totalPaidInReservationCurrency);
+      }
+
+      const remainingDebt = Math.round(((priceValue || 0) - totalPaidInReservationCurrency) * 100) / 100;
+      const hasAnyPayments = paymentChunks.length > 0;
+      let newPaymentStatus = PaymentStatusTypes.UNPAID;
+      
+      if (remainingDebt <= 0 && hasAnyPayments) {
+        newPaymentStatus = PaymentStatusTypes.PAID;
+      } else if (remainingDebt > 0 && hasAnyPayments) {
+        newPaymentStatus = PaymentStatusTypes.PARTIALLY_PAID;
+      }
+      console.log('[HOTEL-TX] RemainingDebt:', remainingDebt, 'PaymentStatus:', newPaymentStatus);
+
+      if (newPaymentStatus !== savedReservation.payment_status) {
+        await this.reservationModel.updateOne(
+          { _id: savedReservation._id },
+          { $set: { payment_status: newPaymentStatus } }
+        );
+      }
+      console.log('[HOTEL-TX] === END ===');
+    } catch (error) {
+      console.error('[HOTEL-TX] FAILED:', error);
+    }
+
+    // Call findById WITHOUT agencyId filter to avoid 404 if agency string is slightly different
+    return await this.findById(savedReservation._id.toString());
   }
 
   async findAll(query: HotelReservationQueryDto): Promise<{
@@ -229,7 +313,7 @@ export class HotelReservationService {
       );
     }
     if (updateReservationDto.travelers) {
-      updateReservationDto.travelers.forEach(traveler => {
+      updateReservationDto.travelers.forEach((traveler: any) => {
         this.validateTravelerPassport(traveler, updateReservationDto.check_in_date || new Date(), updateReservationDto.departure_city, updateReservationDto.arrival_city);
       });
     }
@@ -242,6 +326,16 @@ export class HotelReservationService {
     if (agencyId && Types.ObjectId.isValid(agencyId)) {
       filter.agency = new Types.ObjectId(agencyId);
     }
+
+    const currentReservation = await this.reservationModel.findById(id).exec();
+    if (!currentReservation) {
+      throw new NotFoundException('Hotel reservation not found');
+    }
+
+    const oldPrice = currentReservation.price || 0;
+    const updatePrice = typeof updateReservationDto.price === 'string' ? parseFloat(updateReservationDto.price) : updateReservationDto.price;
+    const newPrice = updatePrice !== undefined ? updatePrice : oldPrice;
+    const priceChanged = updatePrice !== undefined && oldPrice !== newPrice;
 
     const reservation = await this.reservationModel
       .findOneAndUpdate(
@@ -257,6 +351,88 @@ export class HotelReservationService {
 
     if (!reservation) {
       throw new NotFoundException('Hotel reservation not found');
+    }
+
+    const employeeId = updateReservationDto.employee || currentReservation.employee?.toString() || '';
+    const currentAgencyId = agencyId || currentReservation.agency?.toString() || '';
+    const currency = updateReservationDto.currency || currentReservation.currency || 'euro';
+
+    // Handle Transaction updates
+    if (priceChanged || updateReservationDto.payment_chunks) {
+      const oldChunks = currentReservation.payment_chunks || [];
+      const newChunks = reservation.payment_chunks || [];
+      const newlyAddedChunks = newChunks.slice(oldChunks.length);
+
+      // 1. Create income transactions for newly added chunks
+      for (const chunk of newlyAddedChunks) {
+        if (chunk.amount > 0) {
+          await this.transactionService.create({
+            amount: chunk.amount,
+            currency: chunk.currency as any,
+            type: TransactionTypes.INCOME,
+            status: TransactionStatus.SETTLED,
+            hotelReservation: id,
+            agency: currentAgencyId,
+            user: employeeId,
+            description: `Pagesë - Rezervim hoteli (${reservation.hotel_booking_id})`,
+          });
+        }
+      }
+
+      // 2. Recalculate total debt
+      let totalPaidInReservationCurrency = 0;
+      for (const chunk of newChunks) {
+        if (chunk.amount <= 0) continue;
+        totalPaidInReservationCurrency += await this.transactionService.convertCurrency(
+          chunk.amount,
+          chunk.currency,
+          currency,
+        );
+      }
+
+      const remainingDebt = Math.round(((newPrice ?? 0) - totalPaidInReservationCurrency) * 100) / 100;
+
+      // Update or create debt transaction
+      const existingDebtTx = await this.transactionService.findDebtByHotelReservation(id);
+
+      if (existingDebtTx) {
+        if (remainingDebt > 0) {
+          existingDebtTx.amount = remainingDebt;
+          if (currentAgencyId) existingDebtTx.agency = new Types.ObjectId(currentAgencyId);
+          if (employeeId) existingDebtTx.user = new Types.ObjectId(employeeId);
+          await existingDebtTx.save();
+        } else {
+          await existingDebtTx.deleteOne();
+        }
+      } else if (remainingDebt > 0) {
+        await this.transactionService.create({
+          amount: remainingDebt,
+          currency: currency as any,
+          type: TransactionTypes.DEBT,
+          status: TransactionStatus.PENDING,
+          hotelReservation: id,
+          agency: currentAgencyId,
+          user: employeeId,
+          description: `Borxh - Rezervim hoteli e papaguar (${reservation.hotel_booking_id})`,
+        });
+      }
+
+      // Update payment status based on remaining debt
+      const hasAnyPayments = newChunks.length > 0;
+      let newPaymentStatus = PaymentStatusTypes.UNPAID;
+      if (remainingDebt <= 0 && hasAnyPayments) {
+        newPaymentStatus = PaymentStatusTypes.PAID;
+      } else if (remainingDebt > 0 && hasAnyPayments) {
+        newPaymentStatus = PaymentStatusTypes.PARTIALLY_PAID;
+      }
+
+      if (newPaymentStatus !== reservation.payment_status) {
+        await this.reservationModel.updateOne(
+          { _id: id },
+          { $set: { payment_status: newPaymentStatus } }
+        );
+        reservation.payment_status = newPaymentStatus;
+      }
     }
 
     return reservation;
@@ -280,6 +456,13 @@ export class HotelReservationService {
 
     if (!result) {
       throw new NotFoundException('Hotel reservation not found');
+    }
+
+    // Delete associated transactions
+    try {
+      await this.transactionService.deleteByHotelReservation(id);
+    } catch (error) {
+      console.error('Failed to delete transactions for reservation:', id, error);
     }
 
     return { message: 'Hotel reservation deleted successfully' };

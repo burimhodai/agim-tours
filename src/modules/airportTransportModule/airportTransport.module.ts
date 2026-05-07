@@ -5,6 +5,7 @@ import { AirportTransportController } from './controllers/airportTransport.contr
 import { AirportTransportSchema } from 'src/models/airportTransport.model';
 import { TransactionSchema } from 'src/models/transaction.model';
 import { AgencySchema } from 'src/models/agency.model';
+import { UserSchema } from 'src/models/user.model';
 import { TransactionServiceService } from 'src/transactions/transaction-service.service';
 
 @Module({
@@ -13,6 +14,7 @@ import { TransactionServiceService } from 'src/transactions/transaction-service.
       { name: 'AirportTransport', schema: AirportTransportSchema },
       { name: 'Transaction', schema: TransactionSchema },
       { name: 'Agency', schema: AgencySchema },
+      { name: 'User', schema: UserSchema },
     ]),
   ],
   controllers: [AirportTransportController],

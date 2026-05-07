@@ -30,6 +30,10 @@ export const TransactionSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'DriverReport',
     },
+    hotelReservation: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'HotelReservation',
+    },
     travelerId: { type: String }, // Traveler subdocument _id as string
     type: {
       type: String,

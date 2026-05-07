@@ -498,23 +498,11 @@ export class PlaneService {
       let totalPaidInTicketCurrency = 0;
       for (const chunk of finalChunks) {
         if (chunk.amount <= 0) continue;
-        if (
-          chunk.currency &&
-          chunk.currency.toLowerCase() !== ticketCurrency.toLowerCase()
-        ) {
-          const rates: Record<string, Record<string, number>> = {
-            euro: { chf: 0.93, mkd: 61.5 },
-            chf: { euro: 1.075, mkd: 66.13 },
-            mkd: { euro: 0.01626, chf: 0.01512 },
-          };
-          const from = chunk.currency.toLowerCase();
-          const to = ticketCurrency.toLowerCase();
-          const rate = rates[from]?.[to] || 1;
-          totalPaidInTicketCurrency +=
-            Math.round(chunk.amount * rate * 100) / 100;
-        } else {
-          totalPaidInTicketCurrency += chunk.amount;
-        }
+        totalPaidInTicketCurrency += await this.transactionService.convertCurrency(
+          chunk.amount,
+          chunk.currency,
+          ticketCurrency,
+        );
       }
 
       const remainingDebt =

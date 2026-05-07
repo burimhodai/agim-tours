@@ -13,13 +13,25 @@ import {
   ReportTransactionItem,
 } from 'src/shared/DTO/report.dto';
 import { PaymentStatusTypes } from 'src/shared/types/payment.types';
+import { TicketTypes } from 'src/shared/types/ticket.types';
+import { TransactionServiceService } from 'src/transactions/transaction-service.service';
 
 @Injectable()
 export class ReportsService {
   constructor(
     @InjectModel('Transaction') private transactionModel: Model<ITransaction>,
     @InjectModel('Ticket') private ticketModel: Model<any>,
+    @InjectModel('HotelReservation') private hotelReservationModel: Model<any>,
+    private transactionService: TransactionServiceService,
   ) { }
+
+  private async convertCurrency(
+    amount: number,
+    fromCurrency: string,
+    toCurrency: string,
+  ): Promise<number> {
+    return await this.transactionService.convertCurrency(amount, fromCurrency, toCurrency);
+  }
 
   async generateReport(query: ReportQueryDto): Promise<ReportResponseDto> {
     const {
@@ -58,12 +70,16 @@ export class ReportsService {
       .find(filter)
       .populate('user', 'email first_name last_name')
       .populate('ticket')
+      .populate('hotelReservation')
       .sort({ createdAt: -1 })
       .exec();
 
     // Filter by module if specified (only applies to ticket-based transactions)
     if (module) {
       allTransactions = allTransactions.filter((transaction) => {
+        if (module === TicketTypes.HOTEL) {
+          return !!transaction.hotelReservation;
+        }
         const ticket = transaction.ticket as any;
         return ticket && ticket.ticket_type === module;
       });
@@ -140,11 +156,14 @@ export class ReportsService {
       }
 
       let totalPaid = 0;
-      if (ticket.payment_chunks && Array.isArray(ticket.payment_chunks)) {
-        totalPaid = ticket.payment_chunks.reduce(
-          (sum: number, chunk: any) => sum + (chunk.amount || 0),
-          0,
-        );
+      if (ticket.payment_chunks && ticket.payment_chunks.length > 0) {
+        for (const chunk of ticket.payment_chunks) {
+          totalPaid += await this.convertCurrency(
+            chunk.amount || 0,
+            chunk.currency,
+            ticket.currency,
+          );
+        }
       }
 
       const debtAmount = (ticket.price || 0) - totalPaid;
@@ -179,6 +198,72 @@ export class ReportsService {
             payment_chunks: ticket.payment_chunks,
           },
         });
+      }
+    }
+
+    // Add Hotel Reservation debts
+    if (!module || module === TicketTypes.HOTEL) {
+      const hotelFilter: any = {
+        createdAt: {
+          $gte: dateRange.from,
+          $lte: dateRange.to,
+        },
+        payment_status: { $in: ["not_paid", "partially_paid"] },
+        is_deleted: { $ne: true },
+      };
+
+      if (agency) hotelFilter.agency = new Types.ObjectId(agency);
+      if (employee) hotelFilter.employee = new Types.ObjectId(employee);
+
+      const hotelReservations = await this.hotelReservationModel
+        .find(hotelFilter)
+        .populate("employee", "email first_name last_name")
+        .sort({ createdAt: -1 })
+        .exec();
+
+      for (const hotel of hotelReservations) {
+        if (debtTicketIds.has(hotel._id.toString())) continue;
+
+        let totalPaid = 0;
+        if (hotel.payment_chunks && hotel.payment_chunks.length > 0) {
+          for (const chunk of hotel.payment_chunks) {
+            totalPaid += await this.convertCurrency(
+              chunk.amount || 0,
+              chunk.currency,
+              hotel.currency,
+            );
+          }
+        }
+
+        const debtAmount = (hotel.price || 0) - totalPaid;
+        if (debtAmount > 0.05) {
+          debtItems.push({
+            _id: hotel._id.toString(),
+            amount: debtAmount,
+            currency: hotel.currency,
+            type: "DEBT",
+            description: `Borxh për hotelin ${hotel.hotel_name} (${hotel.hotel_booking_id})`,
+            createdAt: hotel.createdAt,
+            user: hotel.employee
+              ? {
+                _id: (hotel.employee as any)._id.toString(),
+                email: (hotel.employee as any).email,
+                first_name: (hotel.employee as any).first_name,
+                last_name: (hotel.employee as any).last_name,
+              }
+              : undefined,
+            ticket: {
+              _id: hotel._id.toString(),
+              ticket_type: TicketTypes.HOTEL,
+              booking_reference: hotel.hotel_booking_id,
+              destination_location: hotel.hotel_name,
+              departure_date: hotel.check_in_date,
+              price: hotel.price,
+              payment_status: hotel.payment_status,
+              payment_chunks: hotel.payment_chunks || [],
+            } as any,
+          });
+        }
       }
     }
 
@@ -273,6 +358,52 @@ export class ReportsService {
     return transactions.map((transaction) => {
       const user = transaction.user as any;
       const ticket = transaction.ticket as any;
+      const hotel = (transaction as any).hotelReservation;
+      const hotelId = hotel?._id || hotel;
+
+      const mappedTicket = ticket
+        ? {
+          _id: ticket._id.toString(),
+          ticket_type: ticket.ticket_type,
+          booking_reference: ticket.booking_reference,
+          departure_location: ticket.departure_location,
+          destination_location: ticket.destination_location,
+          departure_date: ticket.departure_date,
+          passengers: ticket.passengers,
+          operator: ticket.operator,
+          price: ticket.price,
+          payment_status: ticket.payment_status,
+          payment_chunks: ticket.payment_chunks || [],
+        }
+        : hotelId && typeof hotel !== 'string' && hotel.hotel_booking_id
+          ? {
+            _id: hotelId.toString(),
+            ticket_type: TicketTypes.HOTEL,
+            booking_reference: hotel.hotel_booking_id,
+            departure_location: hotel.arrival_city || "Hotel",
+            destination_location: hotel.hotel_name,
+            departure_date: hotel.check_in_date,
+            passengers: hotel.travelers?.map((t: any) => ({
+              first_name: t.full_name.split(" ")[0],
+              last_name: t.full_name.split(" ").slice(1).join(" "),
+            })),
+            operator: hotel.operator,
+            price: hotel.price,
+            payment_status: hotel.payment_status,
+            payment_chunks: hotel.payment_chunks || [],
+          }
+          : hotelId
+            ? {
+              _id: hotelId.toString(),
+              ticket_type: TicketTypes.HOTEL,
+              booking_reference: "Rezervim Hoteli",
+              departure_location: "Hotel",
+              destination_location: "Detajet e hotelit",
+              price: 0,
+              payment_status: 'unknown',
+              payment_chunks: [],
+            }
+            : undefined;
 
       return {
         _id: transaction._id.toString(),
@@ -290,21 +421,7 @@ export class ReportsService {
             last_name: user.last_name,
           }
           : undefined,
-        ticket: ticket
-          ? {
-            _id: ticket._id.toString(),
-            ticket_type: ticket.ticket_type,
-            booking_reference: ticket.booking_reference,
-            departure_location: ticket.departure_location,
-            destination_location: ticket.destination_location,
-            departure_date: ticket.departure_date,
-            passengers: ticket.passengers,
-            operator: ticket.operator,
-            price: ticket.price,
-            payment_status: ticket.payment_status,
-            payment_chunks: ticket.payment_chunks || [],
-          }
-          : undefined,
+        ticket: mappedTicket,
       };
     });
   }

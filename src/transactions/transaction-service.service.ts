@@ -24,35 +24,92 @@ export class TransactionServiceService {
     @InjectModel('Agency') private agencyModel: Model<any>,
   ) { }
 
-  private convertCurrency(
+  private CURRENCY_MAP: Record<string, string> = {
+    euro: 'EUR',
+    chf: 'CHF',
+    mkd: 'MKD',
+    eur: 'EUR',
+  };
+
+  private ratesCache: {
+    rates: Record<string, Record<string, number>>;
+    timestamp: number;
+  } = {
+    rates: {},
+    timestamp: 0,
+  };
+
+  private CACHE_DURATION = 60 * 60 * 1000; // 1 hour
+
+  private async fetchExchangeRates(from: string): Promise<Record<string, number>> {
+    const normalizedFrom = from.toLowerCase();
+    const isoFrom = this.CURRENCY_MAP[normalizedFrom] || from.toUpperCase();
+
+    // Check cache
+    const now = Date.now();
+    if (this.ratesCache.rates[isoFrom] && now - this.ratesCache.timestamp < this.CACHE_DURATION) {
+      return this.ratesCache.rates[isoFrom];
+    }
+
+    try {
+      // MKD is not supported by Frankfurter API, so we'll use a fixed rate
+      if (isoFrom === 'MKD') {
+        const mkdRates = {
+          EUR: 1 / 61.5,
+          CHF: 1 / 64,
+          MKD: 1,
+        };
+        this.ratesCache.rates['MKD'] = mkdRates;
+        this.ratesCache.timestamp = now;
+        return mkdRates;
+      }
+
+      const response = await fetch(`https://api.frankfurter.app/latest?from=${isoFrom}`);
+      const data: any = await response.json();
+
+      const rates = { ...data.rates };
+      rates[isoFrom] = 1;
+
+      if (isoFrom === 'EUR') {
+        rates['MKD'] = 61.5;
+      } else if (isoFrom === 'CHF') {
+        rates['MKD'] = 64;
+      }
+
+      this.ratesCache.rates[isoFrom] = rates;
+      this.ratesCache.timestamp = now;
+      return rates;
+    } catch (error) {
+      console.error('Failed to fetch exchange rates:', error);
+      const fallbackRates: Record<string, Record<string, number>> = {
+        EUR: { EUR: 1, CHF: 0.94, MKD: 61.5 },
+        CHF: { EUR: 1.06, CHF: 1, MKD: 64 },
+        MKD: { EUR: 0.016, CHF: 0.015, MKD: 1 },
+      };
+      return fallbackRates[isoFrom] || { EUR: 1, CHF: 1, MKD: 1 };
+    }
+  }
+
+  public async convertCurrency(
     amount: number,
-    fromCurrency: string,
-    toCurrency: string,
-  ): number {
-    if (fromCurrency === toCurrency) return amount;
+    from: string,
+    to: string,
+  ): Promise<number> {
+    const normalizedFrom = from.toLowerCase();
+    const normalizedTo = to.toLowerCase();
 
-    const rates: Record<string, Record<string, number>> = {
-      [CurrencyTypes.EURO]: {
-        [CurrencyTypes.CHF]: 0.93,
-        [CurrencyTypes.MKD]: 61.5,
-      },
-      [CurrencyTypes.CHF]: {
-        [CurrencyTypes.EURO]: 1.075,
-        [CurrencyTypes.MKD]: 66.13,
-      },
-      [CurrencyTypes.MKD]: {
-        [CurrencyTypes.EURO]: 0.01626,
-        [CurrencyTypes.CHF]: 0.01512,
-      },
-    };
+    if (normalizedFrom === normalizedTo) return amount;
 
-    const from = fromCurrency.toLowerCase();
-    const to = toCurrency.toLowerCase();
+    const isoTo = this.CURRENCY_MAP[normalizedTo] || to.toUpperCase();
+    const rates = await this.fetchExchangeRates(normalizedFrom);
 
-    const rate = rates[from]?.[to];
-    if (!rate) return amount;
+    const rate = rates[isoTo];
+    if (!rate) {
+      console.warn(`No exchange rate found for ${from} to ${to}`);
+      return amount;
+    }
 
-    return Math.round(amount * rate * 100) / 100;
+    return amount * rate;
   }
 
   async create(
@@ -98,6 +155,9 @@ export class TransactionServiceService {
       driverReport: (createTransactionDto as any).driverReport && Types.ObjectId.isValid((createTransactionDto as any).driverReport)
         ? new Types.ObjectId((createTransactionDto as any).driverReport)
         : undefined,
+      hotelReservation: (createTransactionDto as any).hotelReservation && Types.ObjectId.isValid((createTransactionDto as any).hotelReservation)
+        ? new Types.ObjectId((createTransactionDto as any).hotelReservation)
+        : undefined,
       travelerId: createTransactionDto.travelerId,
     };
 
@@ -106,6 +166,8 @@ export class TransactionServiceService {
     return await savedTransaction.populate([
       { path: 'user', select: 'email first_name last_name' },
       { path: 'agency' },
+      { path: 'ticket' },
+      { path: 'hotelReservation' },
     ]);
   }
 
@@ -254,7 +316,62 @@ export class TransactionServiceService {
       debtTransaction.currency &&
       paymentCurrency.toLowerCase() !== debtTransaction.currency.toLowerCase()
     ) {
-      convertedAmount = this.convertCurrency(
+      convertedAmount = await this.convertCurrency(
+        paidAmount,
+        paymentCurrency,
+        debtTransaction.currency,
+      );
+    }
+
+    const newAmount = (debtTransaction.amount || 0) - convertedAmount;
+
+    if (newAmount <= 0) {
+      debtTransaction.amount = 0;
+      debtTransaction.type = TransactionTypes.INCOME;
+      debtTransaction.status = TransactionStatus.SETTLED;
+      debtTransaction.description = (debtTransaction.description || '')
+        .replace('Borxh - ', '')
+        .replace(' e papaguar', ' - Paguar plotësisht');
+    } else {
+      debtTransaction.amount = newAmount;
+    }
+
+    return await debtTransaction.save();
+  }
+
+  async reduceDebtByHotelReservation(
+    reservationId: string,
+    paidAmount: number,
+    paymentCurrency?: string,
+    agencyId?: string,
+    userId?: string,
+  ): Promise<ITransaction | null> {
+    if (!Types.ObjectId.isValid(reservationId)) {
+      return null;
+    }
+
+    const debtTransaction = await this.transactionModel
+      .findOne({
+        hotelReservation: new Types.ObjectId(reservationId),
+        type: TransactionTypes.DEBT,
+        status: TransactionStatus.PENDING,
+      })
+      .exec();
+
+    if (!debtTransaction) {
+      return null;
+    }
+
+    if (agencyId) debtTransaction.agency = new Types.ObjectId(agencyId);
+    if (userId) debtTransaction.user = new Types.ObjectId(userId);
+
+    let convertedAmount = paidAmount;
+    if (
+      paymentCurrency &&
+      debtTransaction.currency &&
+      paymentCurrency.toLowerCase() !== debtTransaction.currency.toLowerCase()
+    ) {
+      convertedAmount = await this.convertCurrency(
         paidAmount,
         paymentCurrency,
         debtTransaction.currency,
@@ -546,6 +663,32 @@ export class TransactionServiceService {
     return result.deletedCount > 0;
   }
 
+  async deleteByHotelReservation(reservationId: string): Promise<boolean> {
+    if (!Types.ObjectId.isValid(reservationId)) {
+      return false;
+    }
+
+    const result = await this.transactionModel
+      .deleteMany({ hotelReservation: new Types.ObjectId(reservationId) })
+      .exec();
+
+    return result.deletedCount > 0;
+  }
+
+  async findDebtByHotelReservation(reservationId: string): Promise<ITransaction | null> {
+    if (!Types.ObjectId.isValid(reservationId)) {
+      return null;
+    }
+
+    return await this.transactionModel
+      .findOne({
+        hotelReservation: new Types.ObjectId(reservationId),
+        type: TransactionTypes.DEBT,
+        status: TransactionStatus.PENDING,
+      })
+      .exec();
+  }
+
   async updateByDriverReport(
     driverReportId: string,
     updateData: UpdateTransactionDto,
@@ -609,6 +752,7 @@ export class TransactionServiceService {
       .populate('agency')
       .populate('user', 'email first_name last_name')
       .populate('ticket')
+      .populate('hotelReservation')
       .sort({ createdAt: -1 })
       .exec();
   }
@@ -623,6 +767,7 @@ export class TransactionServiceService {
       .populate('agency')
       .populate('user', 'email first_name last_name')
       .populate('ticket')
+      .populate('hotelReservation')
       .exec();
 
     if (!transaction) {
