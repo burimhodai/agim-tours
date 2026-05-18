@@ -8,6 +8,8 @@ import {
   UpdateWebsiteCityDto,
   CreateWebsiteHotelDto,
   UpdateWebsiteHotelDto,
+  CreateWebsiteTopDestinationDto,
+  UpdateWebsiteTopDestinationDto,
 } from '../../shared/DTO/website-config.dto';
 
 @Injectable()
@@ -19,6 +21,8 @@ export class WebsiteConfigService implements OnModuleInit {
     private readonly cityModel: Model<any>,
     @InjectModel('WebsiteHotel')
     private readonly hotelModel: Model<any>,
+    @InjectModel('WebsiteTopDestination')
+    private readonly topDestinationModel: Model<any>,
   ) {}
 
   async onModuleInit() {
@@ -227,6 +231,76 @@ export class WebsiteConfigService implements OnModuleInit {
       throw new NotFoundException('Hotel not found');
     }
     return hotel;
+  }
+
+  async createTopDestination(data: CreateWebsiteTopDestinationDto) {
+    await this.findOneCity(data.city);
+    const dest = new this.topDestinationModel({
+      ...data,
+      city: new Types.ObjectId(data.city),
+    });
+    const saved = await dest.save();
+    return this.topDestinationModel
+      .findById(saved._id)
+      .populate({ path: 'city', populate: { path: 'country' } })
+      .lean();
+  }
+
+  async findAllTopDestinations() {
+    return this.topDestinationModel
+      .find({ is_deleted: { $ne: true } })
+      .populate({ path: 'city', populate: { path: 'country' } })
+      .sort({ createdAt: -1 })
+      .lean();
+  }
+
+  async findOneTopDestination(id: string) {
+    const dest = await this.topDestinationModel
+      .findOne({
+        _id: new Types.ObjectId(id),
+        is_deleted: { $ne: true },
+      })
+      .populate({ path: 'city', populate: { path: 'country' } })
+      .lean();
+    if (!dest) {
+      throw new NotFoundException('Top destination not found');
+    }
+    return dest;
+  }
+
+  async updateTopDestination(id: string, data: UpdateWebsiteTopDestinationDto) {
+    const updateData: any = { ...data };
+    if (data.city) {
+      await this.findOneCity(data.city);
+      updateData.city = new Types.ObjectId(data.city);
+    }
+    const dest = await this.topDestinationModel
+      .findOneAndUpdate(
+        { _id: new Types.ObjectId(id), is_deleted: { $ne: true } },
+        { $set: updateData },
+        { new: true },
+      )
+      .populate({ path: 'city', populate: { path: 'country' } })
+      .lean();
+    if (!dest) {
+      throw new NotFoundException('Top destination not found');
+    }
+    return dest;
+  }
+
+  async deleteTopDestination(id: string) {
+    const dest = await this.topDestinationModel
+      .findOneAndUpdate(
+        { _id: new Types.ObjectId(id), is_deleted: { $ne: true } },
+        { $set: { is_deleted: true } },
+        { new: true },
+      )
+      .populate({ path: 'city', populate: { path: 'country' } })
+      .lean();
+    if (!dest) {
+      throw new NotFoundException('Top destination not found');
+    }
+    return dest;
   }
 
   async seedData() {

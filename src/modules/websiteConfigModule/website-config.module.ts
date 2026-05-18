@@ -5,6 +5,7 @@ import { WebsiteConfigService } from './website-config.service';
 import { WebsiteCountrySchema } from '../../models/websiteCountry.model';
 import { WebsiteCitySchema } from '../../models/websiteCity.model';
 import { WebsiteHotelSchema } from '../../models/websiteHotel.model';
+import { WebsiteTopDestinationSchema } from '../../models/websiteTopDestination.model';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { WebsiteHotelSchema } from '../../models/websiteHotel.model';
       { name: 'WebsiteCountry', schema: WebsiteCountrySchema },
       { name: 'WebsiteCity', schema: WebsiteCitySchema },
       { name: 'WebsiteHotel', schema: WebsiteHotelSchema },
+      { name: 'WebsiteTopDestination', schema: WebsiteTopDestinationSchema },
     ]),
   ],
   controllers: [WebsiteConfigController],

@@ -341,3 +341,35 @@ export class UpdateWebsiteHotelDto {
   @Max(5)
   stars?: number;
 }
+
+export class CreateWebsiteTopDestinationDto {
+  @ApiProperty({ description: 'Associated City Mongo ID' })
+  @IsString()
+  city: string;
+
+  @ApiProperty({ description: 'Destination Image URL' })
+  @IsString()
+  image: string;
+
+  @ApiPropertyOptional({ description: 'Status of the destination', default: true })
+  @IsOptional()
+  @IsBoolean()
+  is_active?: boolean;
+}
+
+export class UpdateWebsiteTopDestinationDto {
+  @ApiPropertyOptional({ description: 'Associated City Mongo ID' })
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  @ApiPropertyOptional({ description: 'Destination Image URL' })
+  @IsOptional()
+  @IsString()
+  image?: string;
+
+  @ApiPropertyOptional({ description: 'Status of the destination' })
+  @IsOptional()
+  @IsBoolean()
+  is_active?: boolean;
+}

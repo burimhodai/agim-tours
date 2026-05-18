@@ -23,6 +23,8 @@ import {
   UpdateWebsiteCityDto,
   CreateWebsiteHotelDto,
   UpdateWebsiteHotelDto,
+  CreateWebsiteTopDestinationDto,
+  UpdateWebsiteTopDestinationDto,
 } from '../../shared/DTO/website-config.dto';
 
 @ApiTags('Website Config')
@@ -182,5 +184,52 @@ export class WebsiteConfigController {
     @Param('id') id: string,
   ) {
     return this.configService.deleteHotel(id);
+  }
+
+  @Post('top-destinations')
+  @ApiOperation({ summary: 'Create a new top destination configuration' })
+  @ApiResponse({ status: 201, description: 'Top destination successfully created' })
+  async createTopDestination(
+    @Body() data: CreateWebsiteTopDestinationDto,
+  ) {
+    return this.configService.createTopDestination(data);
+  }
+
+  @Get('top-destinations')
+  @ApiOperation({ summary: 'Get all top destinations' })
+  @ApiResponse({ status: 200, description: 'List of active top destinations' })
+  async findAllTopDestinations() {
+    return this.configService.findAllTopDestinations();
+  }
+
+  @Get('top-destinations/:id')
+  @ApiOperation({ summary: 'Get a top destination by ID' })
+  @ApiParam({ name: 'id', description: 'Top Destination ID' })
+  @ApiResponse({ status: 200, description: 'Top destination details' })
+  async findOneTopDestination(
+    @Param('id') id: string,
+  ) {
+    return this.configService.findOneTopDestination(id);
+  }
+
+  @Put('top-destinations/:id')
+  @ApiOperation({ summary: 'Update an existing top destination' })
+  @ApiParam({ name: 'id', description: 'Top Destination ID' })
+  @ApiResponse({ status: 200, description: 'Top destination successfully updated' })
+  async updateTopDestination(
+    @Param('id') id: string,
+    @Body() data: UpdateWebsiteTopDestinationDto,
+  ) {
+    return this.configService.updateTopDestination(id, data);
+  }
+
+  @Delete('top-destinations/:id')
+  @ApiOperation({ summary: 'Soft-delete a top destination' })
+  @ApiParam({ name: 'id', description: 'Top Destination ID' })
+  @ApiResponse({ status: 200, description: 'Top destination successfully soft-deleted' })
+  async deleteTopDestination(
+    @Param('id') id: string,
+  ) {
+    return this.configService.deleteTopDestination(id);
   }
 }
