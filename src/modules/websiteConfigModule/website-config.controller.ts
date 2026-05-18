@@ -8,6 +8,13 @@ import {
   Param,
   Query,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { WebsiteConfigService } from './website-config.service';
 import {
   CreateWebsiteCountryDto,
@@ -18,16 +25,21 @@ import {
   UpdateWebsiteHotelDto,
 } from '../../shared/DTO/website-config.dto';
 
+@ApiTags('Website Config')
 @Controller('website-configs')
 export class WebsiteConfigController {
   constructor(private readonly configService: WebsiteConfigService) {}
 
   @Post('seed')
+  @ApiOperation({ summary: 'Seed initial country, city, and hotel data' })
+  @ApiResponse({ status: 201, description: 'Database successfully seeded' })
   async seed() {
     return this.configService.seedData();
   }
 
   @Post('countries')
+  @ApiOperation({ summary: 'Create a new country configuration' })
+  @ApiResponse({ status: 201, description: 'Country successfully created' })
   async createCountry(
     @Body() data: CreateWebsiteCountryDto,
   ) {
@@ -35,11 +47,16 @@ export class WebsiteConfigController {
   }
 
   @Get('countries')
+  @ApiOperation({ summary: 'Get all countries' })
+  @ApiResponse({ status: 200, description: 'List of all active countries' })
   async findAllCountries() {
     return this.configService.findAllCountries();
   }
 
   @Get('countries/:id')
+  @ApiOperation({ summary: 'Get a country by ID' })
+  @ApiParam({ name: 'id', description: 'Country ID' })
+  @ApiResponse({ status: 200, description: 'Country details' })
   async findOneCountry(
     @Param('id') id: string,
   ) {
@@ -47,6 +64,9 @@ export class WebsiteConfigController {
   }
 
   @Put('countries/:id')
+  @ApiOperation({ summary: 'Update an existing country' })
+  @ApiParam({ name: 'id', description: 'Country ID' })
+  @ApiResponse({ status: 200, description: 'Country successfully updated' })
   async updateCountry(
     @Param('id') id: string,
     @Body() data: UpdateWebsiteCountryDto,
@@ -55,6 +75,9 @@ export class WebsiteConfigController {
   }
 
   @Delete('countries/:id')
+  @ApiOperation({ summary: 'Soft-delete a country' })
+  @ApiParam({ name: 'id', description: 'Country ID' })
+  @ApiResponse({ status: 200, description: 'Country successfully soft-deleted' })
   async deleteCountry(
     @Param('id') id: string,
   ) {
@@ -62,6 +85,8 @@ export class WebsiteConfigController {
   }
 
   @Post('cities')
+  @ApiOperation({ summary: 'Create a new city configuration' })
+  @ApiResponse({ status: 201, description: 'City successfully created' })
   async createCity(
     @Body() data: CreateWebsiteCityDto,
   ) {
@@ -69,6 +94,9 @@ export class WebsiteConfigController {
   }
 
   @Get('cities')
+  @ApiOperation({ summary: 'Get all cities, optionally filtered by country' })
+  @ApiQuery({ name: 'countryId', required: false, description: 'Optional country ID to filter cities' })
+  @ApiResponse({ status: 200, description: 'List of active cities' })
   async findAllCities(
     @Query('countryId') countryId: string,
   ) {
@@ -76,6 +104,9 @@ export class WebsiteConfigController {
   }
 
   @Get('cities/:id')
+  @ApiOperation({ summary: 'Get a city by ID' })
+  @ApiParam({ name: 'id', description: 'City ID' })
+  @ApiResponse({ status: 200, description: 'City details' })
   async findOneCity(
     @Param('id') id: string,
   ) {
@@ -83,6 +114,9 @@ export class WebsiteConfigController {
   }
 
   @Put('cities/:id')
+  @ApiOperation({ summary: 'Update an existing city' })
+  @ApiParam({ name: 'id', description: 'City ID' })
+  @ApiResponse({ status: 200, description: 'City successfully updated' })
   async updateCity(
     @Param('id') id: string,
     @Body() data: UpdateWebsiteCityDto,
@@ -91,6 +125,9 @@ export class WebsiteConfigController {
   }
 
   @Delete('cities/:id')
+  @ApiOperation({ summary: 'Soft-delete a city' })
+  @ApiParam({ name: 'id', description: 'City ID' })
+  @ApiResponse({ status: 200, description: 'City successfully soft-deleted' })
   async deleteCity(
     @Param('id') id: string,
   ) {
@@ -98,6 +135,8 @@ export class WebsiteConfigController {
   }
 
   @Post('hotels')
+  @ApiOperation({ summary: 'Create a new hotel configuration' })
+  @ApiResponse({ status: 201, description: 'Hotel successfully created' })
   async createHotel(
     @Body() data: CreateWebsiteHotelDto,
   ) {
@@ -105,6 +144,9 @@ export class WebsiteConfigController {
   }
 
   @Get('hotels')
+  @ApiOperation({ summary: 'Get all hotels, optionally filtered by city' })
+  @ApiQuery({ name: 'cityId', required: false, description: 'Optional city ID to filter hotels' })
+  @ApiResponse({ status: 200, description: 'List of active hotels' })
   async findAllHotels(
     @Query('cityId') cityId: string,
   ) {
@@ -112,6 +154,9 @@ export class WebsiteConfigController {
   }
 
   @Get('hotels/:id')
+  @ApiOperation({ summary: 'Get a hotel by ID' })
+  @ApiParam({ name: 'id', description: 'Hotel ID' })
+  @ApiResponse({ status: 200, description: 'Hotel details' })
   async findOneHotel(
     @Param('id') id: string,
   ) {
@@ -119,6 +164,9 @@ export class WebsiteConfigController {
   }
 
   @Put('hotels/:id')
+  @ApiOperation({ summary: 'Update an existing hotel' })
+  @ApiParam({ name: 'id', description: 'Hotel ID' })
+  @ApiResponse({ status: 200, description: 'Hotel successfully updated' })
   async updateHotel(
     @Param('id') id: string,
     @Body() data: UpdateWebsiteHotelDto,
@@ -127,6 +175,9 @@ export class WebsiteConfigController {
   }
 
   @Delete('hotels/:id')
+  @ApiOperation({ summary: 'Soft-delete a hotel' })
+  @ApiParam({ name: 'id', description: 'Hotel ID' })
+  @ApiResponse({ status: 200, description: 'Hotel successfully soft-deleted' })
   async deleteHotel(
     @Param('id') id: string,
   ) {
