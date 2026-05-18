@@ -13,6 +13,7 @@ export const WebsiteHotelSchema = new mongoose.Schema(
     location_mk: { type: String, required: true },
     location_maps_link: { type: String, required: true },
     images: { type: [String], default: [] },
+    stars: { type: Number, min: 1, max: 5, default: 3 },
     description_sq: { type: String },
     description_mk: { type: String },
     extra_info_sq: { type: String },

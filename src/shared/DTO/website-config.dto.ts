@@ -4,6 +4,9 @@ import {
   IsDate,
   IsOptional,
   IsString,
+  IsInt,
+  Min,
+  Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -159,6 +162,12 @@ export class CreateWebsiteHotelDto {
   @IsOptional()
   @IsBoolean()
   is_active?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  stars?: number;
 }
 
 export class UpdateWebsiteHotelDto {
@@ -260,4 +269,10 @@ export class UpdateWebsiteHotelDto {
   @IsOptional()
   @IsBoolean()
   is_active?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  stars?: number;
 }
