@@ -21,7 +21,7 @@ import { PaymentStatusTypes } from 'src/shared/types/payment.types';
 
 @Controller('plane')
 export class PlaneController {
-  constructor(private readonly planeService: PlaneService) { }
+  constructor(private readonly planeService: PlaneService) {}
 
   @Post('tickets')
   async create(@Body() createPlaneTicketDto: CreatePlaneTicketDto) {
@@ -72,7 +72,11 @@ export class PlaneController {
     @Body('payment_status') paymentStatus: PaymentStatusTypes,
     @Body('employee') employeeId?: string,
   ) {
-    return await this.planeService.updatePaymentStatus(id, paymentStatus, employeeId);
+    return await this.planeService.updatePaymentStatus(
+      id,
+      paymentStatus,
+      employeeId,
+    );
   }
 
   @Patch('tickets/:id/check-in')
@@ -102,10 +106,7 @@ export class PlaneController {
   }
 
   @Patch('tickets/:id/refund')
-  async refund(
-    @Param('id') id: string,
-    @Body() refundDto: CancelTicketDto,
-  ) {
+  async refund(@Param('id') id: string, @Body() refundDto: CancelTicketDto) {
     return await this.planeService.refund(id, refundDto);
   }
 }

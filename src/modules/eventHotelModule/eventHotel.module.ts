@@ -24,4 +24,4 @@ import { TransactionServiceService } from 'src/transactions/transaction-service.
   providers: [EventHotelService, EventBusService, TransactionServiceService],
   exports: [EventHotelService, EventBusService],
 })
-export class EventHotelModule { }
+export class EventHotelModule {}

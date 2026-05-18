@@ -27,7 +27,7 @@ export class BusService {
     @InjectModel('Ticket') private ticketModel: Model<ITicket>,
     @InjectModel('User') private userModel: Model<IUser>,
     private transactionService: TransactionServiceService,
-  ) { }
+  ) {}
 
   private generateBusUid(): string {
     // Generate random 5-6 digit number
@@ -76,10 +76,22 @@ export class BusService {
     };
 
     for (const key in newData) {
-      if (['logs', '_id', '__v', 'employee', 'updatedAt', 'createdAt', 'passengers', 'payment_chunks'].includes(key)) continue;
+      if (
+        [
+          'logs',
+          '_id',
+          '__v',
+          'employee',
+          'updatedAt',
+          'createdAt',
+          'passengers',
+          'payment_chunks',
+        ].includes(key)
+      )
+        continue;
 
-      let oldValue = oldData[key];
-      let newValue = newData[key];
+      const oldValue = oldData[key];
+      const newValue = newData[key];
 
       // Skip if value is not provided in update
       if (newValue === undefined) continue;
@@ -90,19 +102,29 @@ export class BusService {
         const newTime = newValue ? new Date(newValue).getTime() : 0;
 
         if (oldTime !== newTime) {
-          const oldStr = oldValue ? new Date(oldValue).toLocaleString('sq-AL') : 'pa përcaktuar';
-          const newStr = newValue ? new Date(newValue).toLocaleString('sq-AL') : 'pa përcaktuar';
+          const oldStr = oldValue
+            ? new Date(oldValue).toLocaleString('sq-AL')
+            : 'pa përcaktuar';
+          const newStr = newValue
+            ? new Date(newValue).toLocaleString('sq-AL')
+            : 'pa përcaktuar';
           changes.push(`${fieldNames[key] || key}: ${oldStr} -> ${newStr}`);
         }
         continue;
       }
 
       if (oldValue !== newValue) {
-        changes.push(`${fieldNames[key] || key}: ${oldValue || 'pa përcaktuar'} -> ${newValue}`);
+        changes.push(
+          `${fieldNames[key] || key}: ${oldValue || 'pa përcaktuar'} -> ${newValue}`,
+        );
       }
     }
 
-    if (newData.payment_chunks && JSON.stringify(oldData.payment_chunks) !== JSON.stringify(newData.payment_chunks)) {
+    if (
+      newData.payment_chunks &&
+      JSON.stringify(oldData.payment_chunks) !==
+        JSON.stringify(newData.payment_chunks)
+    ) {
       const oldLen = oldData.payment_chunks?.length || 0;
       const newLen = newData.payment_chunks?.length || 0;
       if (newLen > oldLen) {
@@ -113,7 +135,10 @@ export class BusService {
       }
     }
 
-    if (newData.passengers && JSON.stringify(oldData.passengers) !== JSON.stringify(newData.passengers)) {
+    if (
+      newData.passengers &&
+      JSON.stringify(oldData.passengers) !== JSON.stringify(newData.passengers)
+    ) {
       changes.push('Të dhënat e pasagjerëve u përditësuan');
     }
 
@@ -122,8 +147,14 @@ export class BusService {
 
   async create(createBusTicketDto: CreateBusTicketDto): Promise<ITicket> {
     let finalAgencyId = createBusTicketDto.agency;
-    if (!finalAgencyId && createBusTicketDto.employee && Types.ObjectId.isValid(createBusTicketDto.employee)) {
-      const employee = await this.userModel.findById(createBusTicketDto.employee).exec();
+    if (
+      !finalAgencyId &&
+      createBusTicketDto.employee &&
+      Types.ObjectId.isValid(createBusTicketDto.employee)
+    ) {
+      const employee = await this.userModel
+        .findById(createBusTicketDto.employee)
+        .exec();
       if (employee?.agency) finalAgencyId = employee.agency.toString();
     }
 
@@ -131,9 +162,7 @@ export class BusService {
       ...createBusTicketDto,
       uid: this.generateBusUid(),
       ticket_type: TicketTypes.BUS,
-      agency: finalAgencyId
-        ? new Types.ObjectId(finalAgencyId)
-        : undefined,
+      agency: finalAgencyId ? new Types.ObjectId(finalAgencyId) : undefined,
       employee: createBusTicketDto.employee
         ? new Types.ObjectId(createBusTicketDto.employee)
         : undefined,
@@ -182,7 +211,10 @@ export class BusService {
         user: createBusTicketDto.employee,
         description: 'Biletë autobusi',
       });
-    } else if (createBusTicketDto.payment_status === PaymentStatusTypes.UNPAID || createBusTicketDto.payment_status === PaymentStatusTypes.NOT_PAID) {
+    } else if (
+      createBusTicketDto.payment_status === PaymentStatusTypes.UNPAID ||
+      createBusTicketDto.payment_status === PaymentStatusTypes.NOT_PAID
+    ) {
       // Unpaid - create DEBT transaction
       await this.transactionService.create({
         amount: createBusTicketDto.price,
@@ -226,9 +258,9 @@ export class BusService {
           { ticket_type: { $regex: new RegExp(`^${TicketTypes.BUS}$`, 'i') } },
           { ticket_type: { $exists: false } },
           { ticket_type: null },
-          { ticket_type: "" }
-        ]
-      }
+          { ticket_type: '' },
+        ],
+      },
     ];
 
     if (agency && Types.ObjectId.isValid(agency)) {
@@ -236,14 +268,14 @@ export class BusService {
         $or: [
           { agency: new Types.ObjectId(agency) },
           { agency: { $exists: false } },
-          { agency: null }
-        ]
+          { agency: null },
+        ],
       });
     }
 
     const filter: any = {
       is_deleted: { $ne: true },
-      $and: andConditions
+      $and: andConditions,
     };
 
     if (departure_location) {
@@ -266,10 +298,7 @@ export class BusService {
         dateFilter.$lte = departure_date_to;
       }
       andConditions.push({
-        $or: [
-          { departure_date: dateFilter },
-          { return_date: dateFilter }
-        ]
+        $or: [{ departure_date: dateFilter }, { return_date: dateFilter }],
       });
     }
 
@@ -301,7 +330,7 @@ export class BusService {
         { 'passengers.first_name': searchRegex },
         { 'passengers.last_name': searchRegex },
         { 'passengers.passport_number': searchRegex },
-        { 'passengers.phone': searchRegex }
+        { 'passengers.phone': searchRegex },
       ];
     }
 
@@ -371,13 +400,13 @@ export class BusService {
     const updateData: any = { ...updateBusTicketDto };
     // Removed auto-update of ticket.agency to allow using 'agency' field for transaction attribution
 
-
     // Detect new payment chunks before updating
     const oldPaymentChunks = currentTicket.payment_chunks || [];
     const newPaymentChunks = updateBusTicketDto.payment_chunks || [];
-    const newChunksAdded = newPaymentChunks.length > oldPaymentChunks.length
-      ? newPaymentChunks.slice(oldPaymentChunks.length)
-      : [];
+    const newChunksAdded =
+      newPaymentChunks.length > oldPaymentChunks.length
+        ? newPaymentChunks.slice(oldPaymentChunks.length)
+        : [];
 
     const ticket = await this.ticketModel
       .findOneAndUpdate(
@@ -394,7 +423,10 @@ export class BusService {
       throw new NotFoundException('Bus ticket not found');
     }
 
-    const changesDescription = this.getChangesDescription(currentTicket.toObject(), updateData);
+    const changesDescription = this.getChangesDescription(
+      currentTicket.toObject(),
+      updateData,
+    );
 
     await this.addLogInternal(
       id,
@@ -404,7 +436,9 @@ export class BusService {
     );
 
     if (newChunksAdded.length > 0) {
-      const employee = await this.userModel.findById(updateBusTicketDto.employee).exec();
+      const employee = await this.userModel
+        .findById(updateBusTicketDto.employee)
+        .exec();
       const employeeAgencyId = employee?.agency?.toString();
 
       for (const chunk of newChunksAdded) {
@@ -414,31 +448,45 @@ export class BusService {
           type: TransactionTypes.INCOME,
           status: TransactionStatus.SETTLED,
           ticket: id,
-          agency: updateBusTicketDto.agency || employeeAgencyId || (ticket.agency instanceof Types.ObjectId
-            ? ticket.agency.toString()
-            : (ticket.agency as any)?._id?.toString() || ''),
+          agency:
+            updateBusTicketDto.agency ||
+            employeeAgencyId ||
+            (ticket.agency instanceof Types.ObjectId
+              ? ticket.agency.toString()
+              : (ticket.agency as any)?._id?.toString() || ''),
           user: updateBusTicketDto.employee,
           description: `Pagesë - Biletë autobusi (${ticket.uid})`,
         });
 
-        await this.transactionService.reduceDebtByTicket(id, chunk.amount, chunk.currency);
+        await this.transactionService.reduceDebtByTicket(
+          id,
+          chunk.amount,
+          chunk.currency,
+        );
       }
     }
 
-    if (updateBusTicketDto.price !== undefined && currentTicket.price !== updateBusTicketDto.price) {
+    if (
+      updateBusTicketDto.price !== undefined &&
+      currentTicket.price !== updateBusTicketDto.price
+    ) {
       await this.transactionService.handleTicketPriceChange(
         id,
         currentTicket.price,
         updateBusTicketDto.price,
         updateBusTicketDto.currency || currentTicket.currency || 'EUR',
-        updateBusTicketDto.agency || (ticket.agency instanceof Types.ObjectId
-          ? ticket.agency.toString()
-          : (ticket.agency as any)?._id?.toString() || ''),
+        updateBusTicketDto.agency ||
+          (ticket.agency instanceof Types.ObjectId
+            ? ticket.agency.toString()
+            : (ticket.agency as any)?._id?.toString() || ''),
         updateBusTicketDto.employee || currentTicket.employee?.toString() || '',
       );
 
       // Recalculate payment status based on total paid vs new price
-      const totalPaid = (ticket.payment_chunks || []).reduce((sum, chunk) => sum + chunk.amount, 0);
+      const totalPaid = (ticket.payment_chunks || []).reduce(
+        (sum, chunk) => sum + chunk.amount,
+        0,
+      );
       let newStatus = ticket.payment_status;
 
       if (totalPaid <= 0) {
@@ -451,7 +499,10 @@ export class BusService {
 
       if (newStatus !== ticket.payment_status) {
         ticket.payment_status = newStatus;
-        await this.ticketModel.updateOne({ _id: id }, { $set: { payment_status: newStatus } });
+        await this.ticketModel.updateOne(
+          { _id: id },
+          { $set: { payment_status: newStatus } },
+        );
       }
     }
 
@@ -658,7 +709,9 @@ export class BusService {
       ticket.payment_status === PaymentStatusTypes.UNPAID ||
       ticket.payment_status === PaymentStatusTypes.NOT_PAID;
 
-    const employee = await this.userModel.findById(cancelTicketDto.employee).exec();
+    const employee = await this.userModel
+      .findById(cancelTicketDto.employee)
+      .exec();
     const employeeAgencyId = employee?.agency?.toString();
 
     if (wasUnpaid) {
@@ -681,9 +734,12 @@ export class BusService {
             type: TransactionTypes.OUTCOME,
             status: TransactionStatus.SETTLED,
             ticket: ticket._id.toString(),
-            agency: cancelTicketDto.agency || employeeAgencyId || (ticket.agency instanceof Types.ObjectId
-              ? ticket.agency.toString()
-              : (ticket.agency as any)?._id?.toString() || ''),
+            agency:
+              cancelTicketDto.agency ||
+              employeeAgencyId ||
+              (ticket.agency instanceof Types.ObjectId
+                ? ticket.agency.toString()
+                : (ticket.agency as any)?._id?.toString() || ''),
             user: cancelTicketDto.employee,
             description: `Rimbursim - Biletë autobusi e anuluar (${ticket.uid})`,
           });
@@ -692,9 +748,10 @@ export class BusService {
       }
     }
 
-    const refundInfo = refund_chunks && refund_chunks.length > 0
-      ? `Rimbursim: ${refund_chunks.map(c => `${c.amount} ${c.currency}`).join(', ')}.`
-      : 'Pa rimbursim.';
+    const refundInfo =
+      refund_chunks && refund_chunks.length > 0
+        ? `Rimbursim: ${refund_chunks.map((c) => `${c.amount} ${c.currency}`).join(', ')}.`
+        : 'Pa rimbursim.';
 
     await this.addLogInternal(
       id,
@@ -717,7 +774,9 @@ export class BusService {
     }
 
     if (ticket.status !== 'canceled') {
-      throw new BadRequestException('Vetëm biletat e anuluara mund të rimbursohen');
+      throw new BadRequestException(
+        'Vetëm biletat e anuluara mund të rimbursohen',
+      );
     }
 
     if (ticket.payment_status === PaymentStatusTypes.REFUNDED) {
@@ -750,9 +809,12 @@ export class BusService {
         type: TransactionTypes.OUTCOME,
         status: TransactionStatus.SETTLED,
         ticket: ticket._id.toString(),
-        agency: refundDto.agency || employeeAgencyId || (ticket.agency instanceof Types.ObjectId
-          ? ticket.agency.toString()
-          : (ticket.agency as any)?._id?.toString() || ''),
+        agency:
+          refundDto.agency ||
+          employeeAgencyId ||
+          (ticket.agency instanceof Types.ObjectId
+            ? ticket.agency.toString()
+            : (ticket.agency as any)?._id?.toString() || ''),
         user: refundDto.employee,
         description: `Rimbursim - Biletë autobusi e anuluar (${ticket.uid})`,
       });
@@ -766,7 +828,7 @@ export class BusService {
         : `Rimbursimi: ${note}`;
     }
 
-    const refundInfo = `Rimbursim: ${refund_chunks.map(c => `${c.amount} ${c.currency}`).join(', ')}.`;
+    const refundInfo = `Rimbursim: ${refund_chunks.map((c) => `${c.amount} ${c.currency}`).join(', ')}.`;
 
     await this.addLogInternal(
       id,

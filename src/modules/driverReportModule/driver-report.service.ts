@@ -1,12 +1,18 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { DriverReport, DriverReportDocument } from './entities/driver-report.entity';
+import {
+  DriverReport,
+  DriverReportDocument,
+} from './entities/driver-report.entity';
 import { CreateDriverReportDto } from './dto/create-driver-report.dto';
 import { UpdateDriverReportDto } from './dto/update-driver-report.dto';
 import { DriverReportQueryDto } from './dto/driver-report-query.dto';
 import { TransactionServiceService } from 'src/transactions/transaction-service.service';
-import { TransactionStatus, TransactionTypes } from 'src/shared/types/transaction.types';
+import {
+  TransactionStatus,
+  TransactionTypes,
+} from 'src/shared/types/transaction.types';
 import { CurrencyTypes } from 'src/shared/types/currency.types';
 
 @Injectable()
@@ -15,7 +21,7 @@ export class DriverReportService {
     @InjectModel(DriverReport.name)
     private driverReportModel: Model<DriverReportDocument>,
     private transactionService: TransactionServiceService,
-  ) { }
+  ) {}
 
   async create(createDriverReportDto: CreateDriverReportDto) {
     const d = new Date(createDriverReportDto.date);

@@ -6,7 +6,9 @@ import { FuelReport, FuelReportSchema } from './entities/fuel-report.entity';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: FuelReport.name, schema: FuelReportSchema }]),
+    MongooseModule.forFeature([
+      { name: FuelReport.name, schema: FuelReportSchema },
+    ]),
   ],
   controllers: [FuelReportController],
   providers: [FuelReportService],

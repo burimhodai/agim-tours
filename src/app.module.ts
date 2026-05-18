@@ -28,6 +28,7 @@ import { ArrangementModule } from './modules/arrangementModule/arrangement.modul
 import { DriverModule } from './modules/driverModule/driver.module';
 import { ReportBusModule } from './modules/reportBusModule/report-bus.module';
 import { FuelReportModule } from './modules/fuelReportModule/fuel-report.module';
+import { WebsiteConfigModule } from './modules/websiteConfigModule/website-config.module';
 
 @Module({
   imports: [
@@ -76,8 +77,9 @@ import { FuelReportModule } from './modules/fuelReportModule/fuel-report.module'
     DriverModule,
     ReportBusModule,
     FuelReportModule,
+    WebsiteConfigModule,
   ],
   controllers: [AppController, TransactionControllerController],
   providers: [AppService, TransactionServiceService],
 })
-export class AppModule { }
+export class AppModule {}

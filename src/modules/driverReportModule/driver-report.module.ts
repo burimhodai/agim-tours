@@ -2,7 +2,10 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { DriverReportService } from './driver-report.service';
 import { DriverReportController } from './driver-report.controller';
-import { DriverReport, DriverReportSchema } from './entities/driver-report.entity';
+import {
+  DriverReport,
+  DriverReportSchema,
+} from './entities/driver-report.entity';
 import { TransactionSchema } from 'src/models/transaction.model';
 import { AgencySchema } from 'src/models/agency.model';
 import { UserSchema } from 'src/models/user.model';

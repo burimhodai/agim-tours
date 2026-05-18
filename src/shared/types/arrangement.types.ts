@@ -33,13 +33,13 @@ export interface IArrangement extends Document {
   destination: string;
   start_date: Date;
   end_date: Date;
-  
+
   hotel_partner?: Types.ObjectId | string;
   hotel_name: string;
   check_in_date: Date;
   check_out_date: Date;
   room_groups?: IRoomGroup[];
-  
+
   departure_location: string;
   destination_location: string;
   departure_date: Date;
@@ -53,16 +53,25 @@ export interface IArrangement extends Document {
   price: number;
   currency: CurrencyTypes;
   payment_status: PaymentStatusTypes;
-  payment_chunks?: { amount: number; currency: CurrencyTypes; payment_date?: Date }[];
-  
+  payment_chunks?: {
+    amount: number;
+    currency: CurrencyTypes;
+    payment_date?: Date;
+  }[];
+
   travelers: IArrangementTraveler[];
-  
+
   agency?: Types.ObjectId | string;
   employee?: Types.ObjectId | string;
-  logs?: { title?: string; description?: string; employee?: Types.ObjectId | string; created_at?: Date }[];
+  logs?: {
+    title?: string;
+    description?: string;
+    employee?: Types.ObjectId | string;
+    created_at?: Date;
+  }[];
   is_deleted?: boolean;
   status?: 'active' | 'canceled';
-  
+
   createdAt?: Date;
   updatedAt?: Date;
 }

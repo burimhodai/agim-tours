@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Param, Query, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  Delete,
+} from '@nestjs/common';
 import { TransactionServiceService } from './transaction-service.service';
 import {
   CreateTransactionDto,
@@ -7,7 +15,7 @@ import {
 
 @Controller('transactions')
 export class TransactionControllerController {
-  constructor(private readonly transactionService: TransactionServiceService) { }
+  constructor(private readonly transactionService: TransactionServiceService) {}
 
   @Post()
   async create(@Body() createTransactionDto: CreateTransactionDto) {

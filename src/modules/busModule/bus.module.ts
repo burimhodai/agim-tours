@@ -21,4 +21,4 @@ import { TransactionServiceService } from 'src/transactions/transaction-service.
   providers: [BusService, TransactionServiceService],
   exports: [BusService],
 })
-export class BusModule { }
+export class BusModule {}

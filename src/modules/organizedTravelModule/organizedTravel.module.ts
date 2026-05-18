@@ -23,4 +23,4 @@ import { TransactionServiceService } from 'src/transactions/transaction-service.
   providers: [OrganizedTravelService, TransactionServiceService],
   exports: [OrganizedTravelService],
 })
-export class OrganizedTravelModule { }
+export class OrganizedTravelModule {}

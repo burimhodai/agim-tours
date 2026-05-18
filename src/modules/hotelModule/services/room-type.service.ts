@@ -16,7 +16,7 @@ import {
 export class RoomTypeService {
   constructor(
     @InjectModel('RoomType') private roomTypeModel: Model<IRoomType>,
-  ) { }
+  ) {}
 
   async create(createRoomTypeDto: CreateRoomTypeDto): Promise<IRoomType> {
     const roomTypeData = {
@@ -98,11 +98,7 @@ export class RoomTypeService {
     }
 
     const roomType = await this.roomTypeModel
-      .findOneAndUpdate(
-        filter,
-        { $set: updateRoomTypeDto },
-        { new: true },
-      )
+      .findOneAndUpdate(filter, { $set: updateRoomTypeDto }, { new: true })
       .populate('agency')
       .exec();
 
@@ -123,9 +119,7 @@ export class RoomTypeService {
       filter.agency = new Types.ObjectId(agencyId);
     }
 
-    const result = await this.roomTypeModel
-      .findOneAndDelete(filter)
-      .exec();
+    const result = await this.roomTypeModel.findOneAndDelete(filter).exec();
 
     if (!result) {
       throw new NotFoundException('Room type not found');

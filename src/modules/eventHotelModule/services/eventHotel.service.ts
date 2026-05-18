@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { IUser } from 'src/shared/types/user.types';
@@ -50,15 +54,23 @@ export class EventHotelService {
     @InjectModel('User') private userModel: Model<IUser>,
     @InjectModel('EventBus') private busModel: Model<any>,
     private transactionService: TransactionServiceService,
-  ) { }
+  ) {}
 
-  private validateTravelerPassport(traveler: any, departureDate: Date, departureCity?: string, arrivalCity?: string, location?: string) {
+  private validateTravelerPassport(
+    traveler: any,
+    departureDate: Date,
+    departureCity?: string,
+    arrivalCity?: string,
+    location?: string,
+  ) {
     const isIstanbulOrStamboll = (city?: string) =>
       city?.toLowerCase() === 'istanbul' || city?.toLowerCase() === 'stamboll';
 
     if (isIstanbulOrStamboll(location)) {
       if (!traveler.passport_expiry_date) {
-        throw new BadRequestException(`Data e skadimit të pasaportës është e detyrueshme për destinacionin Stamboll (${traveler.first_name || ''} ${traveler.last_name || ''})`);
+        throw new BadRequestException(
+          `Data e skadimit të pasaportës është e detyrueshme për destinacionin Stamboll (${traveler.first_name || ''} ${traveler.last_name || ''})`,
+        );
       }
 
       const expiryDate = new Date(traveler.passport_expiry_date);
@@ -68,7 +80,9 @@ export class EventHotelService {
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
       if (diffDays < 150) {
-        throw new BadRequestException(`Pasaporta e udhëtarit ${traveler.first_name || ''} ${traveler.last_name || ''} duhet të jetë e vlefshme edhe të paktën 150 ditë pas datës së nisjes.`);
+        throw new BadRequestException(
+          `Pasaporta e udhëtarit ${traveler.first_name || ''} ${traveler.last_name || ''} duhet të jetë e vlefshme edhe të paktën 150 ditë pas datës së nisjes.`,
+        );
       }
     }
   }
@@ -220,16 +234,21 @@ export class EventHotelService {
     }
 
     if (updateEventDto?.room_groups) {
-      console.log('room_groups before processing:', JSON.stringify(updateEventDto.room_groups, null, 2));
+      console.log(
+        'room_groups before processing:',
+        JSON.stringify(updateEventDto.room_groups, null, 2),
+      );
 
       updateData.room_groups = updateEventDto.room_groups.map((group) => {
         // Extract ID from populated object or use string directly
-        const roomTypeId = typeof group.room_type === 'object' && group.room_type !== null
-          ? (group.room_type as any)._id
-          : group.room_type;
-        const hotelId = typeof group.hotel === 'object' && group.hotel !== null
-          ? (group.hotel as any)._id
-          : group.hotel;
+        const roomTypeId =
+          typeof group.room_type === 'object' && group.room_type !== null
+            ? (group.room_type as any)._id
+            : group.room_type;
+        const hotelId =
+          typeof group.hotel === 'object' && group.hotel !== null
+            ? (group.hotel as any)._id
+            : group.hotel;
 
         // Build the result object without empty string fields
         const result: any = {
@@ -243,7 +262,11 @@ export class EventHotelService {
         }
 
         // Only include room_type if it's a valid ObjectId
-        if (roomTypeId && roomTypeId !== '' && Types.ObjectId.isValid(roomTypeId)) {
+        if (
+          roomTypeId &&
+          roomTypeId !== '' &&
+          Types.ObjectId.isValid(roomTypeId)
+        ) {
           result.room_type = new Types.ObjectId(roomTypeId);
         }
 
@@ -262,22 +285,40 @@ export class EventHotelService {
         const result: any = { ...traveler };
 
         if (traveler.hotel && traveler.hotel !== '') {
-          const hotelId = typeof traveler.hotel === 'object' ? (traveler.hotel as any)._id : traveler.hotel;
-          result.hotel = hotelId && Types.ObjectId.isValid(hotelId) ? new Types.ObjectId(hotelId) : undefined;
+          const hotelId =
+            typeof traveler.hotel === 'object'
+              ? (traveler.hotel as any)._id
+              : traveler.hotel;
+          result.hotel =
+            hotelId && Types.ObjectId.isValid(hotelId)
+              ? new Types.ObjectId(hotelId)
+              : undefined;
         } else if (traveler.hotel === '') {
           result.hotel = undefined;
         }
 
         if (traveler.room_type && traveler.room_type !== '') {
-          const roomTypeId = typeof traveler.room_type === 'object' ? (traveler.room_type as any)._id : traveler.room_type;
-          result.room_type = roomTypeId && Types.ObjectId.isValid(roomTypeId) ? new Types.ObjectId(roomTypeId) : undefined;
+          const roomTypeId =
+            typeof traveler.room_type === 'object'
+              ? (traveler.room_type as any)._id
+              : traveler.room_type;
+          result.room_type =
+            roomTypeId && Types.ObjectId.isValid(roomTypeId)
+              ? new Types.ObjectId(roomTypeId)
+              : undefined;
         } else if (traveler.room_type === '') {
           result.room_type = undefined;
         }
 
         if (traveler.bus && traveler.bus !== '') {
-          const busId = typeof traveler.bus === 'object' ? (traveler.bus as any)._id : traveler.bus;
-          result.bus = busId && Types.ObjectId.isValid(busId) ? new Types.ObjectId(busId) : undefined;
+          const busId =
+            typeof traveler.bus === 'object'
+              ? (traveler.bus as any)._id
+              : traveler.bus;
+          result.bus =
+            busId && Types.ObjectId.isValid(busId)
+              ? new Types.ObjectId(busId)
+              : undefined;
         } else if (traveler.bus === '') {
           result.bus = undefined;
         }
@@ -352,17 +393,27 @@ export class EventHotelService {
     const busOccupancyIncrement: Record<string, number> = {};
 
     for (const traveler of addTravelerDto.travelers) {
-      this.validateTravelerPassport(traveler, event.date, event.departure_city, event.arrival_city, event.location);
-      
+      this.validateTravelerPassport(
+        traveler,
+        event.date,
+        event.departure_city,
+        event.arrival_city,
+        event.location,
+      );
+
       const busId = traveler.bus;
-      if (busId && busId !== "") {
+      if (busId && busId !== '') {
         const bus = await this.busModel.findById(busId);
         if (bus && bus.capacity) {
-          const currentOccupancy = event.travelers.filter(t => t.status === "active" && t.bus?.toString() === busId).length;
+          const currentOccupancy = event.travelers.filter(
+            (t) => t.status === 'active' && t.bus?.toString() === busId,
+          ).length;
           const alreadyAddedInThisBatch = busOccupancyIncrement[busId] || 0;
-          
+
           if (currentOccupancy + alreadyAddedInThisBatch >= bus.capacity) {
-            throw new BadRequestException(`Autobusi ${bus.name} ka arritur kapacitetin maksimal prej ${bus.capacity} personave.`);
+            throw new BadRequestException(
+              `Autobusi ${bus.name} ka arritur kapacitetin maksimal prej ${bus.capacity} personave.`,
+            );
           }
           busOccupancyIncrement[busId] = alreadyAddedInThisBatch + 1;
         }
@@ -383,12 +434,14 @@ export class EventHotelService {
     const savedEvent = await event.save();
 
     // Add log
-    const travelerNames = processedTravelers.map(t => `${t.first_name} ${t.last_name}`).join(', ');
+    const travelerNames = processedTravelers
+      .map((t) => `${t.first_name} ${t.last_name}`)
+      .join(', ');
     await this.addLog(
       id,
       'Udhëtarët u shtuan',
       `U shtuan udhëtarët: ${travelerNames}`,
-      employeeId || addTravelerDto.employee
+      employeeId || addTravelerDto.employee,
     );
 
     // Create transactions for each traveler with a price
@@ -472,20 +525,25 @@ export class EventHotelService {
     employeeId?: string,
   ): Promise<IEventHotel> {
     const event = await this.eventModel.findById(eventId);
-    if (!event) throw new NotFoundException("Ngjarja nuk u gjet");
+    if (!event) throw new NotFoundException('Ngjarja nuk u gjet');
 
     const otherTravelers = event.travelers.filter(
-      (t: any) => t.room_group_id !== roomGroupId
+      (t: any) => t.room_group_id !== roomGroupId,
     );
     const existingGroupTravelers = event.travelers.filter(
-      (t: any) => t.room_group_id === roomGroupId
+      (t: any) => t.room_group_id === roomGroupId,
     );
     const processedTravelers = [];
 
     for (const data of travelersData) {
-      this.validateTravelerPassport(data, event.date, event.departure_city, event.arrival_city);
+      this.validateTravelerPassport(
+        data,
+        event.date,
+        event.departure_city,
+        event.arrival_city,
+      );
       const existing = existingGroupTravelers.find(
-        (t: any) => t._id?.toString() === data._id
+        (t: any) => t._id?.toString() === data._id,
       );
 
       const travelerData: any = {
@@ -493,15 +551,15 @@ export class EventHotelService {
         ...data,
         room_group_id: roomGroupId,
         room_type:
-          data.room_type && data.room_type !== ""
+          data.room_type && data.room_type !== ''
             ? new Types.ObjectId(data.room_type)
             : existing?.room_type,
         hotel:
-          data.hotel && data.hotel !== ""
+          data.hotel && data.hotel !== ''
             ? new Types.ObjectId(data.hotel)
             : existing?.hotel,
         bus:
-          data.bus && data.bus !== ""
+          data.bus && data.bus !== ''
             ? new Types.ObjectId(data.bus)
             : existing?.bus,
       };
@@ -513,17 +571,19 @@ export class EventHotelService {
     const savedEvent = await event.save();
 
     // Add log
-    const travelerNames = processedTravelers.map(t => `${t.first_name} ${t.last_name}`).join(', ');
+    const travelerNames = processedTravelers
+      .map((t) => `${t.first_name} ${t.last_name}`)
+      .join(', ');
     await this.addLog(
       eventId,
       'Grupi u përditësua',
       `U përditësuan të dhënat për grupin e udhëtarëve: ${travelerNames}`,
-      employeeId
+      employeeId,
     );
 
     for (const newTraveler of processedTravelers) {
       const oldTraveler = existingGroupTravelers.find(
-        (t: any) => t._id?.toString() === newTraveler._id?.toString()
+        (t: any) => t._id?.toString() === newTraveler._id?.toString(),
       );
 
       if (
@@ -540,16 +600,20 @@ export class EventHotelService {
           event.name,
           undefined,
           undefined,
-          employeeId
+          employeeId,
         );
       } else if (!oldTraveler && newTraveler.price > 0) {
         const createdTraveler = savedEvent.travelers.find(
           (t: any) =>
             t.first_name === newTraveler.first_name &&
             t.last_name === newTraveler.last_name &&
-            t.room_group_id === roomGroupId
+            t.room_group_id === roomGroupId,
         );
-        if (createdTraveler && createdTraveler.price && createdTraveler.price > 0) {
+        if (
+          createdTraveler &&
+          createdTraveler.price &&
+          createdTraveler.price > 0
+        ) {
           await this.createTravelerTransaction(
             eventId,
             createdTraveler._id.toString(),
@@ -586,17 +650,31 @@ export class EventHotelService {
       throw new NotFoundException('Udhëtari nuk u gjet');
     }
 
-    this.validateTravelerPassport(travelerData, event.date, event.departure_city, event.arrival_city);
+    this.validateTravelerPassport(
+      travelerData,
+      event.date,
+      event.departure_city,
+      event.arrival_city,
+    );
 
     const oldTraveler = event.travelers[travelerIndex].toObject();
 
     // Check bus capacity if bus is changed
-    if (travelerData.bus && travelerData.bus !== "" && travelerData.bus !== oldTraveler.bus?.toString()) {
+    if (
+      travelerData.bus &&
+      travelerData.bus !== '' &&
+      travelerData.bus !== oldTraveler.bus?.toString()
+    ) {
       const bus = await this.busModel.findById(travelerData.bus);
       if (bus && bus.capacity) {
-        const currentOccupancy = event.travelers.filter(t => t.status === "active" && t.bus?.toString() === travelerData.bus).length;
+        const currentOccupancy = event.travelers.filter(
+          (t) =>
+            t.status === 'active' && t.bus?.toString() === travelerData.bus,
+        ).length;
         if (currentOccupancy >= bus.capacity) {
-          throw new BadRequestException(`Autobusi ${bus.name} ka arritur kapacitetin maksimal prej ${bus.capacity} personave.`);
+          throw new BadRequestException(
+            `Autobusi ${bus.name} ka arritur kapacitetin maksimal prej ${bus.capacity} personave.`,
+          );
         }
       }
     }
@@ -623,7 +701,7 @@ export class EventHotelService {
       eventId,
       'Udhëtari u përditësua',
       `U përditësuan të dhënat për udhëtarin: ${travelerData.first_name} ${travelerData.last_name}`,
-      employeeId || travelerData.employee
+      employeeId || travelerData.employee,
     );
 
     // Handle payment status change
@@ -750,7 +828,10 @@ export class EventHotelService {
       // Update remaining debt
       const remainingDebt = newTraveler.price - paidAmount;
       if (remainingDebt > 0) {
-        const existingDebt = await this.transactionService.findByEventTraveler(eventId, `${travelerId}_debt`);
+        const existingDebt = await this.transactionService.findByEventTraveler(
+          eventId,
+          `${travelerId}_debt`,
+        );
         if (existingDebt) {
           await this.transactionService.updateByEventTraveler(
             eventId,
@@ -774,10 +855,16 @@ export class EventHotelService {
           });
         }
       } else {
-        await this.transactionService.deleteByEventTraveler(eventId, `${travelerId}_debt`);
+        await this.transactionService.deleteByEventTraveler(
+          eventId,
+          `${travelerId}_debt`,
+        );
       }
     } else if (newStatus === PaymentStatusTypes.REFUNDED) {
-      const refundAmount = customRefundAmount !== undefined ? customRefundAmount : (oldTraveler.paid_amount || 0);
+      const refundAmount =
+        customRefundAmount !== undefined
+          ? customRefundAmount
+          : oldTraveler.paid_amount || 0;
       const refundCurrency = customRefundCurrency || newTraveler.currency;
 
       if (refundAmount > 0) {
@@ -795,7 +882,10 @@ export class EventHotelService {
       }
       // Delete any existing transactions for this traveler to clear history
       await this.transactionService.deleteByEventTraveler(eventId, travelerId);
-      await this.transactionService.deleteByEventTraveler(eventId, `${travelerId}_debt`);
+      await this.transactionService.deleteByEventTraveler(
+        eventId,
+        `${travelerId}_debt`,
+      );
     } else if (
       newStatus === PaymentStatusTypes.UNPAID &&
       oldStatus !== PaymentStatusTypes.UNPAID
@@ -866,7 +956,7 @@ export class EventHotelService {
       eventId,
       'Pagesa u përditësua',
       `U përditësua statusi i pagesës për udhëtarin: ${updatedTraveler.first_name} ${updatedTraveler.last_name}. Statusi i ri: ${paymentStatus}`,
-      employeeId
+      employeeId,
     );
 
     await this.handlePaymentStatusChange(
@@ -878,7 +968,7 @@ export class EventHotelService {
       event.name,
       undefined,
       undefined,
-      employeeId
+      employeeId,
     );
 
     return savedEvent;
@@ -911,7 +1001,7 @@ export class EventHotelService {
       eventId,
       'Udhëtari u anulua',
       `Udhëtari ${traveler.first_name} ${traveler.last_name} u anulua nga ngjarja`,
-      employeeId
+      employeeId,
     );
 
     return await event.save();
@@ -944,7 +1034,7 @@ export class EventHotelService {
       eventId,
       'Udhëtari u reaktivizua',
       `Udhëtari ${traveler.first_name} ${traveler.last_name} u reaktivizua në ngjarje`,
-      employeeId
+      employeeId,
     );
 
     return await event.save();
@@ -961,11 +1051,14 @@ export class EventHotelService {
     }
 
     let busObjectId = undefined;
-    if (assignBusDto.bus_id && assignBusDto.bus_id !== "") {
+    if (assignBusDto.bus_id && assignBusDto.bus_id !== '') {
       busObjectId = new Types.ObjectId(assignBusDto.bus_id);
     }
 
-    if (busObjectId && !event.buses.some((b: any) => b.toString() === assignBusDto.bus_id)) {
+    if (
+      busObjectId &&
+      !event.buses.some((b: any) => b.toString() === assignBusDto.bus_id)
+    ) {
       event.buses.push(busObjectId);
     }
 
@@ -973,14 +1066,19 @@ export class EventHotelService {
     if (busObjectId) {
       const bus = await this.busModel.findById(busObjectId);
       if (bus && bus.capacity) {
-        const currentOccupancy = event.travelers.filter(t => t.status === "active" && t.bus?.toString() === assignBusDto.bus_id).length;
-        const newTravelersCount = assignBusDto.traveler_ids.filter(id => {
-          const traveler = event.travelers.find(t => t._id.toString() === id);
+        const currentOccupancy = event.travelers.filter(
+          (t) =>
+            t.status === 'active' && t.bus?.toString() === assignBusDto.bus_id,
+        ).length;
+        const newTravelersCount = assignBusDto.traveler_ids.filter((id) => {
+          const traveler = event.travelers.find((t) => t._id.toString() === id);
           return traveler && traveler.bus?.toString() !== assignBusDto.bus_id;
         }).length;
 
         if (currentOccupancy + newTravelersCount > bus.capacity) {
-          throw new BadRequestException(`Nuk mund të shtohen më shumë udhëtarë! Autobusi ${bus.name} ka kapacitet maksimal prej ${bus.capacity} personave.`);
+          throw new BadRequestException(
+            `Nuk mund të shtohen më shumë udhëtarë! Autobusi ${bus.name} ka kapacitet maksimal prej ${bus.capacity} personave.`,
+          );
         }
       }
     }
@@ -1003,12 +1101,14 @@ export class EventHotelService {
       const travelerNames = assignedTravelers
         .map((t: any) => `${t.first_name} ${t.last_name}`)
         .join(', ');
-      
-      const actionLogTitle = busObjectId ? 'Autobusi u caktua' : 'Udhëtarët u hoqën nga autobusi';
+
+      const actionLogTitle = busObjectId
+        ? 'Autobusi u caktua'
+        : 'Udhëtarët u hoqën nga autobusi';
       const actionLogDesc = busObjectId
         ? `U caktua autobusi për udhëtarët: ${travelerNames}`
         : `U hoqën nga autobusi udhëtarët: ${travelerNames}`;
-      
+
       await this.addLog(
         eventId,
         actionLogTitle,
@@ -1024,19 +1124,21 @@ export class EventHotelService {
     const event = await this.findOne(eventId);
     const travelersByBus: any = {};
 
-    event.travelers.filter((t: any) => t.status === "active").forEach((traveler: any) => {
-      const busId = traveler.bus?._id?.toString() || 'unassigned';
-      const busName = traveler.bus?.name || 'Pa autobus';
+    event.travelers
+      .filter((t: any) => t.status === 'active')
+      .forEach((traveler: any) => {
+        const busId = traveler.bus?._id?.toString() || 'unassigned';
+        const busName = traveler.bus?.name || 'Pa autobus';
 
-      if (!travelersByBus[busId]) {
-        travelersByBus[busId] = {
-          bus: traveler.bus || null,
-          busName,
-          travelers: [],
-        };
-      }
-      travelersByBus[busId].travelers.push(traveler);
-    });
+        if (!travelersByBus[busId]) {
+          travelersByBus[busId] = {
+            bus: traveler.bus || null,
+            busName,
+            travelers: [],
+          };
+        }
+        travelersByBus[busId].travelers.push(traveler);
+      });
 
     return Object.values(travelersByBus);
   }
@@ -1045,36 +1147,44 @@ export class EventHotelService {
     const event = await this.findOne(eventId);
     const travelersByHotel: any = {};
 
-    event.travelers.filter((t: any) => t.status === "active").forEach((traveler: any) => {
-      const hotelId = traveler.hotel?._id?.toString() || 'unassigned';
-      const hotelName = traveler.hotel?.name || 'Pa hotel';
+    event.travelers
+      .filter((t: any) => t.status === 'active')
+      .forEach((traveler: any) => {
+        const hotelId = traveler.hotel?._id?.toString() || 'unassigned';
+        const hotelName = traveler.hotel?.name || 'Pa hotel';
 
-      if (!travelersByHotel[hotelId]) {
-        travelersByHotel[hotelId] = {
-          hotel: traveler.hotel || null,
-          hotelName,
-          travelers: [],
-        };
-      }
-      travelersByHotel[hotelId].travelers.push(traveler);
-    });
+        if (!travelersByHotel[hotelId]) {
+          travelersByHotel[hotelId] = {
+            hotel: traveler.hotel || null,
+            hotelName,
+            travelers: [],
+          };
+        }
+        travelersByHotel[hotelId].travelers.push(traveler);
+      });
 
     return Object.values(travelersByHotel);
   }
 
   async getHotelList(eventId: string): Promise<any[]> {
     const event = await this.findOne(eventId);
-    return event.travelers.filter((t: any) => t.status === "active" && t.show_in_hotel_list !== false);
+    return event.travelers.filter(
+      (t: any) => t.status === 'active' && t.show_in_hotel_list !== false,
+    );
   }
 
   async getBorderList(eventId: string): Promise<any[]> {
     const event = await this.findOne(eventId);
-    return event.travelers.filter((t: any) => t.status === "active" && t.show_in_border_list !== false);
+    return event.travelers.filter(
+      (t: any) => t.status === 'active' && t.show_in_border_list !== false,
+    );
   }
 
   async getGuideList(eventId: string): Promise<any[]> {
     const event = await this.findOne(eventId);
-    return event.travelers.filter((t: any) => t.status === "active" && t.show_in_guide_list !== false);
+    return event.travelers.filter(
+      (t: any) => t.status === 'active' && t.show_in_guide_list !== false,
+    );
   }
 
   async updatePrintColumns(
@@ -1124,11 +1234,12 @@ export class EventHotelService {
           event.name,
           amount,
           currency,
-          employee
+          employee,
         );
 
         // Set the final status to UNPAID/NOT_PAID as requested
-        event.travelers[travelerIndex].payment_status = PaymentStatusTypes.UNPAID;
+        event.travelers[travelerIndex].payment_status =
+          PaymentStatusTypes.UNPAID;
         event.travelers[travelerIndex].paid_amount = 0;
         event.travelers[travelerIndex].note = note
           ? `${event.travelers[travelerIndex].note || ''}\n\nRimbursimi: ${note}`.trim()
@@ -1139,15 +1250,19 @@ export class EventHotelService {
     const savedEvent = await event.save();
 
     // Add log
-    const refundedTravelerIds = items.map(i => i.traveler_id);
-    const refundedTravelers = event.travelers.filter((t: any) => refundedTravelerIds.includes(t._id.toString()));
-    const travelerNames = refundedTravelers.map((t: any) => `${t.first_name} ${t.last_name}`).join(', ');
+    const refundedTravelerIds = items.map((i) => i.traveler_id);
+    const refundedTravelers = event.travelers.filter((t: any) =>
+      refundedTravelerIds.includes(t._id.toString()),
+    );
+    const travelerNames = refundedTravelers
+      .map((t: any) => `${t.first_name} ${t.last_name}`)
+      .join(', ');
 
     await this.addLog(
       eventId,
       'Rimbursim',
       `U krye rimbursimi për udhëtarët: ${travelerNames}${note ? `. Shënim: ${note}` : ''}`,
-      employee
+      employee,
     );
 
     return savedEvent;
@@ -1165,7 +1280,10 @@ export class EventHotelService {
           logs: {
             title,
             description,
-            employee: employeeId && Types.ObjectId.isValid(employeeId) ? new Types.ObjectId(employeeId) : undefined,
+            employee:
+              employeeId && Types.ObjectId.isValid(employeeId)
+                ? new Types.ObjectId(employeeId)
+                : undefined,
             created_at: new Date(),
           },
         },

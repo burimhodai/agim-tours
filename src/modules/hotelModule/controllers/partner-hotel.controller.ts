@@ -17,7 +17,7 @@ import {
 
 @Controller('hotel')
 export class PartnerHotelController {
-  constructor(private readonly partnerHotelService: PartnerHotelService) { }
+  constructor(private readonly partnerHotelService: PartnerHotelService) {}
 
   @Post('partners')
   async create(@Body() createPartnerHotelDto: CreatePartnerHotelDto) {

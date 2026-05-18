@@ -12,9 +12,10 @@ import {
 @Injectable()
 export class ArrangementService {
   constructor(
-    @InjectModel('Arrangement') private readonly arrangementModel: Model<IArrangement>,
+    @InjectModel('Arrangement')
+    private readonly arrangementModel: Model<IArrangement>,
     @InjectModel('Ticket') private readonly ticketModel: Model<ITicket>,
-  ) { }
+  ) {}
 
   private mapTravelersToPassengers(travelers: any[]) {
     return travelers.map((t) => ({
@@ -34,7 +35,8 @@ export class ArrangementService {
 
   async create(createDto: CreateArrangementDto) {
     const ticketPassengers = this.mapTravelersToPassengers(createDto.travelers);
-    const ticketUid = 'ARR-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+    const ticketUid =
+      'ARR-' + Math.random().toString(36).substr(2, 6).toUpperCase();
 
     const newTicket = new this.ticketModel({
       uid: ticketUid,
@@ -65,7 +67,7 @@ export class ArrangementService {
 
     const savedArrangement = await newArrangement.save();
 
-    savedTicket.arrangement_id = savedArrangement._id as Types.ObjectId;
+    savedTicket.arrangement_id = savedArrangement._id;
     await savedTicket.save();
 
     return savedArrangement;
@@ -148,20 +150,48 @@ export class ArrangementService {
     const updatedArrangement = await arrangement.save();
 
     if (arrangement.plane_ticket_id) {
-      const ticket = await this.ticketModel.findById(arrangement.plane_ticket_id);
+      const ticket = await this.ticketModel.findById(
+        arrangement.plane_ticket_id,
+      );
       if (ticket) {
         let ticketChanged = false;
-        if (updateDto.departure_date) { ticket.departure_date = updateDto.departure_date; ticketChanged = true; }
-        if (updateDto.return_date) { ticket.return_date = updateDto.return_date; ticketChanged = true; }
-        if (updateDto.departure_location) { ticket.departure_location = updateDto.departure_location; ticketChanged = true; }
-        if (updateDto.destination_location) { ticket.destination_location = updateDto.destination_location; ticketChanged = true; }
-        if (updateDto.operator) { ticket.operator = updateDto.operator; ticketChanged = true; }
-        if (updateDto.operatorId) { ticket.operatorId = updateDto.operatorId; ticketChanged = true; }
-        if (updateDto.route_number) { ticket.route_number = updateDto.route_number; ticketChanged = true; }
-        if (updateDto.return_route_number) { ticket.return_route_number = updateDto.return_route_number; ticketChanged = true; }
+        if (updateDto.departure_date) {
+          ticket.departure_date = updateDto.departure_date;
+          ticketChanged = true;
+        }
+        if (updateDto.return_date) {
+          ticket.return_date = updateDto.return_date;
+          ticketChanged = true;
+        }
+        if (updateDto.departure_location) {
+          ticket.departure_location = updateDto.departure_location;
+          ticketChanged = true;
+        }
+        if (updateDto.destination_location) {
+          ticket.destination_location = updateDto.destination_location;
+          ticketChanged = true;
+        }
+        if (updateDto.operator) {
+          ticket.operator = updateDto.operator;
+          ticketChanged = true;
+        }
+        if (updateDto.operatorId) {
+          ticket.operatorId = updateDto.operatorId;
+          ticketChanged = true;
+        }
+        if (updateDto.route_number) {
+          ticket.route_number = updateDto.route_number;
+          ticketChanged = true;
+        }
+        if (updateDto.return_route_number) {
+          ticket.return_route_number = updateDto.return_route_number;
+          ticketChanged = true;
+        }
 
         if (updateDto.travelers) {
-          ticket.passengers = this.mapTravelersToPassengers(updateDto.travelers);
+          ticket.passengers = this.mapTravelersToPassengers(
+            updateDto.travelers,
+          );
           ticketChanged = true;
         }
 
@@ -192,7 +222,9 @@ export class ArrangementService {
     await arrangement.save();
 
     if (arrangement.plane_ticket_id) {
-      const ticket = await this.ticketModel.findById(arrangement.plane_ticket_id);
+      const ticket = await this.ticketModel.findById(
+        arrangement.plane_ticket_id,
+      );
       if (ticket) {
         ticket.is_deleted = true;
         ticket.status = 'canceled';

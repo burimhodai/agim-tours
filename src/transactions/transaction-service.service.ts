@@ -22,7 +22,7 @@ export class TransactionServiceService {
   constructor(
     @InjectModel('Transaction') private transactionModel: Model<ITransaction>,
     @InjectModel('Agency') private agencyModel: Model<any>,
-  ) { }
+  ) {}
 
   private CURRENCY_MAP: Record<string, string> = {
     euro: 'EUR',
@@ -41,13 +41,18 @@ export class TransactionServiceService {
 
   private CACHE_DURATION = 60 * 60 * 1000; // 1 hour
 
-  private async fetchExchangeRates(from: string): Promise<Record<string, number>> {
+  private async fetchExchangeRates(
+    from: string,
+  ): Promise<Record<string, number>> {
     const normalizedFrom = from.toLowerCase();
     const isoFrom = this.CURRENCY_MAP[normalizedFrom] || from.toUpperCase();
 
     // Check cache
     const now = Date.now();
-    if (this.ratesCache.rates[isoFrom] && now - this.ratesCache.timestamp < this.CACHE_DURATION) {
+    if (
+      this.ratesCache.rates[isoFrom] &&
+      now - this.ratesCache.timestamp < this.CACHE_DURATION
+    ) {
       return this.ratesCache.rates[isoFrom];
     }
 
@@ -64,7 +69,9 @@ export class TransactionServiceService {
         return mkdRates;
       }
 
-      const response = await fetch(`https://api.frankfurter.app/latest?from=${isoFrom}`);
+      const response = await fetch(
+        `https://api.frankfurter.app/latest?from=${isoFrom}`,
+      );
       const data: any = await response.json();
 
       const rates = { ...data.rates };
@@ -128,36 +135,52 @@ export class TransactionServiceService {
             ? `${description} - ${agencyDoc.name}`
             : agencyDoc.name;
         }
-      } catch (e) { }
+      } catch (e) {}
     }
 
     const transactionData = {
       ...createTransactionDto,
       description,
-      agency: createTransactionDto.agency && Types.ObjectId.isValid(createTransactionDto.agency)
-        ? new Types.ObjectId(createTransactionDto.agency)
-        : undefined,
-      user: createTransactionDto.user && Types.ObjectId.isValid(createTransactionDto.user)
-        ? new Types.ObjectId(createTransactionDto.user)
-        : undefined,
-      ticket: createTransactionDto.ticket && Types.ObjectId.isValid(createTransactionDto.ticket)
-        ? new Types.ObjectId(createTransactionDto.ticket)
-        : undefined,
-      event: createTransactionDto.event && Types.ObjectId.isValid(createTransactionDto.event)
-        ? new Types.ObjectId(createTransactionDto.event)
-        : undefined,
-      organizedTravel: createTransactionDto.organizedTravel && Types.ObjectId.isValid(createTransactionDto.organizedTravel)
-        ? new Types.ObjectId(createTransactionDto.organizedTravel)
-        : undefined,
-      airportTransport: (createTransactionDto as any).airportTransport && Types.ObjectId.isValid((createTransactionDto as any).airportTransport)
-        ? new Types.ObjectId((createTransactionDto as any).airportTransport)
-        : undefined,
-      driverReport: (createTransactionDto as any).driverReport && Types.ObjectId.isValid((createTransactionDto as any).driverReport)
-        ? new Types.ObjectId((createTransactionDto as any).driverReport)
-        : undefined,
-      hotelReservation: (createTransactionDto as any).hotelReservation && Types.ObjectId.isValid((createTransactionDto as any).hotelReservation)
-        ? new Types.ObjectId((createTransactionDto as any).hotelReservation)
-        : undefined,
+      agency:
+        createTransactionDto.agency &&
+        Types.ObjectId.isValid(createTransactionDto.agency)
+          ? new Types.ObjectId(createTransactionDto.agency)
+          : undefined,
+      user:
+        createTransactionDto.user &&
+        Types.ObjectId.isValid(createTransactionDto.user)
+          ? new Types.ObjectId(createTransactionDto.user)
+          : undefined,
+      ticket:
+        createTransactionDto.ticket &&
+        Types.ObjectId.isValid(createTransactionDto.ticket)
+          ? new Types.ObjectId(createTransactionDto.ticket)
+          : undefined,
+      event:
+        createTransactionDto.event &&
+        Types.ObjectId.isValid(createTransactionDto.event)
+          ? new Types.ObjectId(createTransactionDto.event)
+          : undefined,
+      organizedTravel:
+        createTransactionDto.organizedTravel &&
+        Types.ObjectId.isValid(createTransactionDto.organizedTravel)
+          ? new Types.ObjectId(createTransactionDto.organizedTravel)
+          : undefined,
+      airportTransport:
+        (createTransactionDto as any).airportTransport &&
+        Types.ObjectId.isValid((createTransactionDto as any).airportTransport)
+          ? new Types.ObjectId((createTransactionDto as any).airportTransport)
+          : undefined,
+      driverReport:
+        (createTransactionDto as any).driverReport &&
+        Types.ObjectId.isValid((createTransactionDto as any).driverReport)
+          ? new Types.ObjectId((createTransactionDto as any).driverReport)
+          : undefined,
+      hotelReservation:
+        (createTransactionDto as any).hotelReservation &&
+        Types.ObjectId.isValid((createTransactionDto as any).hotelReservation)
+          ? new Types.ObjectId((createTransactionDto as any).hotelReservation)
+          : undefined,
       travelerId: createTransactionDto.travelerId,
     };
 
@@ -675,7 +698,9 @@ export class TransactionServiceService {
     return result.deletedCount > 0;
   }
 
-  async findDebtByHotelReservation(reservationId: string): Promise<ITransaction | null> {
+  async findDebtByHotelReservation(
+    reservationId: string,
+  ): Promise<ITransaction | null> {
     if (!Types.ObjectId.isValid(reservationId)) {
       return null;
     }
@@ -803,7 +828,7 @@ export class TransactionServiceService {
     const diff = newPrice - oldPrice;
     if (diff === 0) return;
 
-    let debtTx = await this.transactionModel.findOne({
+    const debtTx = await this.transactionModel.findOne({
       ticket: new Types.ObjectId(ticketId),
       type: TransactionTypes.DEBT,
       status: TransactionStatus.PENDING,

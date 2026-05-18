@@ -24,7 +24,7 @@ import { PaymentStatusTypes } from 'src/shared/types/payment.types';
 
 @Controller('events')
 export class EventHotelController {
-  constructor(private readonly eventService: EventHotelService) { }
+  constructor(private readonly eventService: EventHotelService) {}
 
   @Post()
   async create(@Body() createEventDto: CreateEventDto) {
@@ -67,7 +67,12 @@ export class EventHotelController {
     @Body('agency') performingAgencyId?: string,
     @Body('employee') employeeId?: string,
   ) {
-    return await this.eventService.addTravelers(id, addTravelerDto, performingAgencyId, employeeId);
+    return await this.eventService.addTravelers(
+      id,
+      addTravelerDto,
+      performingAgencyId,
+      employeeId,
+    );
   }
 
   @Put(':id/travelers/:travelerId')
@@ -110,7 +115,11 @@ export class EventHotelController {
     @Param('travelerId') travelerId: string,
     @Query('employee') employeeId?: string,
   ) {
-    return await this.eventService.removeTraveler(eventId, travelerId, employeeId);
+    return await this.eventService.removeTraveler(
+      eventId,
+      travelerId,
+      employeeId,
+    );
   }
 
   @Patch(':id/travelers/:travelerId/reactivate')
@@ -119,7 +128,11 @@ export class EventHotelController {
     @Param('travelerId') travelerId: string,
     @Query('employee') employeeId?: string,
   ) {
-    return await this.eventService.reactivateTraveler(eventId, travelerId, employeeId);
+    return await this.eventService.reactivateTraveler(
+      eventId,
+      travelerId,
+      employeeId,
+    );
   }
 
   @Post(':id/refund-travelers')

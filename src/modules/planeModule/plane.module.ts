@@ -23,4 +23,4 @@ import { MailModule } from '../mailModule/mail.module';
   providers: [PlaneService, TransactionServiceService],
   exports: [PlaneService],
 })
-export class PlaneModule { }
+export class PlaneModule {}

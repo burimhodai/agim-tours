@@ -31,7 +31,10 @@ export class ReportBusController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateReportBusDto: UpdateReportBusDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateReportBusDto: UpdateReportBusDto,
+  ) {
     return this.reportBusService.update(id, updateReportBusDto);
   }
 

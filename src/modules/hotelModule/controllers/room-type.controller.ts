@@ -17,7 +17,7 @@ import {
 
 @Controller('hotel')
 export class RoomTypeController {
-  constructor(private readonly roomTypeService: RoomTypeService) { }
+  constructor(private readonly roomTypeService: RoomTypeService) {}
 
   @Post('room-types')
   async create(@Body() createRoomTypeDto: CreateRoomTypeDto) {

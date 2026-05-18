@@ -20,7 +20,7 @@ import { ReservationStatus } from 'src/shared/types/hotel.types';
 
 @Controller('hotel')
 export class HotelReservationController {
-  constructor(private readonly reservationService: HotelReservationService) { }
+  constructor(private readonly reservationService: HotelReservationService) {}
 
   @Post('reservations')
   async create(@Body() createReservationDto: CreateHotelReservationDto) {

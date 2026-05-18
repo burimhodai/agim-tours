@@ -29,7 +29,7 @@ export class PlaneService {
     @InjectModel('User') private userModel: Model<IUser>,
     private transactionService: TransactionServiceService,
     private mailService: MailService,
-  ) { }
+  ) {}
 
   private generatePlaneUid(): string {
     const numDigits = Math.random() < 0.5 ? 5 : 6;
@@ -86,10 +86,25 @@ export class PlaneService {
     };
 
     for (const key in newData) {
-      if (['logs', '_id', '__v', 'employee', 'updatedAt', 'createdAt', 'passengers', 'payment_chunks', 'is_round_trip', 'stops', 'return_stops'].includes(key)) continue;
+      if (
+        [
+          'logs',
+          '_id',
+          '__v',
+          'employee',
+          'updatedAt',
+          'createdAt',
+          'passengers',
+          'payment_chunks',
+          'is_round_trip',
+          'stops',
+          'return_stops',
+        ].includes(key)
+      )
+        continue;
 
-      let oldValue = oldData[key];
-      let newValue = newData[key];
+      const oldValue = oldData[key];
+      const newValue = newData[key];
 
       if (newValue === undefined) continue;
 
@@ -98,19 +113,29 @@ export class PlaneService {
         const newTime = newValue ? new Date(newValue).getTime() : 0;
 
         if (oldTime !== newTime) {
-          const oldStr = oldValue ? new Date(oldValue).toLocaleString('sq-AL') : 'pa përcaktuar';
-          const newStr = newValue ? new Date(newValue).toLocaleString('sq-AL') : 'pa përcaktuar';
+          const oldStr = oldValue
+            ? new Date(oldValue).toLocaleString('sq-AL')
+            : 'pa përcaktuar';
+          const newStr = newValue
+            ? new Date(newValue).toLocaleString('sq-AL')
+            : 'pa përcaktuar';
           changes.push(`${fieldNames[key] || key}: ${oldStr} -> ${newStr}`);
         }
         continue;
       }
 
       if (oldValue !== newValue) {
-        changes.push(`${fieldNames[key] || key}: ${oldValue || 'pa përcaktuar'} -> ${newValue}`);
+        changes.push(
+          `${fieldNames[key] || key}: ${oldValue || 'pa përcaktuar'} -> ${newValue}`,
+        );
       }
     }
 
-    if (newData.payment_chunks && JSON.stringify(oldData.payment_chunks) !== JSON.stringify(newData.payment_chunks)) {
+    if (
+      newData.payment_chunks &&
+      JSON.stringify(oldData.payment_chunks) !==
+        JSON.stringify(newData.payment_chunks)
+    ) {
       const oldLen = oldData.payment_chunks?.length || 0;
       const newLen = newData.payment_chunks?.length || 0;
       if (newLen > oldLen) {
@@ -121,12 +146,20 @@ export class PlaneService {
       }
     }
 
-    if (newData.passengers && JSON.stringify(oldData.passengers) !== JSON.stringify(newData.passengers)) {
+    if (
+      newData.passengers &&
+      JSON.stringify(oldData.passengers) !== JSON.stringify(newData.passengers)
+    ) {
       changes.push('Të dhënat e pasagjerëve u përditësuan');
     }
 
-    if ((newData.stops && JSON.stringify(oldData.stops) !== JSON.stringify(newData.stops)) ||
-      (newData.return_stops && JSON.stringify(oldData.return_stops) !== JSON.stringify(newData.return_stops))) {
+    if (
+      (newData.stops &&
+        JSON.stringify(oldData.stops) !== JSON.stringify(newData.stops)) ||
+      (newData.return_stops &&
+        JSON.stringify(oldData.return_stops) !==
+          JSON.stringify(newData.return_stops))
+    ) {
       changes.push('Ndalesat u përditësuan');
     }
 
@@ -154,7 +187,7 @@ export class PlaneService {
       agency: new Types.ObjectId(createPlaneTicketDto.agency),
       employee:
         createPlaneTicketDto.employee &&
-          Types.ObjectId.isValid(createPlaneTicketDto.employee)
+        Types.ObjectId.isValid(createPlaneTicketDto.employee)
           ? new Types.ObjectId(createPlaneTicketDto.employee)
           : undefined,
       logs: [
@@ -163,7 +196,7 @@ export class PlaneService {
           description: `Bileta u krijua me sukses nga ${createPlaneTicketDto.operator || 'operatori'}.`,
           employee:
             createPlaneTicketDto.employee &&
-              Types.ObjectId.isValid(createPlaneTicketDto.employee)
+            Types.ObjectId.isValid(createPlaneTicketDto.employee)
               ? new Types.ObjectId(createPlaneTicketDto.employee)
               : undefined,
           created_at: new Date(),
@@ -228,11 +261,10 @@ export class PlaneService {
           await debtTx.save();
         }
       }
-    } catch (txError) { }
+    } catch (txError) {}
 
     return savedTicket;
   }
-
 
   async findAll(query: PlaneTicketQueryDto): Promise<{
     tickets: ITicket[];
@@ -258,12 +290,14 @@ export class PlaneService {
     const andConditions: any[] = [
       {
         $or: [
-          { ticket_type: { $regex: new RegExp(`^${TicketTypes.PLANE}$`, 'i') } },
+          {
+            ticket_type: { $regex: new RegExp(`^${TicketTypes.PLANE}$`, 'i') },
+          },
           { ticket_type: { $exists: false } },
           { ticket_type: null },
-          { ticket_type: "" }
-        ]
-      }
+          { ticket_type: '' },
+        ],
+      },
     ];
 
     if (agency && Types.ObjectId.isValid(agency)) {
@@ -271,14 +305,14 @@ export class PlaneService {
         $or: [
           { agency: new Types.ObjectId(agency) },
           { agency: { $exists: false } },
-          { agency: null }
-        ]
+          { agency: null },
+        ],
       });
     }
 
     const filter: any = {
       is_deleted: { $ne: true },
-      $and: andConditions
+      $and: andConditions,
     };
 
     if (departure_location) {
@@ -301,10 +335,7 @@ export class PlaneService {
         dateFilter.$lte = departure_date_to;
       }
       andConditions.push({
-        $or: [
-          { departure_date: dateFilter },
-          { return_date: dateFilter }
-        ]
+        $or: [{ departure_date: dateFilter }, { return_date: dateFilter }],
       });
     }
 
@@ -340,7 +371,7 @@ export class PlaneService {
         { 'passengers.first_name': searchRegex },
         { 'passengers.last_name': searchRegex },
         { 'passengers.passport_number': searchRegex },
-        { 'passengers.phone': searchRegex }
+        { 'passengers.phone': searchRegex },
       ];
     }
 
@@ -417,7 +448,8 @@ export class PlaneService {
     const priceChanged =
       updatePlaneTicketDto.price !== undefined && oldPrice !== newPrice;
 
-    const allChunks = updatePlaneTicketDto.payment_chunks || currentTicket.payment_chunks || [];
+    const allChunks =
+      updatePlaneTicketDto.payment_chunks || currentTicket.payment_chunks || [];
     const hasAnyPayments = allChunks.length > 0;
 
     if (priceChanged) {
@@ -444,9 +476,7 @@ export class PlaneService {
     }
 
     const employeeId =
-      updatePlaneTicketDto.employee ||
-      currentTicket.employee?.toString() ||
-      '';
+      updatePlaneTicketDto.employee || currentTicket.employee?.toString() || '';
     const agencyId = await this.getEmployeeAgencyId(employeeId);
     const ticketCurrency =
       updatePlaneTicketDto.currency || currentTicket.currency || 'euro';
@@ -463,17 +493,23 @@ export class PlaneService {
       updatePlaneTicketDto.employee,
     );
 
-    const oldChunksSimplified = (currentTicket.payment_chunks || []).map(c => ({
-      amount: c.amount,
-      currency: c.currency
-    }));
-    const newChunksSimplified = (updatePlaneTicketDto.payment_chunks || []).map(c => ({
-      amount: c.amount,
-      currency: c.currency
-    }));
+    const oldChunksSimplified = (currentTicket.payment_chunks || []).map(
+      (c) => ({
+        amount: c.amount,
+        currency: c.currency,
+      }),
+    );
+    const newChunksSimplified = (updatePlaneTicketDto.payment_chunks || []).map(
+      (c) => ({
+        amount: c.amount,
+        currency: c.currency,
+      }),
+    );
 
-    const chunksChanged = updatePlaneTicketDto.payment_chunks !== undefined &&
-      JSON.stringify(oldChunksSimplified) !== JSON.stringify(newChunksSimplified);
+    const chunksChanged =
+      updatePlaneTicketDto.payment_chunks !== undefined &&
+      JSON.stringify(oldChunksSimplified) !==
+        JSON.stringify(newChunksSimplified);
 
     if (priceChanged || chunksChanged) {
       const finalChunks = ticket.payment_chunks || [];
@@ -498,11 +534,12 @@ export class PlaneService {
       let totalPaidInTicketCurrency = 0;
       for (const chunk of finalChunks) {
         if (chunk.amount <= 0) continue;
-        totalPaidInTicketCurrency += await this.transactionService.convertCurrency(
-          chunk.amount,
-          chunk.currency,
-          ticketCurrency,
-        );
+        totalPaidInTicketCurrency +=
+          await this.transactionService.convertCurrency(
+            chunk.amount,
+            chunk.currency,
+            ticketCurrency,
+          );
       }
 
       const remainingDebt =
@@ -567,9 +604,6 @@ export class PlaneService {
 
     return ticket;
   }
-
-
-
 
   async delete(id: string, employeeId?: string): Promise<{ message: string }> {
     if (!Types.ObjectId.isValid(id)) {
@@ -780,7 +814,9 @@ export class PlaneService {
       ticket.payment_status === PaymentStatusTypes.UNPAID ||
       ticket.payment_status === PaymentStatusTypes.NOT_PAID;
 
-    const employeeAgencyId = await this.getEmployeeAgencyId(cancelTicketDto.employee);
+    const employeeAgencyId = await this.getEmployeeAgencyId(
+      cancelTicketDto.employee,
+    );
 
     if (wasUnpaid) {
       await this.transactionService.deleteByTicket(id);
@@ -811,9 +847,10 @@ export class PlaneService {
       }
     }
 
-    const refundInfo = refund_chunks && refund_chunks.length > 0
-      ? `Rimbursim: ${refund_chunks.map(c => `${c.amount} ${c.currency}`).join(', ')}.`
-      : 'Pa rimbursim.';
+    const refundInfo =
+      refund_chunks && refund_chunks.length > 0
+        ? `Rimbursim: ${refund_chunks.map((c) => `${c.amount} ${c.currency}`).join(', ')}.`
+        : 'Pa rimbursim.';
 
     await this.addLogInternal(
       id,
@@ -836,7 +873,9 @@ export class PlaneService {
     }
 
     if (ticket.status !== 'canceled') {
-      throw new BadRequestException('Vetëm biletat e anuluara mund të rimbursohen');
+      throw new BadRequestException(
+        'Vetëm biletat e anuluara mund të rimbursohen',
+      );
     }
 
     if (ticket.payment_status === PaymentStatusTypes.REFUNDED) {
@@ -882,7 +921,7 @@ export class PlaneService {
         : `Rimbursimi: ${note}`;
     }
 
-    const refundInfo = `Rimbursim: ${refund_chunks.map(c => `${c.amount} ${c.currency}`).join(', ')}.`;
+    const refundInfo = `Rimbursim: ${refund_chunks.map((c) => `${c.amount} ${c.currency}`).join(', ')}.`;
 
     await this.addLogInternal(
       id,

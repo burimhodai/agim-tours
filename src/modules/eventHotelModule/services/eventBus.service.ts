@@ -20,7 +20,7 @@ export interface IEventBus {
 
 @Injectable()
 export class EventBusService {
-  constructor(@InjectModel('EventBus') private busModel: Model<IEventBus>) { }
+  constructor(@InjectModel('EventBus') private busModel: Model<IEventBus>) {}
 
   async create(createBusDto: CreateEventBusDto): Promise<IEventBus> {
     const busData = {

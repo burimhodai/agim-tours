@@ -23,14 +23,18 @@ export class ReportsService {
     @InjectModel('Ticket') private ticketModel: Model<any>,
     @InjectModel('HotelReservation') private hotelReservationModel: Model<any>,
     private transactionService: TransactionServiceService,
-  ) { }
+  ) {}
 
   private async convertCurrency(
     amount: number,
     fromCurrency: string,
     toCurrency: string,
   ): Promise<number> {
-    return await this.transactionService.convertCurrency(amount, fromCurrency, toCurrency);
+    return await this.transactionService.convertCurrency(
+      amount,
+      fromCurrency,
+      toCurrency,
+    );
   }
 
   async generateReport(query: ReportQueryDto): Promise<ReportResponseDto> {
@@ -178,11 +182,11 @@ export class ReportsService {
           createdAt: ticket.createdAt,
           user: ticket.employee
             ? {
-              _id: (ticket.employee as any)._id.toString(),
-              email: (ticket.employee as any).email,
-              first_name: (ticket.employee as any).first_name,
-              last_name: (ticket.employee as any).last_name,
-            }
+                _id: ticket.employee._id.toString(),
+                email: ticket.employee.email,
+                first_name: ticket.employee.first_name,
+                last_name: ticket.employee.last_name,
+              }
             : undefined,
           ticket: {
             _id: ticket._id.toString(),
@@ -208,7 +212,7 @@ export class ReportsService {
           $gte: dateRange.from,
           $lte: dateRange.to,
         },
-        payment_status: { $in: ["not_paid", "partially_paid"] },
+        payment_status: { $in: ['not_paid', 'partially_paid'] },
         is_deleted: { $ne: true },
       };
 
@@ -217,7 +221,7 @@ export class ReportsService {
 
       const hotelReservations = await this.hotelReservationModel
         .find(hotelFilter)
-        .populate("employee", "email first_name last_name")
+        .populate('employee', 'email first_name last_name')
         .sort({ createdAt: -1 })
         .exec();
 
@@ -241,16 +245,16 @@ export class ReportsService {
             _id: hotel._id.toString(),
             amount: debtAmount,
             currency: hotel.currency,
-            type: "DEBT",
+            type: 'DEBT',
             description: `Borxh për hotelin ${hotel.hotel_name} (${hotel.hotel_booking_id})`,
             createdAt: hotel.createdAt,
             user: hotel.employee
               ? {
-                _id: (hotel.employee as any)._id.toString(),
-                email: (hotel.employee as any).email,
-                first_name: (hotel.employee as any).first_name,
-                last_name: (hotel.employee as any).last_name,
-              }
+                  _id: hotel.employee._id.toString(),
+                  email: hotel.employee.email,
+                  first_name: hotel.employee.first_name,
+                  last_name: hotel.employee.last_name,
+                }
               : undefined,
             ticket: {
               _id: hotel._id.toString(),
@@ -363,46 +367,46 @@ export class ReportsService {
 
       const mappedTicket = ticket
         ? {
-          _id: ticket._id.toString(),
-          ticket_type: ticket.ticket_type,
-          booking_reference: ticket.booking_reference,
-          departure_location: ticket.departure_location,
-          destination_location: ticket.destination_location,
-          departure_date: ticket.departure_date,
-          passengers: ticket.passengers,
-          operator: ticket.operator,
-          price: ticket.price,
-          payment_status: ticket.payment_status,
-          payment_chunks: ticket.payment_chunks || [],
-        }
+            _id: ticket._id.toString(),
+            ticket_type: ticket.ticket_type,
+            booking_reference: ticket.booking_reference,
+            departure_location: ticket.departure_location,
+            destination_location: ticket.destination_location,
+            departure_date: ticket.departure_date,
+            passengers: ticket.passengers,
+            operator: ticket.operator,
+            price: ticket.price,
+            payment_status: ticket.payment_status,
+            payment_chunks: ticket.payment_chunks || [],
+          }
         : hotelId && typeof hotel !== 'string' && hotel.hotel_booking_id
           ? {
-            _id: hotelId.toString(),
-            ticket_type: TicketTypes.HOTEL,
-            booking_reference: hotel.hotel_booking_id,
-            departure_location: hotel.arrival_city || "Hotel",
-            destination_location: hotel.hotel_name,
-            departure_date: hotel.check_in_date,
-            passengers: hotel.travelers?.map((t: any) => ({
-              first_name: t.full_name.split(" ")[0],
-              last_name: t.full_name.split(" ").slice(1).join(" "),
-            })),
-            operator: hotel.operator,
-            price: hotel.price,
-            payment_status: hotel.payment_status,
-            payment_chunks: hotel.payment_chunks || [],
-          }
-          : hotelId
-            ? {
               _id: hotelId.toString(),
               ticket_type: TicketTypes.HOTEL,
-              booking_reference: "Rezervim Hoteli",
-              departure_location: "Hotel",
-              destination_location: "Detajet e hotelit",
-              price: 0,
-              payment_status: 'unknown',
-              payment_chunks: [],
+              booking_reference: hotel.hotel_booking_id,
+              departure_location: hotel.arrival_city || 'Hotel',
+              destination_location: hotel.hotel_name,
+              departure_date: hotel.check_in_date,
+              passengers: hotel.travelers?.map((t: any) => ({
+                first_name: t.full_name.split(' ')[0],
+                last_name: t.full_name.split(' ').slice(1).join(' '),
+              })),
+              operator: hotel.operator,
+              price: hotel.price,
+              payment_status: hotel.payment_status,
+              payment_chunks: hotel.payment_chunks || [],
             }
+          : hotelId
+            ? {
+                _id: hotelId.toString(),
+                ticket_type: TicketTypes.HOTEL,
+                booking_reference: 'Rezervim Hoteli',
+                departure_location: 'Hotel',
+                destination_location: 'Detajet e hotelit',
+                price: 0,
+                payment_status: 'unknown',
+                payment_chunks: [],
+              }
             : undefined;
 
       return {
@@ -415,11 +419,11 @@ export class ReportsService {
         createdAt: transaction.createdAt,
         user: user
           ? {
-            _id: user._id.toString(),
-            email: user.email,
-            first_name: user.first_name,
-            last_name: user.last_name,
-          }
+              _id: user._id.toString(),
+              email: user.email,
+              first_name: user.first_name,
+              last_name: user.last_name,
+            }
           : undefined,
         ticket: mappedTicket,
       };

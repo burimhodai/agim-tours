@@ -24,7 +24,7 @@ import { PaymentStatusTypes } from 'src/shared/types/payment.types';
 
 @Controller('organized-travel')
 export class OrganizedTravelController {
-  constructor(private readonly travelService: OrganizedTravelService) { }
+  constructor(private readonly travelService: OrganizedTravelService) {}
 
   @Post()
   async create(@Body() createDto: CreateOrganizedTravelDto) {
@@ -67,7 +67,12 @@ export class OrganizedTravelController {
     @Body('agency') performingAgencyId?: string,
     @Body('employee') employeeId?: string,
   ) {
-    return await this.travelService.addTravelers(id, addTravelersDto, performingAgencyId, employeeId);
+    return await this.travelService.addTravelers(
+      id,
+      addTravelersDto,
+      performingAgencyId,
+      employeeId,
+    );
   }
 
   @Put(':id/travelers/:travelerId')
@@ -110,7 +115,11 @@ export class OrganizedTravelController {
     @Param('travelerId') travelerId: string,
     @Query('employee') employeeId?: string,
   ) {
-    return await this.travelService.removeTraveler(travelId, travelerId, employeeId);
+    return await this.travelService.removeTraveler(
+      travelId,
+      travelerId,
+      employeeId,
+    );
   }
 
   @Patch(':id/travelers/:travelerId/reactivate')
@@ -119,7 +128,11 @@ export class OrganizedTravelController {
     @Param('travelerId') travelerId: string,
     @Query('employee') employeeId?: string,
   ) {
-    return await this.travelService.reactivateTraveler(travelId, travelerId, employeeId);
+    return await this.travelService.reactivateTraveler(
+      travelId,
+      travelerId,
+      employeeId,
+    );
   }
 
   @Post(':id/refund-travelers')

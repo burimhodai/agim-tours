@@ -18,7 +18,7 @@ interface CreateLoyalCustomerDto {
   notes?: string;
 }
 
-interface UpdateLoyalCustomerDto extends Partial<CreateLoyalCustomerDto> { }
+interface UpdateLoyalCustomerDto extends Partial<CreateLoyalCustomerDto> {}
 
 interface AddPurchaseDto {
   ticket_type: 'bus' | 'plane' | 'hotel' | 'event';
@@ -37,7 +37,7 @@ export class LoyalCustomerService {
     @InjectModel('LoyalCustomer')
     private readonly loyalCustomerModel: Model<any>,
     @InjectModel('Agency') private readonly agencyModel: Model<any>,
-  ) { }
+  ) {}
 
   private async getAgencyId(agency: any): Promise<any> {
     if (agency && agency._id) return agency._id;

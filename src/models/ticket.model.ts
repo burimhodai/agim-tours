@@ -130,7 +130,10 @@ export const TicketSchema = new mongoose.Schema(
     documentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Document' },
     route_number: { type: String },
     return_route_number: { type: String },
-    arrangement_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Arrangement' },
+    arrangement_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Arrangement',
+    },
   },
   {
     timestamps: true,

@@ -17,7 +17,7 @@ export class PartnerHotelService {
   constructor(
     @InjectModel('PartnerHotel')
     private partnerHotelModel: Model<IPartnerHotel>,
-  ) { }
+  ) {}
 
   async create(
     createPartnerHotelDto: CreatePartnerHotelDto,
@@ -138,11 +138,7 @@ export class PartnerHotelService {
     }
 
     const partnerHotel = await this.partnerHotelModel
-      .findOneAndUpdate(
-        filter,
-        { $set: updatePartnerHotelDto },
-        { new: true },
-      )
+      .findOneAndUpdate(filter, { $set: updatePartnerHotelDto }, { new: true })
       .populate('agency')
       .exec();
 
@@ -163,9 +159,7 @@ export class PartnerHotelService {
       filter.agency = new Types.ObjectId(agencyId);
     }
 
-    const result = await this.partnerHotelModel
-      .findOneAndDelete(filter)
-      .exec();
+    const result = await this.partnerHotelModel.findOneAndDelete(filter).exec();
 
     if (!result) {
       throw new NotFoundException('Partner hotel not found');
@@ -184,9 +178,7 @@ export class PartnerHotelService {
       filter.agency = new Types.ObjectId(agencyId);
     }
 
-    const partnerHotel = await this.partnerHotelModel
-      .findOne(filter)
-      .exec();
+    const partnerHotel = await this.partnerHotelModel.findOne(filter).exec();
 
     if (!partnerHotel) {
       throw new NotFoundException('Partner hotel not found');

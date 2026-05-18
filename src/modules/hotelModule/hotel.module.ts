@@ -53,4 +53,4 @@ import { OperatorController } from './controllers/operator.controller';
     OperatorService,
   ],
 })
-export class HotelModule { }
+export class HotelModule {}

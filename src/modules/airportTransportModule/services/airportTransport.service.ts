@@ -1,9 +1,16 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { CreateAirportTransportDto, UpdateAirportTransportDto, AirportTransportQueryDto } from 'src/shared/DTO/airportTransport.dto';
+import {
+  CreateAirportTransportDto,
+  UpdateAirportTransportDto,
+  AirportTransportQueryDto,
+} from 'src/shared/DTO/airportTransport.dto';
 import { TransactionServiceService } from 'src/transactions/transaction-service.service';
-import { TransactionTypes, TransactionStatus } from 'src/shared/types/transaction.types';
+import {
+  TransactionTypes,
+  TransactionStatus,
+} from 'src/shared/types/transaction.types';
 
 @Injectable()
 export class AirportTransportService {
@@ -11,7 +18,7 @@ export class AirportTransportService {
     @InjectModel('AirportTransport') private airportTransportModel: Model<any>,
     @InjectModel('User') private userModel: Model<any>,
     private transactionService: TransactionServiceService,
-  ) { }
+  ) {}
 
   async create(createDto: CreateAirportTransportDto) {
     const newTransport = new this.airportTransportModel(createDto);
@@ -52,22 +59,33 @@ export class AirportTransportService {
   }
 
   async findOne(id: string) {
-    const transport = await this.airportTransportModel.findById(id).populate('agency').populate('employee').exec();
-    if (!transport) throw new NotFoundException('Transporti i aeroportit nuk u gjet');
+    const transport = await this.airportTransportModel
+      .findById(id)
+      .populate('agency')
+      .populate('employee')
+      .exec();
+    if (!transport)
+      throw new NotFoundException('Transporti i aeroportit nuk u gjet');
     return transport;
   }
 
   async update(id: string, updateDto: UpdateAirportTransportDto) {
-    const transport = await this.airportTransportModel.findByIdAndUpdate(id, updateDto, { new: true }).exec();
-    if (!transport) throw new NotFoundException('Transporti i aeroportit nuk u gjet');
+    const transport = await this.airportTransportModel
+      .findByIdAndUpdate(id, updateDto, { new: true })
+      .exec();
+    if (!transport)
+      throw new NotFoundException('Transporti i aeroportit nuk u gjet');
 
     await this.handleTransaction(transport);
     return transport;
   }
 
   async remove(id: string) {
-    const transport = await this.airportTransportModel.findByIdAndDelete(id).exec();
-    if (!transport) throw new NotFoundException('Transporti i aeroportit nuk u gjet');
+    const transport = await this.airportTransportModel
+      .findByIdAndDelete(id)
+      .exec();
+    if (!transport)
+      throw new NotFoundException('Transporti i aeroportit nuk u gjet');
 
     await this.transactionService.deleteByAirportTransport(id);
     return { message: 'U fshi me sukses' };
@@ -75,7 +93,9 @@ export class AirportTransportService {
 
   private async handleTransaction(transport: any) {
     // Delete existing transactions for this transport
-    await this.transactionService.deleteByAirportTransport(transport._id.toString());
+    await this.transactionService.deleteByAirportTransport(
+      transport._id.toString(),
+    );
 
     // Only create income transaction if paid
     if (transport.is_paid && transport.price && transport.price > 0) {
@@ -83,7 +103,11 @@ export class AirportTransportService {
       let transactionAgency = transport.agency;
       if (transport.employee) {
         try {
-          const employee = await this.userModel.findById(transport.employee).select('agency').lean().exec();
+          const employee = await this.userModel
+            .findById(transport.employee)
+            .select('agency')
+            .lean()
+            .exec();
           if (employee?.agency) {
             transactionAgency = employee.agency;
           }

@@ -4,35 +4,35 @@ import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class MailService {
-    private transporter: nodemailer.Transporter;
+  private transporter: nodemailer.Transporter;
 
-    constructor(private configService: ConfigService) {
-        this.transporter = nodemailer.createTransport({
-            host: this.configService.get<string>('SMTP_HOST'),
-            port: this.configService.get<number>('SMTP_PORT'),
-            secure: false,
-            auth: {
-                user: this.configService.get<string>('SMTP_USER'),
-                pass: this.configService.get<string>('SMTP_PASS'),
-            },
-        });
-    }
+  constructor(private configService: ConfigService) {
+    this.transporter = nodemailer.createTransport({
+      host: this.configService.get<string>('SMTP_HOST'),
+      port: this.configService.get<number>('SMTP_PORT'),
+      secure: false,
+      auth: {
+        user: this.configService.get<string>('SMTP_USER'),
+        pass: this.configService.get<string>('SMTP_PASS'),
+      },
+    });
+  }
 
-    async sendPriceChangeEmail(
-        oldPrice: number,
-        newPrice: number,
-        currency: any,
-        ticketUid: string,
-        ticketId: string,
-    ) {
-        const baseUrl = 'https://agimtours-five.vercel.app';
-        const directLink = `${baseUrl}/plane-tickets/${ticketId}`;
+  async sendPriceChangeEmail(
+    oldPrice: number,
+    newPrice: number,
+    currency: any,
+    ticketUid: string,
+    ticketId: string,
+  ) {
+    const baseUrl = 'https://agimtours-five.vercel.app';
+    const directLink = `${baseUrl}/plane-tickets/${ticketId}`;
 
-        const mailOptions = {
-            from: `"Agim Tours" <${this.configService.get<string>('SMTP_USER')}>`,
-            to: 'b2bagimtours@gmail.com',
-            subject: `Njoftim: Ndryshim i çmimit për biletën ${ticketUid}`,
-            html: `
+    const mailOptions = {
+      from: `"Agim Tours" <${this.configService.get<string>('SMTP_USER')}>`,
+      to: 'b2bagimtours@gmail.com',
+      subject: `Njoftim: Ndryshim i çmimit për biletën ${ticketUid}`,
+      html: `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
           <h2>Përshëndetje Etnik,</h2>
           <p>Çmimi i biletës me UID <strong>${ticketUid}</strong> ka ndryshuar.</p>
@@ -47,15 +47,15 @@ export class MailService {
           <p>Faleminderit,<br>Sistemi Agim Tours</p>
         </div>
       `,
-        };
+    };
 
-        try {
-            const info = await this.transporter.sendMail(mailOptions);
-            console.log('Email sent: ' + info.response);
-            return info;
-        } catch (error) {
-            console.error('Error sending email:', error);
-            throw error;
-        }
+    try {
+      const info = await this.transporter.sendMail(mailOptions);
+      console.log('Email sent: ' + info.response);
+      return info;
+    } catch (error) {
+      console.error('Error sending email:', error);
+      throw error;
     }
+  }
 }

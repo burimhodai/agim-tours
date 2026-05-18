@@ -43,7 +43,10 @@ export class ArrangementController {
   }
 
   @Delete(':id')
-  async delete(@Param('id') id: string, @Query('employeeId') employeeId?: string) {
+  async delete(
+    @Param('id') id: string,
+    @Query('employeeId') employeeId?: string,
+  ) {
     return await this.arrangementService.delete(id, employeeId);
   }
 }

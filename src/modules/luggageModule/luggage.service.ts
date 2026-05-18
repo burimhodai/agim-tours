@@ -4,7 +4,7 @@ import { Model } from 'mongoose';
 
 @Injectable()
 export class LuggageService {
-  constructor(@InjectModel('LuggageType') private luggageModel: Model<any>) { }
+  constructor(@InjectModel('LuggageType') private luggageModel: Model<any>) {}
 
   async findAll(agencyId: string) {
     return this.luggageModel.find({ agency: agencyId }).exec();

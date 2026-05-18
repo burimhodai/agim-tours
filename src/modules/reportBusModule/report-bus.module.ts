@@ -6,7 +6,9 @@ import { ReportBus, ReportBusSchema } from './entities/report-bus.entity';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: ReportBus.name, schema: ReportBusSchema }]),
+    MongooseModule.forFeature([
+      { name: ReportBus.name, schema: ReportBusSchema },
+    ]),
   ],
   controllers: [ReportBusController],
   providers: [ReportBusService],

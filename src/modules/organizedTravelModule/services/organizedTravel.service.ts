@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { IUser } from 'src/shared/types/user.types';
@@ -47,7 +51,7 @@ export class OrganizedTravelService {
     @InjectModel('User') private userModel: Model<IUser>,
     @InjectModel('EventBus') private busModel: Model<any>,
     private transactionService: TransactionServiceService,
-  ) { }
+  ) {}
 
   private generateTravelUid(): string {
     const numDigits = Math.random() < 0.5 ? 5 : 6;
@@ -257,14 +261,18 @@ export class OrganizedTravelService {
 
     for (const traveler of addTravelersDto.travelers) {
       const busId = traveler.bus;
-      if (busId && busId !== "") {
+      if (busId && busId !== '') {
         const bus = await this.busModel.findById(busId);
         if (bus && bus.capacity) {
-          const currentOccupancy = travel.travelers.filter(t => t.status === "active" && t.bus?.toString() === busId).length;
+          const currentOccupancy = travel.travelers.filter(
+            (t) => t.status === 'active' && t.bus?.toString() === busId,
+          ).length;
           const alreadyAddedInThisBatch = busOccupancyIncrement[busId] || 0;
 
           if (currentOccupancy + alreadyAddedInThisBatch >= bus.capacity) {
-            throw new BadRequestException(`Autobusi ${bus.name} ka arritur kapacitetin maksimal prej ${bus.capacity} personave.`);
+            throw new BadRequestException(
+              `Autobusi ${bus.name} ka arritur kapacitetin maksimal prej ${bus.capacity} personave.`,
+            );
           }
           busOccupancyIncrement[busId] = alreadyAddedInThisBatch + 1;
         }
@@ -281,12 +289,14 @@ export class OrganizedTravelService {
     const savedTravel = await travel.save();
 
     // Add log
-    const travelerNames = processedTravelers.map(t => `${t.first_name} ${t.last_name}`).join(', ');
+    const travelerNames = processedTravelers
+      .map((t) => `${t.first_name} ${t.last_name}`)
+      .join(', ');
     await this.addLog(
       id,
       'Udhëtarët u shtuan',
       `U shtuan udhëtarët: ${travelerNames}`,
-      employeeId || addTravelersDto.employee
+      employeeId || addTravelersDto.employee,
     );
 
     // Create transactions for each traveler with a price
@@ -370,20 +380,20 @@ export class OrganizedTravelService {
     employeeId?: string,
   ): Promise<IOrganizedTravel> {
     const travel = await this.travelModel.findById(travelId);
-    if (!travel) throw new NotFoundException("Udhëtimi nuk u gjet");
+    if (!travel) throw new NotFoundException('Udhëtimi nuk u gjet');
 
     const otherTravelers = travel.travelers.filter(
-      (t: any) => t.group_id !== groupId
+      (t: any) => t.group_id !== groupId,
     );
     const existingGroupTravelers = travel.travelers.filter(
-      (t: any) => t.group_id === groupId
+      (t: any) => t.group_id === groupId,
     );
 
     const processedTravelers = [];
 
     for (const data of travelersData) {
       const existing = existingGroupTravelers.find(
-        (t: any) => t._id?.toString() === data._id
+        (t: any) => t._id?.toString() === data._id,
       );
 
       const travelerData: any = {
@@ -391,7 +401,7 @@ export class OrganizedTravelService {
         ...data,
         group_id: groupId,
         bus:
-          data.bus && data.bus !== ""
+          data.bus && data.bus !== ''
             ? new Types.ObjectId(data.bus)
             : existing?.bus,
       };
@@ -403,17 +413,19 @@ export class OrganizedTravelService {
     const savedTravel = await travel.save();
 
     // Add log
-    const groupTravelerNames = processedTravelers.map(t => `${t.first_name} ${t.last_name}`).join(', ');
+    const groupTravelerNames = processedTravelers
+      .map((t) => `${t.first_name} ${t.last_name}`)
+      .join(', ');
     await this.addLog(
       travelId,
       'Grupi u përditësua',
       `Grupi ${groupId} u përditësua. Udhëtarët: ${groupTravelerNames}`,
-      employeeId
+      employeeId,
     );
 
     for (const newTraveler of processedTravelers) {
       const oldTraveler = existingGroupTravelers.find(
-        (t: any) => t._id?.toString() === newTraveler._id?.toString()
+        (t: any) => t._id?.toString() === newTraveler._id?.toString(),
       );
 
       if (
@@ -430,16 +442,20 @@ export class OrganizedTravelService {
           travel.name,
           undefined,
           undefined,
-          employeeId
+          employeeId,
         );
       } else if (!oldTraveler && newTraveler.price > 0) {
         const createdTraveler = savedTravel.travelers.find(
           (t: any) =>
             t.first_name === newTraveler.first_name &&
             t.last_name === newTraveler.last_name &&
-            t.group_id === groupId
+            t.group_id === groupId,
         );
-        if (createdTraveler && createdTraveler.price && createdTraveler.price > 0) {
+        if (
+          createdTraveler &&
+          createdTraveler.price &&
+          createdTraveler.price > 0
+        ) {
           await this.createTravelerTransaction(
             travelId,
             createdTraveler._id.toString(),
@@ -479,12 +495,21 @@ export class OrganizedTravelService {
     const oldTraveler = travel.travelers[travelerIndex].toObject();
 
     // Check bus capacity if bus is changed
-    if (travelerData.bus && travelerData.bus !== "" && travelerData.bus !== oldTraveler.bus?.toString()) {
+    if (
+      travelerData.bus &&
+      travelerData.bus !== '' &&
+      travelerData.bus !== oldTraveler.bus?.toString()
+    ) {
       const bus = await this.busModel.findById(travelerData.bus);
       if (bus && bus.capacity) {
-        const currentOccupancy = travel.travelers.filter(t => t.status === "active" && t.bus?.toString() === travelerData.bus).length;
+        const currentOccupancy = travel.travelers.filter(
+          (t) =>
+            t.status === 'active' && t.bus?.toString() === travelerData.bus,
+        ).length;
         if (currentOccupancy >= bus.capacity) {
-          throw new BadRequestException(`Autobusi ${bus.name} ka arritur kapacitetin maksimal prej ${bus.capacity} personave.`);
+          throw new BadRequestException(
+            `Autobusi ${bus.name} ka arritur kapacitetin maksimal prej ${bus.capacity} personave.`,
+          );
         }
       }
     }
@@ -505,7 +530,7 @@ export class OrganizedTravelService {
       travelId,
       'Udhëtari u përditësua',
       `Detajet e udhëtarit ${updatedTraveler.first_name} ${updatedTraveler.last_name} u përditësuan`,
-      employeeId
+      employeeId,
     );
 
     // Handle payment status change
@@ -632,7 +657,11 @@ export class OrganizedTravelService {
       // Update remaining debt
       const remainingDebt = newTraveler.price - paidAmount;
       if (remainingDebt > 0) {
-        const existingDebt = await this.transactionService.findByOrganizedTravelTraveler(travelId, `${travelerId}_debt`);
+        const existingDebt =
+          await this.transactionService.findByOrganizedTravelTraveler(
+            travelId,
+            `${travelerId}_debt`,
+          );
         if (existingDebt) {
           // await this.transactionService.updateByOrganizedTravelTraveler(
           //   travelId,
@@ -656,10 +685,16 @@ export class OrganizedTravelService {
           // });
         }
       } else {
-        await this.transactionService.deleteByOrganizedTravelTraveler(travelId, `${travelerId}_debt`);
+        await this.transactionService.deleteByOrganizedTravelTraveler(
+          travelId,
+          `${travelerId}_debt`,
+        );
       }
     } else if (newStatus === PaymentStatusTypes.REFUNDED) {
-      const refundAmount = customRefundAmount !== undefined ? customRefundAmount : (oldTraveler.paid_amount || 0);
+      const refundAmount =
+        customRefundAmount !== undefined
+          ? customRefundAmount
+          : oldTraveler.paid_amount || 0;
       const refundCurrency = customRefundCurrency || newTraveler.currency;
 
       if (refundAmount > 0) {
@@ -676,8 +711,14 @@ export class OrganizedTravelService {
         });
       }
       // Delete any existing transactions for this traveler to clear history
-      await this.transactionService.deleteByOrganizedTravelTraveler(travelId, travelerId);
-      await this.transactionService.deleteByOrganizedTravelTraveler(travelId, `${travelerId}_debt`);
+      await this.transactionService.deleteByOrganizedTravelTraveler(
+        travelId,
+        travelerId,
+      );
+      await this.transactionService.deleteByOrganizedTravelTraveler(
+        travelId,
+        `${travelerId}_debt`,
+      );
     } else if (
       newStatus === PaymentStatusTypes.UNPAID &&
       oldStatus !== PaymentStatusTypes.UNPAID
@@ -750,7 +791,7 @@ export class OrganizedTravelService {
       travelId,
       'Statusi i pagesës u ndryshua',
       `Statusi i pagesës për ${t.first_name} ${t.last_name} u bë ${paymentStatus}${paidAmount !== undefined ? ` (Shuma: ${paidAmount})` : ''}`,
-      employeeId
+      employeeId,
     );
 
     await this.handlePaymentStatusChange(
@@ -762,7 +803,7 @@ export class OrganizedTravelService {
       travel.name,
       undefined,
       undefined,
-      employeeId
+      employeeId,
     );
 
     return savedTravel;
@@ -795,7 +836,7 @@ export class OrganizedTravelService {
       travelId,
       'Udhëtari u anulua',
       `Udhëtari ${traveler.first_name} ${traveler.last_name} u anulua nga udhëtimi`,
-      employeeId
+      employeeId,
     );
 
     return await travel.save();
@@ -828,7 +869,7 @@ export class OrganizedTravelService {
       travelId,
       'Udhëtari u reaktivizua',
       `Udhëtari ${traveler.first_name} ${traveler.last_name} u reaktivizua në udhëtim`,
-      employeeId
+      employeeId,
     );
 
     return await travel.save();
@@ -845,11 +886,14 @@ export class OrganizedTravelService {
     }
 
     let busObjectId = undefined;
-    if (assignBusDto.bus_id && assignBusDto.bus_id !== "") {
+    if (assignBusDto.bus_id && assignBusDto.bus_id !== '') {
       busObjectId = new Types.ObjectId(assignBusDto.bus_id);
     }
 
-    if (busObjectId && !travel.buses.some((b: any) => b.toString() === assignBusDto.bus_id)) {
+    if (
+      busObjectId &&
+      !travel.buses.some((b: any) => b.toString() === assignBusDto.bus_id)
+    ) {
       travel.buses.push(busObjectId);
     }
 
@@ -857,14 +901,21 @@ export class OrganizedTravelService {
     if (busObjectId) {
       const bus = await this.busModel.findById(busObjectId);
       if (bus && bus.capacity) {
-        const currentOccupancy = travel.travelers.filter(t => t.status === "active" && t.bus?.toString() === assignBusDto.bus_id).length;
-        const newTravelersCount = assignBusDto.traveler_ids.filter(id => {
-          const traveler = travel.travelers.find(t => t._id.toString() === id);
+        const currentOccupancy = travel.travelers.filter(
+          (t) =>
+            t.status === 'active' && t.bus?.toString() === assignBusDto.bus_id,
+        ).length;
+        const newTravelersCount = assignBusDto.traveler_ids.filter((id) => {
+          const traveler = travel.travelers.find(
+            (t) => t._id.toString() === id,
+          );
           return traveler && traveler.bus?.toString() !== assignBusDto.bus_id;
         }).length;
 
         if (currentOccupancy + newTravelersCount > bus.capacity) {
-          throw new BadRequestException(`Nuk mund të shtohen më shumë udhëtarë! Autobusi ${bus.name} ka kapacitet maksimal prej ${bus.capacity} personave.`);
+          throw new BadRequestException(
+            `Nuk mund të shtohen më shumë udhëtarë! Autobusi ${bus.name} ka kapacitet maksimal prej ${bus.capacity} personave.`,
+          );
         }
       }
     }
@@ -883,7 +934,9 @@ export class OrganizedTravelService {
       .map((t: any) => `${t.first_name} ${t.last_name}`)
       .join(', ');
 
-    const actionLogTitle = busObjectId ? 'Autobusi u caktua' : 'Udhëtarët u hoqën nga autobusi';
+    const actionLogTitle = busObjectId
+      ? 'Autobusi u caktua'
+      : 'Udhëtarët u hoqën nga autobusi';
     const actionLogDesc = busObjectId
       ? `U caktuan ${assignedTravelers} në autobusin ${(travel.buses.find((b: any) => b._id.toString() === assignBusDto.bus_id) as any)?.name || 'e ri'}`
       : `U hoqën ${assignedTravelers} nga autobusi`;
@@ -902,31 +955,37 @@ export class OrganizedTravelService {
     const travel = await this.findOne(travelId);
     const travelersByBus: any = {};
 
-    travel.travelers.filter((t: any) => t.status === "active").forEach((traveler: any) => {
-      const busId = traveler.bus?._id?.toString() || 'unassigned';
-      const busName = traveler.bus?.name || 'Pa autobus';
+    travel.travelers
+      .filter((t: any) => t.status === 'active')
+      .forEach((traveler: any) => {
+        const busId = traveler.bus?._id?.toString() || 'unassigned';
+        const busName = traveler.bus?.name || 'Pa autobus';
 
-      if (!travelersByBus[busId]) {
-        travelersByBus[busId] = {
-          bus: traveler.bus || null,
-          busName,
-          travelers: [],
-        };
-      }
-      travelersByBus[busId].travelers.push(traveler);
-    });
+        if (!travelersByBus[busId]) {
+          travelersByBus[busId] = {
+            bus: traveler.bus || null,
+            busName,
+            travelers: [],
+          };
+        }
+        travelersByBus[busId].travelers.push(traveler);
+      });
 
     return Object.values(travelersByBus);
   }
 
   async getBorderList(travelId: string): Promise<any[]> {
     const travel = await this.findOne(travelId);
-    return travel.travelers.filter((t: any) => t.status === "active" && t.show_in_border_list !== false);
+    return travel.travelers.filter(
+      (t: any) => t.status === 'active' && t.show_in_border_list !== false,
+    );
   }
 
   async getGuideList(travelId: string): Promise<any[]> {
     const travel = await this.findOne(travelId);
-    return travel.travelers.filter((t: any) => t.status === "active" && t.show_in_guide_list !== false);
+    return travel.travelers.filter(
+      (t: any) => t.status === 'active' && t.show_in_guide_list !== false,
+    );
   }
 
   async updatePrintColumns(
@@ -966,7 +1025,7 @@ export class OrganizedTravelService {
       if (travelerIndex !== -1) {
         const oldTraveler = travel.travelers[travelerIndex].toObject();
 
-        // Skip if already refunded (though we are changing the status to UNPAID now, 
+        // Skip if already refunded (though we are changing the status to UNPAID now,
         // we use a note to track it)
 
         // Record the refund transaction using the REFUNDED status logic
@@ -979,18 +1038,19 @@ export class OrganizedTravelService {
           travel.name,
           amount,
           currency,
-          employee
+          employee,
         );
 
         await this.addLog(
           travelId,
           'Rimbursim i udhëtarit',
           `Udhëtari ${oldTraveler.first_name} ${oldTraveler.last_name} u rimbursua me ${amount || oldTraveler.paid_amount} ${currency || oldTraveler.currency}. Shënim: ${note || '-'}`,
-          employee
+          employee,
         );
 
         // Set the final status to UNPAID/NOT_PAID as requested
-        travel.travelers[travelerIndex].payment_status = PaymentStatusTypes.UNPAID;
+        travel.travelers[travelerIndex].payment_status =
+          PaymentStatusTypes.UNPAID;
         travel.travelers[travelerIndex].paid_amount = 0;
         travel.travelers[travelerIndex].note = note
           ? `${travel.travelers[travelerIndex].note || ''}\n\nRimbursimi: ${note}`.trim()

@@ -34,10 +34,10 @@ export const ArrangementSchema = new mongoose.Schema(
     return_date: { type: Date },
     route_number: { type: String },
     return_route_number: { type: String },
-    
+
     operatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Operator' },
     operator: { type: String },
-    
+
     plane_ticket_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Ticket' },
 
     price: { type: Number, required: true },
@@ -117,7 +117,7 @@ export const ArrangementSchema = new mongoose.Schema(
         created_at: { type: Date, default: Date.now },
       },
     ],
-    
+
     is_deleted: { type: Boolean, default: false },
     status: { type: String, enum: ['active', 'canceled'], default: 'active' },
   },

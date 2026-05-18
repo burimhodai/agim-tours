@@ -16,7 +16,7 @@ import { DriverReportQueryDto } from './dto/driver-report-query.dto';
 
 @Controller('driver-reports')
 export class DriverReportController {
-  constructor(private readonly driverReportService: DriverReportService) { }
+  constructor(private readonly driverReportService: DriverReportService) {}
 
   @Post()
   create(@Body() createDriverReportDto: CreateDriverReportDto) {
