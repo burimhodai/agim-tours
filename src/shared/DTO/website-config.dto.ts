@@ -202,6 +202,11 @@ export class CreateWebsiteHotelDto {
   @IsBoolean()
   is_active?: boolean;
 
+  @ApiPropertyOptional({ description: 'Show in top list', default: false })
+  @IsOptional()
+  @IsBoolean()
+  show_in_top_list?: boolean;
+
   @ApiPropertyOptional({ description: 'Star rating from 1 to 5', minimum: 1, maximum: 5, default: 3 })
   @IsOptional()
   @IsInt()
@@ -333,6 +338,11 @@ export class UpdateWebsiteHotelDto {
   @IsOptional()
   @IsBoolean()
   is_active?: boolean;
+
+  @ApiPropertyOptional({ description: 'Show in top list' })
+  @IsOptional()
+  @IsBoolean()
+  show_in_top_list?: boolean;
 
   @ApiPropertyOptional({ description: 'Star rating from 1 to 5', minimum: 1, maximum: 5 })
   @IsOptional()

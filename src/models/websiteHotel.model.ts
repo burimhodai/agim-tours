@@ -30,6 +30,7 @@ export const WebsiteHotelSchema = new mongoose.Schema(
     has_pet_friendly: { type: Boolean, default: false },
     has_restaurant: { type: Boolean, default: false },
     has_bar: { type: Boolean, default: false },
+    show_in_top_list: { type: Boolean, default: false },
     is_active: { type: Boolean, default: true },
     is_deleted: { type: Boolean, default: false },
   },

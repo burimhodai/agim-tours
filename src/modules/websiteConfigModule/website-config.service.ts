@@ -184,6 +184,14 @@ export class WebsiteConfigService implements OnModuleInit {
       .lean();
   }
 
+  async findTopListHotels() {
+    return this.hotelModel
+      .find({ show_in_top_list: true, is_deleted: { $ne: true } })
+      .populate({ path: 'city', populate: { path: 'country' } })
+      .sort({ name_sq: 1 })
+      .lean();
+  }
+
   async findOneHotel(id: string) {
     const hotel = await this.hotelModel
       .findOne({

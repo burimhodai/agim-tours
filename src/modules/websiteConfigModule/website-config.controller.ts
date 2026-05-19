@@ -155,6 +155,13 @@ export class WebsiteConfigController {
     return this.configService.findAllHotels(cityId);
   }
 
+  @Get('hotels/top-list')
+  @ApiOperation({ summary: 'Get all hotels flagged for top list' })
+  @ApiResponse({ status: 200, description: 'List of top list hotels' })
+  async findTopListHotels() {
+    return this.configService.findTopListHotels();
+  }
+
   @Get('hotels/:id')
   @ApiOperation({ summary: 'Get a hotel by ID' })
   @ApiParam({ name: 'id', description: 'Hotel ID' })
