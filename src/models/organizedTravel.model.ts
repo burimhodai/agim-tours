@@ -22,6 +22,17 @@ const OrganizedTravelerSchema = new mongoose.Schema({
     enum: Object.values(CurrencyTypes),
     default: CurrencyTypes.EURO,
   },
+  payment_chunks: [
+    {
+      amount: { type: Number, required: true },
+      currency: {
+        type: String,
+        enum: Object.values(CurrencyTypes),
+        required: true,
+      },
+      payment_date: { type: Date, default: Date.now },
+    },
+  ],
   payment_status: {
     type: String,
     enum: Object.values(PaymentStatusTypes),

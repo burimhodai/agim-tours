@@ -15,6 +15,7 @@ import {
   UpdatePlaneTicketDto,
   AddPlaneLogDto,
   PlaneTicketQueryDto,
+  PlaneAnalysisQueryDto,
   CancelTicketDto,
 } from 'src/shared/DTO/plane.dto';
 import { PaymentStatusTypes } from 'src/shared/types/payment.types';
@@ -31,6 +32,11 @@ export class PlaneController {
   @Get('tickets')
   async findAll(@Query() query: PlaneTicketQueryDto) {
     return await this.planeService.findAll(query);
+  }
+
+  @Get('tickets/analysis')
+  async getAnalysis(@Query() query: PlaneAnalysisQueryDto) {
+    return await this.planeService.getAnalysis(query);
   }
 
   @Get('tickets/booking/:bookingReference')

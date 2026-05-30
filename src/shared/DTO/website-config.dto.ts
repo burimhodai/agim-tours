@@ -27,12 +27,16 @@ export class CreateWebsiteCountryDto {
 }
 
 export class UpdateWebsiteCountryDto {
-  @ApiPropertyOptional({ description: 'Name of the country in Albanian language' })
+  @ApiPropertyOptional({
+    description: 'Name of the country in Albanian language',
+  })
   @IsOptional()
   @IsString()
   name_sq?: string;
 
-  @ApiPropertyOptional({ description: 'Name of the country in Macedonian language' })
+  @ApiPropertyOptional({
+    description: 'Name of the country in Macedonian language',
+  })
   @IsOptional()
   @IsString()
   name_mk?: string;
@@ -68,7 +72,9 @@ export class UpdateWebsiteCityDto {
   @IsString()
   name_sq?: string;
 
-  @ApiPropertyOptional({ description: 'Name of the city in Macedonian language' })
+  @ApiPropertyOptional({
+    description: 'Name of the city in Macedonian language',
+  })
   @IsOptional()
   @IsString()
   name_mk?: string;
@@ -97,11 +103,15 @@ export class CreateWebsiteHotelDto {
   @IsString()
   city: string;
 
-  @ApiProperty({ description: 'Physical address / location description in Albanian' })
+  @ApiProperty({
+    description: 'Physical address / location description in Albanian',
+  })
   @IsString()
   location_sq: string;
 
-  @ApiProperty({ description: 'Physical address / location description in Macedonian' })
+  @ApiProperty({
+    description: 'Physical address / location description in Macedonian',
+  })
   @IsString()
   location_mk: string;
 
@@ -109,7 +119,10 @@ export class CreateWebsiteHotelDto {
   @IsString()
   location_maps_link: string;
 
-  @ApiPropertyOptional({ description: 'Array of Cloudinary uploaded image URLs', type: [String] })
+  @ApiPropertyOptional({
+    description: 'Array of Cloudinary uploaded image URLs',
+    type: [String],
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
@@ -125,12 +138,16 @@ export class CreateWebsiteHotelDto {
   @IsString()
   description_mk?: string;
 
-  @ApiPropertyOptional({ description: 'Additional instructions / notes in Albanian' })
+  @ApiPropertyOptional({
+    description: 'Additional instructions / notes in Albanian',
+  })
   @IsOptional()
   @IsString()
   extra_info_sq?: string;
 
-  @ApiPropertyOptional({ description: 'Additional instructions / notes in Macedonian' })
+  @ApiPropertyOptional({
+    description: 'Additional instructions / notes in Macedonian',
+  })
   @IsOptional()
   @IsString()
   extra_info_mk?: string;
@@ -147,12 +164,18 @@ export class CreateWebsiteHotelDto {
   @IsDate()
   offer_end_date?: Date;
 
-  @ApiPropertyOptional({ description: 'Wireless internet support', default: false })
+  @ApiPropertyOptional({
+    description: 'Wireless internet support',
+    default: false,
+  })
   @IsOptional()
   @IsBoolean()
   has_wifi?: boolean;
 
-  @ApiPropertyOptional({ description: 'Free parking availability', default: false })
+  @ApiPropertyOptional({
+    description: 'Free parking availability',
+    default: false,
+  })
   @IsOptional()
   @IsBoolean()
   has_parking?: boolean;
@@ -167,12 +190,18 @@ export class CreateWebsiteHotelDto {
   @IsBoolean()
   has_pool?: boolean;
 
-  @ApiPropertyOptional({ description: 'Air conditioning support', default: false })
+  @ApiPropertyOptional({
+    description: 'Air conditioning support',
+    default: false,
+  })
   @IsOptional()
   @IsBoolean()
   has_ac?: boolean;
 
-  @ApiPropertyOptional({ description: 'Spa & Wellness support', default: false })
+  @ApiPropertyOptional({
+    description: 'Spa & Wellness support',
+    default: false,
+  })
   @IsOptional()
   @IsBoolean()
   has_spa?: boolean;
@@ -187,12 +216,18 @@ export class CreateWebsiteHotelDto {
   @IsBoolean()
   has_pet_friendly?: boolean;
 
-  @ApiPropertyOptional({ description: 'Hotel restaurant availability', default: false })
+  @ApiPropertyOptional({
+    description: 'Hotel restaurant availability',
+    default: false,
+  })
   @IsOptional()
   @IsBoolean()
   has_restaurant?: boolean;
 
-  @ApiPropertyOptional({ description: 'Bar or lounge availability', default: false })
+  @ApiPropertyOptional({
+    description: 'Bar or lounge availability',
+    default: false,
+  })
   @IsOptional()
   @IsBoolean()
   has_bar?: boolean;
@@ -207,7 +242,12 @@ export class CreateWebsiteHotelDto {
   @IsBoolean()
   show_in_top_list?: boolean;
 
-  @ApiPropertyOptional({ description: 'Star rating from 1 to 5', minimum: 1, maximum: 5, default: 3 })
+  @ApiPropertyOptional({
+    description: 'Star rating from 1 to 5',
+    minimum: 1,
+    maximum: 5,
+    default: 3,
+  })
   @IsOptional()
   @IsInt()
   @Min(1)
@@ -216,12 +256,16 @@ export class CreateWebsiteHotelDto {
 }
 
 export class UpdateWebsiteHotelDto {
-  @ApiPropertyOptional({ description: 'Name of the hotel in Albanian language' })
+  @ApiPropertyOptional({
+    description: 'Name of the hotel in Albanian language',
+  })
   @IsOptional()
   @IsString()
   name_sq?: string;
 
-  @ApiPropertyOptional({ description: 'Name of the hotel in Macedonian language' })
+  @ApiPropertyOptional({
+    description: 'Name of the hotel in Macedonian language',
+  })
   @IsOptional()
   @IsString()
   name_mk?: string;
@@ -231,12 +275,16 @@ export class UpdateWebsiteHotelDto {
   @IsString()
   city?: string;
 
-  @ApiPropertyOptional({ description: 'Physical address / location description in Albanian' })
+  @ApiPropertyOptional({
+    description: 'Physical address / location description in Albanian',
+  })
   @IsOptional()
   @IsString()
   location_sq?: string;
 
-  @ApiPropertyOptional({ description: 'Physical address / location description in Macedonian' })
+  @ApiPropertyOptional({
+    description: 'Physical address / location description in Macedonian',
+  })
   @IsOptional()
   @IsString()
   location_mk?: string;
@@ -246,7 +294,10 @@ export class UpdateWebsiteHotelDto {
   @IsString()
   location_maps_link?: string;
 
-  @ApiPropertyOptional({ description: 'Array of Cloudinary uploaded image URLs', type: [String] })
+  @ApiPropertyOptional({
+    description: 'Array of Cloudinary uploaded image URLs',
+    type: [String],
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
@@ -262,12 +313,16 @@ export class UpdateWebsiteHotelDto {
   @IsString()
   description_mk?: string;
 
-  @ApiPropertyOptional({ description: 'Additional instructions / notes in Albanian' })
+  @ApiPropertyOptional({
+    description: 'Additional instructions / notes in Albanian',
+  })
   @IsOptional()
   @IsString()
   extra_info_sq?: string;
 
-  @ApiPropertyOptional({ description: 'Additional instructions / notes in Macedonian' })
+  @ApiPropertyOptional({
+    description: 'Additional instructions / notes in Macedonian',
+  })
   @IsOptional()
   @IsString()
   extra_info_mk?: string;
@@ -344,7 +399,11 @@ export class UpdateWebsiteHotelDto {
   @IsBoolean()
   show_in_top_list?: boolean;
 
-  @ApiPropertyOptional({ description: 'Star rating from 1 to 5', minimum: 1, maximum: 5 })
+  @ApiPropertyOptional({
+    description: 'Star rating from 1 to 5',
+    minimum: 1,
+    maximum: 5,
+  })
   @IsOptional()
   @IsInt()
   @Min(1)
@@ -361,7 +420,10 @@ export class CreateWebsiteTopDestinationDto {
   @IsString()
   image: string;
 
-  @ApiPropertyOptional({ description: 'Status of the destination', default: true })
+  @ApiPropertyOptional({
+    description: 'Status of the destination',
+    default: true,
+  })
   @IsOptional()
   @IsBoolean()
   is_active?: boolean;

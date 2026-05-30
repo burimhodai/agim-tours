@@ -7,6 +7,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { ITicket, TicketTypes } from 'src/shared/types/ticket.types';
 import { IUser } from 'src/shared/types/user.types';
+import { ITransaction } from 'src/shared/types/transaction.types';
 import {
   CreatePlaneTicketDto,
   UpdatePlaneTicketDto,
@@ -26,6 +27,8 @@ import { MailService } from '../../mailModule/services/mail.service';
 export class PlaneService {
   constructor(
     @InjectModel('Ticket') private ticketModel: Model<ITicket>,
+    @InjectModel('Transaction')
+    private transactionModel: Model<ITransaction>,
     @InjectModel('User') private userModel: Model<IUser>,
     private transactionService: TransactionServiceService,
     private mailService: MailService,
@@ -43,6 +46,36 @@ export class PlaneService {
     if (!employeeId || !Types.ObjectId.isValid(employeeId)) return '';
     const employee = await this.userModel.findById(employeeId).exec();
     return employee?.agency?.toString() || '';
+  }
+
+  private parseAnalysisDate(value: string, boundary: 'start' | 'end'): Date {
+    if (!value) {
+      throw new BadRequestException('date_from is required');
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      const [year, month, day] = value.split('-').map(Number);
+      return boundary === 'start'
+        ? new Date(year, month - 1, day, 0, 0, 0, 0)
+        : new Date(year, month - 1, day, 23, 59, 59, 999);
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      throw new BadRequestException(`Invalid date: ${value}`);
+    }
+
+    return date;
+  }
+
+  private summarizeByCurrency(
+    items: Array<{ currency?: string; total: number; count: number }>,
+  ) {
+    return items.map((item) => ({
+      currency: item.currency || 'unknown',
+      total: Math.round((item.total || 0) * 100) / 100,
+      count: item.count || 0,
+    }));
   }
 
   private async addLogInternal(
@@ -397,6 +430,111 @@ export class PlaneService {
       total,
       page,
       totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async getAnalysis(query: {
+    agency?: string;
+    date_from: string;
+    date_to?: string;
+  }) {
+    const from = this.parseAnalysisDate(query.date_from, 'start');
+    const to = this.parseAnalysisDate(query.date_to || query.date_from, 'end');
+
+    if (from > to) {
+      throw new BadRequestException('date_from must be before date_to');
+    }
+
+    const agencyId =
+      query.agency && Types.ObjectId.isValid(query.agency)
+        ? new Types.ObjectId(query.agency)
+        : undefined;
+
+    if (query.agency && !agencyId) {
+      throw new BadRequestException('Invalid agency ID');
+    }
+
+    const ticketFilter: any = {
+      ticket_type: TicketTypes.PLANE,
+      is_deleted: { $ne: true },
+      createdAt: { $gte: from, $lte: to },
+    };
+
+    if (agencyId) {
+      ticketFilter.agency = agencyId;
+    }
+
+    const transactionPipeline: any[] = [
+      {
+        $match: {
+          createdAt: { $gte: from, $lte: to },
+          type: { $in: [TransactionTypes.INCOME, TransactionTypes.DEBT] },
+          ticket: { $exists: true, $ne: null },
+        },
+      },
+      {
+        $lookup: {
+          from: 'tickets',
+          localField: 'ticket',
+          foreignField: '_id',
+          as: 'ticketDoc',
+        },
+      },
+      { $unwind: '$ticketDoc' },
+      {
+        $match: {
+          'ticketDoc.ticket_type': TicketTypes.PLANE,
+          'ticketDoc.is_deleted': { $ne: true },
+          ...(agencyId ? { 'ticketDoc.agency': agencyId } : {}),
+        },
+      },
+      {
+        $group: {
+          _id: { type: '$type', currency: '$currency' },
+          total: { $sum: '$amount' },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          type: '$_id.type',
+          currency: '$_id.currency',
+          total: 1,
+          count: 1,
+        },
+      },
+    ];
+
+    const [createdTickets, transactionSummary] = await Promise.all([
+      this.ticketModel.countDocuments(ticketFilter).exec(),
+      this.transactionModel.aggregate(transactionPipeline).exec(),
+    ]);
+
+    const incomeSummary = transactionSummary.filter(
+      (item) => item.type === TransactionTypes.INCOME,
+    );
+    const debtSummary = transactionSummary.filter(
+      (item) => item.type === TransactionTypes.DEBT,
+    );
+
+    return {
+      dateRange: { from, to },
+      createdTickets,
+      income: {
+        transactionCount: incomeSummary.reduce(
+          (total, item) => total + item.count,
+          0,
+        ),
+        summary: this.summarizeByCurrency(incomeSummary),
+      },
+      debt: {
+        transactionCount: debtSummary.reduce(
+          (total, item) => total + item.count,
+          0,
+        ),
+        summary: this.summarizeByCurrency(debtSummary),
+      },
     };
   }
 

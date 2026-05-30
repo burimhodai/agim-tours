@@ -43,6 +43,12 @@ export interface IOrganizedTravel {
   updatedAt?: Date;
 }
 
+type TravelerPaymentChunk = {
+  amount: number;
+  currency: string;
+  payment_date?: Date | string;
+};
+
 @Injectable()
 export class OrganizedTravelService {
   constructor(
@@ -81,6 +87,76 @@ export class OrganizedTravelService {
     } catch (e) {
       console.error('Failed to add log:', e);
     }
+  }
+
+  private normalizePaymentChunks(
+    chunks: TravelerPaymentChunk[] | undefined,
+  ): TravelerPaymentChunk[] {
+    return (chunks || [])
+      .map((chunk) => ({
+        amount: Number(chunk.amount) || 0,
+        currency: (chunk.currency || 'euro').toLowerCase(),
+        payment_date: chunk.payment_date || new Date(),
+      }))
+      .filter((chunk) => chunk.amount > 0);
+  }
+
+  private async normalizeTravelerPaymentFields(
+    traveler: any,
+    defaultCurrency?: string,
+  ): Promise<any> {
+    const currency = (
+      traveler.currency ||
+      defaultCurrency ||
+      'euro'
+    ).toLowerCase();
+    const price = Number(traveler.price) || 0;
+    let paymentChunks = this.normalizePaymentChunks(traveler.payment_chunks);
+
+    if (paymentChunks.length === 0) {
+      if (traveler.payment_status === PaymentStatusTypes.PAID && price > 0) {
+        paymentChunks = [{ amount: price, currency, payment_date: new Date() }];
+      } else if (
+        traveler.payment_status === PaymentStatusTypes.PARTIALLY_PAID &&
+        Number(traveler.paid_amount) > 0
+      ) {
+        paymentChunks = [
+          {
+            amount: Number(traveler.paid_amount),
+            currency,
+            payment_date: new Date(),
+          },
+        ];
+      }
+    }
+
+    let paidAmount = 0;
+    for (const chunk of paymentChunks) {
+      paidAmount += await this.transactionService.convertCurrency(
+        chunk.amount,
+        chunk.currency,
+        currency,
+      );
+    }
+
+    const paymentStatus =
+      paymentChunks.length === 0
+        ? PaymentStatusTypes.UNPAID
+        : price > 0 && paidAmount + 0.05 < price
+          ? PaymentStatusTypes.PARTIALLY_PAID
+          : PaymentStatusTypes.PAID;
+
+    return {
+      ...traveler,
+      price,
+      currency,
+      payment_chunks: paymentChunks,
+      paid_amount: Math.round(paidAmount * 100) / 100,
+      payment_status:
+        traveler.payment_status === PaymentStatusTypes.REFUNDED
+          ? PaymentStatusTypes.REFUNDED
+          : paymentStatus,
+    };
   }
 
   async create(createDto: CreateOrganizedTravelDto): Promise<IOrganizedTravel> {
@@ -278,8 +354,13 @@ export class OrganizedTravelService {
         }
       }
 
+      const normalizedTraveler = await this.normalizeTravelerPaymentFields(
+        traveler,
+        travel.currency,
+      );
+
       processedTravelers.push({
-        ...traveler,
+        ...normalizedTraveler,
         group_id: traveler.group_id || batchGroupId,
         bus: traveler.bus ? new Types.ObjectId(traveler.bus) : undefined,
       });
@@ -303,8 +384,11 @@ export class OrganizedTravelService {
     for (const traveler of savedTravel.travelers.slice(
       -processedTravelers.length,
     )) {
-      if (traveler.price && traveler.price > 0) {
-        await this.createTravelerTransaction(
+      if (
+        (traveler.price && traveler.price > 0) ||
+        (traveler.payment_chunks && traveler.payment_chunks.length > 0)
+      ) {
+        await this.syncTravelerTransactions(
           savedTravel._id.toString(),
           traveler._id.toString(),
           traveler,
@@ -318,7 +402,7 @@ export class OrganizedTravelService {
     return savedTravel;
   }
 
-  private async createTravelerTransaction(
+  private async syncTravelerTransactions(
     travelId: string,
     travelerId: string,
     traveler: any,
@@ -335,39 +419,47 @@ export class OrganizedTravelService {
       }
     }
 
-    const isUnpaid = traveler.payment_status === PaymentStatusTypes.UNPAID;
-    const isPartiallyPaid =
-      traveler.payment_status === PaymentStatusTypes.PARTIALLY_PAID;
-    const isPaid = traveler.payment_status === PaymentStatusTypes.PAID;
-
     const travelerName =
       `${traveler.first_name || ''} ${traveler.last_name || ''}`.trim();
 
-    if (isPaid) {
-      // Fully paid - create income transaction
+    await this.transactionService.deleteByOrganizedTravelTraveler(
+      travelId,
+      travelerId,
+    );
+    await this.transactionService.deleteByOrganizedTravelTraveler(
+      travelId,
+      `${travelerId}_debt`,
+    );
+
+    const paymentChunks = this.normalizePaymentChunks(traveler.payment_chunks);
+    for (let index = 0; index < paymentChunks.length; index++) {
+      const chunk = paymentChunks[index];
       await this.transactionService.create({
-        amount: traveler.price,
-        currency: traveler.currency,
+        amount: chunk.amount,
+        currency: chunk.currency as any,
         type: TransactionTypes.INCOME,
         status: TransactionStatus.SETTLED,
         organizedTravel: travelId,
         travelerId: travelerId,
         agency: finalAgencyId,
         user: employeeId,
-        description: `Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName} (Paguar)`,
+        description: `Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName} (Pagesa ${index + 1})`,
       });
-    } else if (isPartiallyPaid && traveler.paid_amount > 0) {
-      // Partially paid - create income for paid amount and debt for remaining
+    }
+
+    const remainingDebt =
+      (Number(traveler.price) || 0) - (Number(traveler.paid_amount) || 0);
+    if (remainingDebt > 0.05) {
       await this.transactionService.create({
-        amount: traveler.paid_amount,
+        amount: Math.round(remainingDebt * 100) / 100,
         currency: traveler.currency,
-        type: TransactionTypes.INCOME,
-        status: TransactionStatus.SETTLED,
+        type: TransactionTypes.DEBT,
+        status: TransactionStatus.PENDING,
         organizedTravel: travelId,
-        travelerId: travelerId,
+        travelerId: `${travelerId}_debt`,
         agency: finalAgencyId,
         user: employeeId,
-        description: `Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName} (Pagesa e pjesshme)`,
+        description: `Borxh - Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName}`,
       });
     }
   }
@@ -396,15 +488,18 @@ export class OrganizedTravelService {
         (t: any) => t._id?.toString() === data._id,
       );
 
-      const travelerData: any = {
-        ...(existing?.toObject() || {}),
-        ...data,
-        group_id: groupId,
-        bus:
-          data.bus && data.bus !== ''
-            ? new Types.ObjectId(data.bus)
-            : existing?.bus,
-      };
+      const travelerData: any = await this.normalizeTravelerPaymentFields(
+        {
+          ...(existing?.toObject() || {}),
+          ...data,
+          group_id: groupId,
+          bus:
+            data.bus && data.bus !== ''
+              ? new Types.ObjectId(data.bus)
+              : existing?.bus,
+        },
+        travel.currency,
+      );
 
       processedTravelers.push(travelerData);
     }
@@ -424,47 +519,26 @@ export class OrganizedTravelService {
     );
 
     for (const newTraveler of processedTravelers) {
-      const oldTraveler = existingGroupTravelers.find(
-        (t: any) => t._id?.toString() === newTraveler._id?.toString(),
-      );
+      const savedTraveler = newTraveler._id
+        ? savedTravel.travelers.find(
+            (t: any) => t._id?.toString() === newTraveler._id?.toString(),
+          )
+        : savedTravel.travelers.find(
+            (t: any) =>
+              t.first_name === newTraveler.first_name &&
+              t.last_name === newTraveler.last_name &&
+              t.group_id === groupId,
+          );
 
-      if (
-        oldTraveler &&
-        newTraveler.payment_status &&
-        newTraveler.payment_status !== oldTraveler.payment_status
-      ) {
-        await this.handlePaymentStatusChange(
+      if (savedTraveler) {
+        await this.syncTravelerTransactions(
           travelId,
-          newTraveler._id.toString(),
-          oldTraveler.toObject(),
-          newTraveler,
+          savedTraveler._id.toString(),
+          savedTraveler,
           performingAgencyId || travel.agency?.toString(),
           travel.name,
-          undefined,
-          undefined,
           employeeId,
         );
-      } else if (!oldTraveler && newTraveler.price > 0) {
-        const createdTraveler = savedTravel.travelers.find(
-          (t: any) =>
-            t.first_name === newTraveler.first_name &&
-            t.last_name === newTraveler.last_name &&
-            t.group_id === groupId,
-        );
-        if (
-          createdTraveler &&
-          createdTraveler.price &&
-          createdTraveler.price > 0
-        ) {
-          await this.createTravelerTransaction(
-            travelId,
-            createdTraveler._id.toString(),
-            createdTraveler,
-            performingAgencyId || travel.agency?.toString(),
-            travel.name,
-            employeeId,
-          );
-        }
       }
     }
 
@@ -514,13 +588,16 @@ export class OrganizedTravelService {
       }
     }
 
-    const updatedTraveler = {
-      ...oldTraveler,
-      ...travelerData,
-      bus: travelerData.bus
-        ? new Types.ObjectId(travelerData.bus)
-        : travel.travelers[travelerIndex].bus,
-    };
+    const updatedTraveler = await this.normalizeTravelerPaymentFields(
+      {
+        ...oldTraveler,
+        ...travelerData,
+        bus: travelerData.bus
+          ? new Types.ObjectId(travelerData.bus)
+          : travel.travelers[travelerIndex].bus,
+      },
+      travel.currency,
+    );
 
     travel.travelers[travelerIndex] = updatedTraveler;
     const savedTravel = await travel.save();
@@ -533,23 +610,14 @@ export class OrganizedTravelService {
       employeeId,
     );
 
-    // Handle payment status change
-    if (
-      travelerData.payment_status &&
-      travelerData.payment_status !== oldTraveler.payment_status
-    ) {
-      await this.handlePaymentStatusChange(
-        travelId,
-        travelerId,
-        oldTraveler,
-        updatedTraveler,
-        performingAgencyId || travel.agency?.toString(),
-        travel.name,
-        undefined,
-        undefined,
-        employeeId,
-      );
-    }
+    await this.syncTravelerTransactions(
+      travelId,
+      travelerId,
+      updatedTraveler,
+      performingAgencyId || travel.agency?.toString(),
+      travel.name,
+      employeeId,
+    );
 
     return savedTravel;
   }
@@ -769,20 +837,37 @@ export class OrganizedTravelService {
       throw new NotFoundException('Udhëtari nuk u gjet');
     }
 
-    const oldTraveler = travel.travelers[travelerIndex].toObject();
     travel.travelers[travelerIndex].payment_status = paymentStatus;
 
     if (paidAmount !== undefined) {
       travel.travelers[travelerIndex].paid_amount = paidAmount;
     }
 
-    // Auto-calculate paid_amount based on status
     if (paymentStatus === PaymentStatusTypes.PAID) {
-      travel.travelers[travelerIndex].paid_amount =
-        travel.travelers[travelerIndex].price || 0;
+      travel.travelers[travelerIndex].payment_chunks = [
+        {
+          amount: travel.travelers[travelerIndex].price || 0,
+          currency: travel.travelers[travelerIndex].currency || travel.currency,
+          payment_date: new Date(),
+        },
+      ];
     } else if (paymentStatus === PaymentStatusTypes.UNPAID) {
-      travel.travelers[travelerIndex].paid_amount = 0;
+      travel.travelers[travelerIndex].payment_chunks = [];
+    } else if (paidAmount !== undefined) {
+      travel.travelers[travelerIndex].payment_chunks = [
+        {
+          amount: paidAmount,
+          currency: travel.travelers[travelerIndex].currency || travel.currency,
+          payment_date: new Date(),
+        },
+      ];
     }
+
+    const normalizedTraveler = await this.normalizeTravelerPaymentFields(
+      travel.travelers[travelerIndex].toObject(),
+      travel.currency,
+    );
+    travel.travelers[travelerIndex] = normalizedTraveler;
 
     const savedTravel = await travel.save();
     const t = travel.travelers[travelerIndex];
@@ -794,15 +879,12 @@ export class OrganizedTravelService {
       employeeId,
     );
 
-    await this.handlePaymentStatusChange(
+    await this.syncTravelerTransactions(
       travelId,
       travelerId,
-      oldTraveler,
-      travel.travelers[travelerIndex].toObject(),
+      normalizedTraveler,
       performingAgencyId || travel.agency?.toString(),
       travel.name,
-      undefined,
-      undefined,
       employeeId,
     );
 
@@ -1052,6 +1134,7 @@ export class OrganizedTravelService {
         travel.travelers[travelerIndex].payment_status =
           PaymentStatusTypes.UNPAID;
         travel.travelers[travelerIndex].paid_amount = 0;
+        travel.travelers[travelerIndex].payment_chunks = [];
         travel.travelers[travelerIndex].note = note
           ? `${travel.travelers[travelerIndex].note || ''}\n\nRimbursimi: ${note}`.trim()
           : travel.travelers[travelerIndex].note;

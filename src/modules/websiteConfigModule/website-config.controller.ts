@@ -42,9 +42,7 @@ export class WebsiteConfigController {
   @Post('countries')
   @ApiOperation({ summary: 'Create a new country configuration' })
   @ApiResponse({ status: 201, description: 'Country successfully created' })
-  async createCountry(
-    @Body() data: CreateWebsiteCountryDto,
-  ) {
+  async createCountry(@Body() data: CreateWebsiteCountryDto) {
     return this.configService.createCountry(data);
   }
 
@@ -59,9 +57,7 @@ export class WebsiteConfigController {
   @ApiOperation({ summary: 'Get a country by ID' })
   @ApiParam({ name: 'id', description: 'Country ID' })
   @ApiResponse({ status: 200, description: 'Country details' })
-  async findOneCountry(
-    @Param('id') id: string,
-  ) {
+  async findOneCountry(@Param('id') id: string) {
     return this.configService.findOneCountry(id);
   }
 
@@ -79,29 +75,30 @@ export class WebsiteConfigController {
   @Delete('countries/:id')
   @ApiOperation({ summary: 'Soft-delete a country' })
   @ApiParam({ name: 'id', description: 'Country ID' })
-  @ApiResponse({ status: 200, description: 'Country successfully soft-deleted' })
-  async deleteCountry(
-    @Param('id') id: string,
-  ) {
+  @ApiResponse({
+    status: 200,
+    description: 'Country successfully soft-deleted',
+  })
+  async deleteCountry(@Param('id') id: string) {
     return this.configService.deleteCountry(id);
   }
 
   @Post('cities')
   @ApiOperation({ summary: 'Create a new city configuration' })
   @ApiResponse({ status: 201, description: 'City successfully created' })
-  async createCity(
-    @Body() data: CreateWebsiteCityDto,
-  ) {
+  async createCity(@Body() data: CreateWebsiteCityDto) {
     return this.configService.createCity(data);
   }
 
   @Get('cities')
   @ApiOperation({ summary: 'Get all cities, optionally filtered by country' })
-  @ApiQuery({ name: 'countryId', required: false, description: 'Optional country ID to filter cities' })
+  @ApiQuery({
+    name: 'countryId',
+    required: false,
+    description: 'Optional country ID to filter cities',
+  })
   @ApiResponse({ status: 200, description: 'List of active cities' })
-  async findAllCities(
-    @Query('countryId') countryId: string,
-  ) {
+  async findAllCities(@Query('countryId') countryId: string) {
     return this.configService.findAllCities(countryId);
   }
 
@@ -109,9 +106,7 @@ export class WebsiteConfigController {
   @ApiOperation({ summary: 'Get a city by ID' })
   @ApiParam({ name: 'id', description: 'City ID' })
   @ApiResponse({ status: 200, description: 'City details' })
-  async findOneCity(
-    @Param('id') id: string,
-  ) {
+  async findOneCity(@Param('id') id: string) {
     return this.configService.findOneCity(id);
   }
 
@@ -130,28 +125,26 @@ export class WebsiteConfigController {
   @ApiOperation({ summary: 'Soft-delete a city' })
   @ApiParam({ name: 'id', description: 'City ID' })
   @ApiResponse({ status: 200, description: 'City successfully soft-deleted' })
-  async deleteCity(
-    @Param('id') id: string,
-  ) {
+  async deleteCity(@Param('id') id: string) {
     return this.configService.deleteCity(id);
   }
 
   @Post('hotels')
   @ApiOperation({ summary: 'Create a new hotel configuration' })
   @ApiResponse({ status: 201, description: 'Hotel successfully created' })
-  async createHotel(
-    @Body() data: CreateWebsiteHotelDto,
-  ) {
+  async createHotel(@Body() data: CreateWebsiteHotelDto) {
     return this.configService.createHotel(data);
   }
 
   @Get('hotels')
   @ApiOperation({ summary: 'Get all hotels, optionally filtered by city' })
-  @ApiQuery({ name: 'cityId', required: false, description: 'Optional city ID to filter hotels' })
+  @ApiQuery({
+    name: 'cityId',
+    required: false,
+    description: 'Optional city ID to filter hotels',
+  })
   @ApiResponse({ status: 200, description: 'List of active hotels' })
-  async findAllHotels(
-    @Query('cityId') cityId: string,
-  ) {
+  async findAllHotels(@Query('cityId') cityId: string) {
     return this.configService.findAllHotels(cityId);
   }
 
@@ -166,9 +159,7 @@ export class WebsiteConfigController {
   @ApiOperation({ summary: 'Get a hotel by ID' })
   @ApiParam({ name: 'id', description: 'Hotel ID' })
   @ApiResponse({ status: 200, description: 'Hotel details' })
-  async findOneHotel(
-    @Param('id') id: string,
-  ) {
+  async findOneHotel(@Param('id') id: string) {
     return this.configService.findOneHotel(id);
   }
 
@@ -187,18 +178,17 @@ export class WebsiteConfigController {
   @ApiOperation({ summary: 'Soft-delete a hotel' })
   @ApiParam({ name: 'id', description: 'Hotel ID' })
   @ApiResponse({ status: 200, description: 'Hotel successfully soft-deleted' })
-  async deleteHotel(
-    @Param('id') id: string,
-  ) {
+  async deleteHotel(@Param('id') id: string) {
     return this.configService.deleteHotel(id);
   }
 
   @Post('top-destinations')
   @ApiOperation({ summary: 'Create a new top destination configuration' })
-  @ApiResponse({ status: 201, description: 'Top destination successfully created' })
-  async createTopDestination(
-    @Body() data: CreateWebsiteTopDestinationDto,
-  ) {
+  @ApiResponse({
+    status: 201,
+    description: 'Top destination successfully created',
+  })
+  async createTopDestination(@Body() data: CreateWebsiteTopDestinationDto) {
     return this.configService.createTopDestination(data);
   }
 
@@ -213,16 +203,17 @@ export class WebsiteConfigController {
   @ApiOperation({ summary: 'Get a top destination by ID' })
   @ApiParam({ name: 'id', description: 'Top Destination ID' })
   @ApiResponse({ status: 200, description: 'Top destination details' })
-  async findOneTopDestination(
-    @Param('id') id: string,
-  ) {
+  async findOneTopDestination(@Param('id') id: string) {
     return this.configService.findOneTopDestination(id);
   }
 
   @Put('top-destinations/:id')
   @ApiOperation({ summary: 'Update an existing top destination' })
   @ApiParam({ name: 'id', description: 'Top Destination ID' })
-  @ApiResponse({ status: 200, description: 'Top destination successfully updated' })
+  @ApiResponse({
+    status: 200,
+    description: 'Top destination successfully updated',
+  })
   async updateTopDestination(
     @Param('id') id: string,
     @Body() data: UpdateWebsiteTopDestinationDto,
@@ -233,10 +224,11 @@ export class WebsiteConfigController {
   @Delete('top-destinations/:id')
   @ApiOperation({ summary: 'Soft-delete a top destination' })
   @ApiParam({ name: 'id', description: 'Top Destination ID' })
-  @ApiResponse({ status: 200, description: 'Top destination successfully soft-deleted' })
-  async deleteTopDestination(
-    @Param('id') id: string,
-  ) {
+  @ApiResponse({
+    status: 200,
+    description: 'Top destination successfully soft-deleted',
+  })
+  async deleteTopDestination(@Param('id') id: string) {
     return this.configService.deleteTopDestination(id);
   }
 }

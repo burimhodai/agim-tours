@@ -57,31 +57,25 @@ export class TransactionServiceService {
     }
 
     try {
-      // MKD is not supported by Frankfurter API, so we'll use a fixed rate
-      if (isoFrom === 'MKD') {
-        const mkdRates = {
-          EUR: 1 / 61.5,
-          CHF: 1 / 64,
-          MKD: 1,
-        };
-        this.ratesCache.rates['MKD'] = mkdRates;
-        this.ratesCache.timestamp = now;
-        return mkdRates;
-      }
-
       const response = await fetch(
-        `https://api.frankfurter.app/latest?from=${isoFrom}`,
+        `https://api.frankfurter.dev/v2/rates?base=${isoFrom}&quotes=EUR,CHF,MKD`,
       );
+      if (!response.ok) {
+        throw new Error(`Frankfurter returned ${response.status}`);
+      }
       const data: any = await response.json();
 
-      const rates = { ...data.rates };
-      rates[isoFrom] = 1;
-
-      if (isoFrom === 'EUR') {
-        rates['MKD'] = 61.5;
-      } else if (isoFrom === 'CHF') {
-        rates['MKD'] = 64;
+      const rates: Record<string, number> = {};
+      if (Array.isArray(data)) {
+        data.forEach((row) => {
+          if (row?.quote && typeof row.rate === 'number') {
+            rates[row.quote] = row.rate;
+          }
+        });
+      } else if (data?.rates) {
+        Object.assign(rates, data.rates);
       }
+      rates[isoFrom] = 1;
 
       this.ratesCache.rates[isoFrom] = rates;
       this.ratesCache.timestamp = now;
@@ -611,7 +605,7 @@ export class TransactionServiceService {
     }
 
     const result = await this.transactionModel
-      .deleteOne({
+      .deleteMany({
         event: new Types.ObjectId(eventId),
         travelerId: travelerId,
       })
@@ -629,7 +623,7 @@ export class TransactionServiceService {
     }
 
     const result = await this.transactionModel
-      .deleteOne({
+      .deleteMany({
         organizedTravel: new Types.ObjectId(organizedTravelId),
         travelerId: travelerId,
       })

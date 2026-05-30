@@ -15,6 +15,7 @@ import { SearchModule } from './modules/searchModule/search.module';
 import { LoyalCustomerModule } from './modules/loyalCustomerModule/loyal-customer.module';
 import { LuggageModule } from './modules/luggageModule/luggage.module';
 import { MongooseModule } from '@nestjs/mongoose';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AgencySchema } from './models/agency.model';
 import { TransactionSchema } from './models/transaction.model';
 import { TransactionControllerController } from './transactions/transaction-controller.controller';
@@ -29,6 +30,7 @@ import { DriverModule } from './modules/driverModule/driver.module';
 import { ReportBusModule } from './modules/reportBusModule/report-bus.module';
 import { FuelReportModule } from './modules/fuelReportModule/fuel-report.module';
 import { WebsiteConfigModule } from './modules/websiteConfigModule/website-config.module';
+import { DatabaseBackupModule } from './modules/databaseBackup/database-backup.module';
 
 @Module({
   imports: [
@@ -46,6 +48,8 @@ import { WebsiteConfigModule } from './modules/websiteConfigModule/website-confi
       { name: 'Agency', schema: AgencySchema },
       { name: 'Transaction', schema: TransactionSchema },
     ]),
+
+    ScheduleModule.forRoot(),
 
     ConfigModule.forRoot({
       isGlobal: true,
@@ -78,6 +82,7 @@ import { WebsiteConfigModule } from './modules/websiteConfigModule/website-confi
     ReportBusModule,
     FuelReportModule,
     WebsiteConfigModule,
+    DatabaseBackupModule,
   ],
   controllers: [AppController, TransactionControllerController],
   providers: [AppService, TransactionServiceService],

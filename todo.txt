@@ -1,0 +1,12 @@
+1. te raportet te pershkrimi duhet tjese nese bileta o e sotshmit ater ta chese pagese ...
+nese so e sotshmes ater ta chese pagese [muaji]
+2. te shtohet multi currency and multi payments te udhetimet e org ene + hotel
+3. te udhetim + hotel te ndrecet ene renditja ene kur bohet edit mo prajshet asse ataj
+4. te vahcheri i aranzhmenve mo dale nr pass
+5. te kalendari i transportit tvihet dogovori nisoj si te org
+6. te transporti kur e shtajpim ni raport ta kena ni opsion tprintoje list udhtaresh, numri rendor, emri dhe mabiemri (lista e uhdtareve)
+7. te kejt modulet tkese raport me date range, sa bileta jan shtajp, sa hyrje, sa borxh
+8. 
+
+
+

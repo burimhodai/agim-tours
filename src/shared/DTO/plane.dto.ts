@@ -430,3 +430,16 @@ export class PlaneTicketQueryDto {
   @IsString()
   q?: string;
 }
+
+export class PlaneAnalysisQueryDto {
+  @IsOptional()
+  @IsString()
+  agency?: string;
+
+  @IsString()
+  date_from: string;
+
+  @IsOptional()
+  @IsString()
+  date_to?: string;
+}

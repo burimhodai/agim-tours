@@ -192,6 +192,7 @@ export class ReportsService {
             _id: ticket._id.toString(),
             ticket_type: ticket.ticket_type,
             booking_reference: ticket.booking_reference,
+            createdAt: ticket.createdAt,
             departure_location: ticket.departure_location,
             destination_location: ticket.destination_location,
             departure_date: ticket.departure_date,
@@ -260,6 +261,7 @@ export class ReportsService {
               _id: hotel._id.toString(),
               ticket_type: TicketTypes.HOTEL,
               booking_reference: hotel.hotel_booking_id,
+              createdAt: hotel.createdAt,
               destination_location: hotel.hotel_name,
               departure_date: hotel.check_in_date,
               price: hotel.price,
@@ -370,6 +372,7 @@ export class ReportsService {
             _id: ticket._id.toString(),
             ticket_type: ticket.ticket_type,
             booking_reference: ticket.booking_reference,
+            createdAt: ticket.createdAt,
             departure_location: ticket.departure_location,
             destination_location: ticket.destination_location,
             departure_date: ticket.departure_date,
@@ -384,6 +387,7 @@ export class ReportsService {
               _id: hotelId.toString(),
               ticket_type: TicketTypes.HOTEL,
               booking_reference: hotel.hotel_booking_id,
+              createdAt: hotel.createdAt,
               departure_location: hotel.arrival_city || 'Hotel',
               destination_location: hotel.hotel_name,
               departure_date: hotel.check_in_date,
@@ -415,7 +419,7 @@ export class ReportsService {
         currency: transaction.currency,
         type: transaction.type,
         to: transaction.to,
-        description: transaction.description,
+        description: this.formatReportDescription(transaction, ticket),
         createdAt: transaction.createdAt,
         user: user
           ? {
@@ -447,5 +451,69 @@ export class ReportsService {
       total: Math.round(data.total * 100) / 100,
       count: data.count,
     }));
+  }
+
+  private formatReportDescription(
+    transaction: ITransaction,
+    ticket?: any,
+  ): string | undefined {
+    const description = transaction.description;
+
+    if (
+      !description ||
+      transaction.type !== TransactionTypes.INCOME ||
+      !ticket ||
+      (ticket.ticket_type !== TicketTypes.BUS &&
+        ticket.ticket_type !== TicketTypes.PLANE) ||
+      !ticket.createdAt ||
+      !transaction.createdAt ||
+      this.isSameDay(ticket.createdAt, transaction.createdAt)
+    ) {
+      return description;
+    }
+
+    const month = this.getAlbanianMonth(ticket.createdAt);
+    const paymentPrefix = /^Pages[ëe]\s*-\s*/i;
+    const alreadyHasMonth = /^Pages[ëe]\s+[^\s-]+\s*-\s*/i;
+
+    if (paymentPrefix.test(description)) {
+      return description.replace(paymentPrefix, `Pagesë ${month} - `);
+    }
+
+    if (alreadyHasMonth.test(description)) {
+      return description;
+    }
+
+    return `Pagesë ${month} - ${description}`;
+  }
+
+  private isSameDay(firstDate: Date, secondDate: Date): boolean {
+    const first = new Date(firstDate);
+    const second = new Date(secondDate);
+
+    return (
+      first.getFullYear() === second.getFullYear() &&
+      first.getMonth() === second.getMonth() &&
+      first.getDate() === second.getDate()
+    );
+  }
+
+  private getAlbanianMonth(date: Date): string {
+    const months = [
+      'janar',
+      'shkurt',
+      'mars',
+      'prill',
+      'maj',
+      'qershor',
+      'korrik',
+      'gusht',
+      'shtator',
+      'tetor',
+      'nëntor',
+      'dhjetor',
+    ];
+
+    return months[new Date(date).getMonth()] || '';
   }
 }

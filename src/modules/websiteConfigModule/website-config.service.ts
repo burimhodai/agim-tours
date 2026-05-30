@@ -92,10 +92,7 @@ export class WebsiteConfigService implements OnModuleInit {
       country: new Types.ObjectId(data.country),
     });
     const savedCity = await city.save();
-    return this.cityModel
-      .findById(savedCity._id)
-      .populate('country')
-      .lean();
+    return this.cityModel.findById(savedCity._id).populate('country').lean();
   }
 
   async findAllCities(countryId?: string) {

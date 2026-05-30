@@ -66,6 +66,7 @@ export class ReportTransactionItem {
     _id: string;
     ticket_type?: string;
     booking_reference?: string;
+    createdAt?: Date;
     departure_location?: string;
     destination_location?: string;
     departure_date?: Date;
