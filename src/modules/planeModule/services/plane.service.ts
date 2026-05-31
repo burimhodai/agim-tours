@@ -310,6 +310,8 @@ export class PlaneService {
       destination_location,
       departure_date_from,
       departure_date_to,
+      created_at_from,
+      created_at_to,
       payment_status,
       checked_in,
       operator,
@@ -374,6 +376,32 @@ export class PlaneService {
 
     if (payment_status) {
       filter.payment_status = payment_status;
+    }
+
+    if (query.payment_statuses) {
+      const statuses = query.payment_statuses
+        .split(',')
+        .map((status) => status.trim())
+        .filter((status): status is PaymentStatusTypes =>
+          Object.values(PaymentStatusTypes).includes(
+            status as PaymentStatusTypes,
+          ),
+        );
+
+      if (statuses.length > 0) {
+        filter.payment_status = { $in: statuses };
+      }
+    }
+
+    if (created_at_from || created_at_to) {
+      const createdAtFilter: any = {};
+      if (created_at_from) {
+        createdAtFilter.$gte = created_at_from;
+      }
+      if (created_at_to) {
+        createdAtFilter.$lte = created_at_to;
+      }
+      filter.createdAt = createdAtFilter;
     }
 
     if (checked_in !== undefined) {

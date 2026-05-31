@@ -36,7 +36,8 @@ async function bootstrap() {
   app.useGlobalInterceptors(new LoggingInterceptor());
 
   app.enableCors({
-    origin: configService.get('CORS_ORIGIN') || '*',
+    // origin: configService.get('CORS_ORIGIN') || '*',
+    origin: '*',
     credentials: true,
   });
 

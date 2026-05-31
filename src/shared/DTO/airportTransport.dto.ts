@@ -6,6 +6,7 @@ import {
   IsBoolean,
   IsDateString,
   IsEnum,
+  IsArray,
 } from 'class-validator';
 import { CurrencyTypes } from '../types/currency.types';
 
@@ -41,6 +42,11 @@ export class CreateAirportTransportDto {
   @IsNumber()
   @IsOptional()
   number_of_people?: number;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  passengers?: string[];
 
   @IsString()
   @IsOptional()

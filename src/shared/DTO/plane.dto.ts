@@ -399,8 +399,22 @@ export class PlaneTicketQueryDto {
   departure_date_to?: Date;
 
   @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  created_at_from?: Date;
+
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  created_at_to?: Date;
+
+  @IsOptional()
   @IsEnum(PaymentStatusTypes)
   payment_status?: PaymentStatusTypes;
+
+  @IsOptional()
+  @IsString()
+  payment_statuses?: string;
 
   @IsOptional()
   @IsBoolean()

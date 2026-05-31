@@ -15,6 +15,7 @@ export const AirportTransportSchema = new mongoose.Schema(
     },
     is_paid: { type: Boolean, default: false },
     number_of_people: { type: Number },
+    passengers: [{ type: String }],
     contact_nr: { type: String },
     contact_person_name: { type: String },
     note: { type: String },

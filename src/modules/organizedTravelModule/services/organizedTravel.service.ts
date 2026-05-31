@@ -111,24 +111,7 @@ export class OrganizedTravelService {
       'euro'
     ).toLowerCase();
     const price = Number(traveler.price) || 0;
-    let paymentChunks = this.normalizePaymentChunks(traveler.payment_chunks);
-
-    if (paymentChunks.length === 0) {
-      if (traveler.payment_status === PaymentStatusTypes.PAID && price > 0) {
-        paymentChunks = [{ amount: price, currency, payment_date: new Date() }];
-      } else if (
-        traveler.payment_status === PaymentStatusTypes.PARTIALLY_PAID &&
-        Number(traveler.paid_amount) > 0
-      ) {
-        paymentChunks = [
-          {
-            amount: Number(traveler.paid_amount),
-            currency,
-            payment_date: new Date(),
-          },
-        ];
-      }
-    }
+    const paymentChunks = this.normalizePaymentChunks(traveler.payment_chunks);
 
     let paidAmount = 0;
     for (const chunk of paymentChunks) {
@@ -446,22 +429,6 @@ export class OrganizedTravelService {
         description: `Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName} (Pagesa ${index + 1})`,
       });
     }
-
-    const remainingDebt =
-      (Number(traveler.price) || 0) - (Number(traveler.paid_amount) || 0);
-    if (remainingDebt > 0.05) {
-      await this.transactionService.create({
-        amount: Math.round(remainingDebt * 100) / 100,
-        currency: traveler.currency,
-        type: TransactionTypes.DEBT,
-        status: TransactionStatus.PENDING,
-        organizedTravel: travelId,
-        travelerId: `${travelerId}_debt`,
-        agency: finalAgencyId,
-        user: employeeId,
-        description: `Borxh - Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName}`,
-      });
-    }
   }
 
   async updateTravelersGroup(
@@ -725,33 +692,10 @@ export class OrganizedTravelService {
       // Update remaining debt
       const remainingDebt = newTraveler.price - paidAmount;
       if (remainingDebt > 0) {
-        const existingDebt =
-          await this.transactionService.findByOrganizedTravelTraveler(
-            travelId,
-            `${travelerId}_debt`,
-          );
-        if (existingDebt) {
-          // await this.transactionService.updateByOrganizedTravelTraveler(
-          //   travelId,
-          //   `${travelerId}_debt`,
-          //   {
-          //     amount: remainingDebt,
-          //     description: `Borxh - Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName} (Mbetja: ${remainingDebt})`,
-          //   },
-          // );
-        } else {
-          // await this.transactionService.create({
-          //   amount: remainingDebt,
-          //   currency: newTraveler.currency,
-          //   type: TransactionTypes.DEBT,
-          //   status: TransactionStatus.PENDING,
-          //   organizedTravel: travelId,
-          //   travelerId: `${travelerId}_debt`,
-          //   agency: finalAgencyId,
-          //   user: employeeId,
-          //   description: `Borxh - Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName}`,
-          // });
-        }
+        await this.transactionService.deleteByOrganizedTravelTraveler(
+          travelId,
+          `${travelerId}_debt`,
+        );
       } else {
         await this.transactionService.deleteByOrganizedTravelTraveler(
           travelId,
@@ -800,18 +744,6 @@ export class OrganizedTravelService {
         travelId,
         `${travelerId}_debt`,
       );
-
-      // await this.transactionService.create({
-      //   amount: newTraveler.price,
-      //   currency: newTraveler.currency,
-      //   type: TransactionTypes.DEBT,
-      //   status: TransactionStatus.PENDING,
-      //   organizedTravel: travelId,
-      //   travelerId: travelerId,
-      //   agency: finalAgencyId,
-      //   user: employeeId,
-      //   description: `Borxh - Udhëtim i organizuar: ${travelName} - Udhëtar: ${travelerName}`,
-      // });
     }
   }
 
@@ -843,17 +775,9 @@ export class OrganizedTravelService {
       travel.travelers[travelerIndex].paid_amount = paidAmount;
     }
 
-    if (paymentStatus === PaymentStatusTypes.PAID) {
-      travel.travelers[travelerIndex].payment_chunks = [
-        {
-          amount: travel.travelers[travelerIndex].price || 0,
-          currency: travel.travelers[travelerIndex].currency || travel.currency,
-          payment_date: new Date(),
-        },
-      ];
-    } else if (paymentStatus === PaymentStatusTypes.UNPAID) {
+    if (paymentStatus === PaymentStatusTypes.UNPAID) {
       travel.travelers[travelerIndex].payment_chunks = [];
-    } else if (paidAmount !== undefined) {
+    } else if (paidAmount !== undefined && paidAmount > 0) {
       travel.travelers[travelerIndex].payment_chunks = [
         {
           amount: paidAmount,

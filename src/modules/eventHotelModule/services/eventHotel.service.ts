@@ -123,24 +123,7 @@ export class EventHotelService {
       'euro'
     ).toLowerCase();
     const price = Number(traveler.price) || 0;
-    let paymentChunks = this.normalizePaymentChunks(traveler.payment_chunks);
-
-    if (paymentChunks.length === 0) {
-      if (traveler.payment_status === PaymentStatusTypes.PAID && price > 0) {
-        paymentChunks = [{ amount: price, currency, payment_date: new Date() }];
-      } else if (
-        traveler.payment_status === PaymentStatusTypes.PARTIALLY_PAID &&
-        Number(traveler.paid_amount) > 0
-      ) {
-        paymentChunks = [
-          {
-            amount: Number(traveler.paid_amount),
-            currency,
-            payment_date: new Date(),
-          },
-        ];
-      }
-    }
+    const paymentChunks = this.normalizePaymentChunks(traveler.payment_chunks);
 
     let paidAmount = 0;
     for (const chunk of paymentChunks) {
@@ -588,22 +571,6 @@ export class EventHotelService {
         description: `Ngjarje: ${eventName} - Udhëtar: ${travelerName} (Pagesa ${index + 1})`,
       });
     }
-
-    const remainingDebt =
-      (Number(traveler.price) || 0) - (Number(traveler.paid_amount) || 0);
-    if (remainingDebt > 0.05) {
-      await this.transactionService.create({
-        amount: Math.round(remainingDebt * 100) / 100,
-        currency: traveler.currency,
-        type: TransactionTypes.DEBT,
-        status: TransactionStatus.PENDING,
-        event: eventId,
-        travelerId: `${travelerId}_debt`,
-        agency: finalAgencyId,
-        user: employeeId,
-        description: `Borxh - Ngjarje: ${eventName} - Udhëtar: ${travelerName}`,
-      });
-    }
   }
 
   async updateTravelersGroup(
@@ -893,32 +860,10 @@ export class EventHotelService {
       // Update remaining debt
       const remainingDebt = newTraveler.price - paidAmount;
       if (remainingDebt > 0) {
-        const existingDebt = await this.transactionService.findByEventTraveler(
+        await this.transactionService.deleteByEventTraveler(
           eventId,
           `${travelerId}_debt`,
         );
-        if (existingDebt) {
-          await this.transactionService.updateByEventTraveler(
-            eventId,
-            `${travelerId}_debt`,
-            {
-              amount: remainingDebt,
-              description: `Borxh - Ngjarje: ${eventName} - Udhëtar: ${travelerName} (Mbetja: ${remainingDebt})`,
-            },
-          );
-        } else {
-          await this.transactionService.create({
-            amount: remainingDebt,
-            currency: newTraveler.currency,
-            type: TransactionTypes.DEBT,
-            status: TransactionStatus.PENDING,
-            event: eventId,
-            travelerId: `${travelerId}_debt`,
-            agency: finalAgencyId,
-            user: employeeId,
-            description: `Borxh - Ngjarje: ${eventName} - Udhëtar: ${travelerName}`,
-          });
-        }
       } else {
         await this.transactionService.deleteByEventTraveler(
           eventId,
@@ -955,24 +900,12 @@ export class EventHotelService {
       newStatus === PaymentStatusTypes.UNPAID &&
       oldStatus !== PaymentStatusTypes.UNPAID
     ) {
-      // Changing to unpaid - delete all related transactions and create new debt
+      // Changing to unpaid - delete all related traveler transactions
       await this.transactionService.deleteByEventTraveler(eventId, travelerId);
       await this.transactionService.deleteByEventTraveler(
         eventId,
         `${travelerId}_debt`,
       );
-
-      await this.transactionService.create({
-        amount: newTraveler.price,
-        currency: newTraveler.currency,
-        type: TransactionTypes.DEBT,
-        status: TransactionStatus.PENDING,
-        event: eventId,
-        travelerId: travelerId,
-        agency: finalAgencyId,
-        user: employeeId,
-        description: `Borxh - Ngjarje: ${eventName} - Udhëtar: ${travelerName}`,
-      });
     }
   }
 
@@ -1004,17 +937,9 @@ export class EventHotelService {
       event.travelers[travelerIndex].paid_amount = paidAmount;
     }
 
-    if (paymentStatus === PaymentStatusTypes.PAID) {
-      event.travelers[travelerIndex].payment_chunks = [
-        {
-          amount: event.travelers[travelerIndex].price || 0,
-          currency: event.travelers[travelerIndex].currency || event.currency,
-          payment_date: new Date(),
-        },
-      ];
-    } else if (paymentStatus === PaymentStatusTypes.UNPAID) {
+    if (paymentStatus === PaymentStatusTypes.UNPAID) {
       event.travelers[travelerIndex].payment_chunks = [];
-    } else if (paidAmount !== undefined) {
+    } else if (paidAmount !== undefined && paidAmount > 0) {
       event.travelers[travelerIndex].payment_chunks = [
         {
           amount: paidAmount,
