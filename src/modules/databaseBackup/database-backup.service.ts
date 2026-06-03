@@ -13,6 +13,7 @@ import {
   MongoClient,
 } from 'mongodb';
 import { Connection } from 'mongoose';
+import { DateTime } from 'luxon';
 
 const BACKUP_BATCH_SIZE = 1000;
 const BACKUP_TIME_ZONE = 'Europe/Skopje';
@@ -27,6 +28,11 @@ interface BackupMetadataDocument extends Document {
   totalDocuments: number;
 }
 
+type SourceCollectionReader = Pick<
+  Collection<Document>,
+  'collectionName' | 'find' | 'listIndexes'
+>;
+
 @Injectable()
 export class DatabaseBackupService implements OnModuleDestroy {
   private readonly logger = new Logger(DatabaseBackupService.name);
@@ -38,7 +44,7 @@ export class DatabaseBackupService implements OnModuleDestroy {
     private readonly configService: ConfigService,
   ) {}
 
-  @Cron('0 0 * * *', {
+  @Cron('0 22 * * *', {
     name: 'daily-database-backup',
     timeZone: BACKUP_TIME_ZONE,
   })
@@ -72,7 +78,10 @@ export class DatabaseBackupService implements OnModuleDestroy {
         .listCollections({}, { nameOnly: true })
         .toArray();
       const startedAt = new Date();
-      const lastSuccessfulRunAt = await this.getLastSuccessfulRunAt(backupDb);
+      const createdFrom = DateTime.now()
+        .setZone(BACKUP_TIME_ZONE)
+        .startOf('day')
+        .toJSDate();
       let totalDocuments = 0;
 
       for (const collectionInfo of collections) {
@@ -80,7 +89,10 @@ export class DatabaseBackupService implements OnModuleDestroy {
           continue;
         }
 
-        const sourceCollection = sourceDb.collection(collectionInfo.name);
+        const sourceCollection = this.getSourceCollectionReader(
+          sourceDb,
+          collectionInfo.name,
+        );
         const backupCollection = backupDb.collection(collectionInfo.name);
 
         await this.syncCollectionIndexes(sourceCollection, backupCollection);
@@ -88,7 +100,8 @@ export class DatabaseBackupService implements OnModuleDestroy {
         const copied = await this.upsertCollectionDocuments(
           sourceCollection,
           backupCollection,
-          lastSuccessfulRunAt,
+          createdFrom,
+          startedAt,
         );
 
         totalDocuments += copied;
@@ -108,7 +121,8 @@ export class DatabaseBackupService implements OnModuleDestroy {
               backupDatabase: backupDb.databaseName,
               lastSuccessfulRunAt: startedAt,
               lastStartedAt: startedAt,
-              previousSuccessfulRunAt: lastSuccessfulRunAt,
+              copiedCreatedFrom: createdFrom,
+              copiedCreatedTo: startedAt,
               totalDocuments,
             },
           },
@@ -116,9 +130,7 @@ export class DatabaseBackupService implements OnModuleDestroy {
         );
 
       this.logger.log(
-        `Daily database backup finished. ${
-          lastSuccessfulRunAt ? 'Incrementally synced' : 'Fully synced'
-        } ${totalDocuments} documents from ${sourceDb.databaseName} to ${backupDb.databaseName}`,
+        `Daily database backup finished. Synced ${totalDocuments} documents created today from ${sourceDb.databaseName} to ${backupDb.databaseName}`,
       );
     } catch (error) {
       this.logger.error(
@@ -131,11 +143,12 @@ export class DatabaseBackupService implements OnModuleDestroy {
   }
 
   private async upsertCollectionDocuments(
-    sourceCollection: Collection<Document>,
+    sourceCollection: SourceCollectionReader,
     backupCollection: Collection<Document>,
-    changedSince: Date | null,
+    createdFrom: Date,
+    createdTo: Date,
   ): Promise<number> {
-    const filter = this.getChangedDocumentsFilter(changedSince);
+    const filter = this.getCreatedTodayFilter(createdFrom, createdTo);
     const cursor = sourceCollection
       .find(filter)
       .sort({ _id: 1 })
@@ -168,23 +181,17 @@ export class DatabaseBackupService implements OnModuleDestroy {
     return copied;
   }
 
-  private getChangedDocumentsFilter(
-    changedSince: Date | null,
+  private getCreatedTodayFilter(
+    createdFrom: Date,
+    createdTo: Date,
   ): Filter<Document> {
-    if (!changedSince) {
-      return {};
-    }
-
     return {
-      $or: [
-        { updatedAt: { $gte: changedSince } },
-        { createdAt: { $gte: changedSince } },
-      ],
+      createdAt: { $gte: createdFrom, $lte: createdTo },
     };
   }
 
   private async syncCollectionIndexes(
-    sourceCollection: Collection<Document>,
+    sourceCollection: SourceCollectionReader,
     backupCollection: Collection<Document>,
   ): Promise<void> {
     const indexes = (await sourceCollection
@@ -270,12 +277,11 @@ export class DatabaseBackupService implements OnModuleDestroy {
     return backupDb;
   }
 
-  private async getLastSuccessfulRunAt(backupDb: Db): Promise<Date | null> {
-    const metadata = await backupDb
-      .collection<BackupMetadataDocument>(BACKUP_METADATA_COLLECTION)
-      .findOne({ _id: 'daily-main-db-sync' });
-
-    return metadata?.lastSuccessfulRunAt ?? null;
+  private getSourceCollectionReader(
+    sourceDb: Db,
+    collectionName: string,
+  ): SourceCollectionReader {
+    return sourceDb.collection(collectionName);
   }
 
   private shouldSkipCollection(collectionName: string): boolean {
