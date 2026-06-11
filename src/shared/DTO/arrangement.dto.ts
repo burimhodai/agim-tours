@@ -201,6 +201,14 @@ export class CreateArrangementDto {
 export class UpdateArrangementDto {
   @IsOptional()
   @IsString()
+  agency?: string;
+
+  @IsOptional()
+  @IsString()
+  employee?: string;
+
+  @IsOptional()
+  @IsString()
   name?: string;
 
   @IsOptional()

@@ -6,6 +6,9 @@ import { ArrangementSchema } from 'src/models/arrangement.model';
 import { TicketSchema } from 'src/models/ticket.model';
 import { PartnerHotelSchema } from 'src/models/partnerHotel.model';
 import { OperatorSchema } from 'src/models/operator.model';
+import { TransactionSchema } from 'src/models/transaction.model';
+import { AgencySchema } from 'src/models/agency.model';
+import { TransactionServiceService } from 'src/transactions/transaction-service.service';
 
 @Module({
   imports: [
@@ -14,9 +17,11 @@ import { OperatorSchema } from 'src/models/operator.model';
       { name: 'Ticket', schema: TicketSchema },
       { name: 'PartnerHotel', schema: PartnerHotelSchema },
       { name: 'Operator', schema: OperatorSchema },
+      { name: 'Transaction', schema: TransactionSchema },
+      { name: 'Agency', schema: AgencySchema },
     ]),
   ],
   controllers: [ArrangementController],
-  providers: [ArrangementService],
+  providers: [ArrangementService, TransactionServiceService],
 })
 export class ArrangementModule {}

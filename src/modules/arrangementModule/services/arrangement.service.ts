@@ -8,6 +8,11 @@ import {
   UpdateArrangementDto,
   ArrangementQueryDto,
 } from 'src/shared/DTO/arrangement.dto';
+import { TransactionServiceService } from 'src/transactions/transaction-service.service';
+import {
+  TransactionStatus,
+  TransactionTypes,
+} from 'src/shared/types/transaction.types';
 
 @Injectable()
 export class ArrangementService {
@@ -15,6 +20,7 @@ export class ArrangementService {
     @InjectModel('Arrangement')
     private readonly arrangementModel: Model<IArrangement>,
     @InjectModel('Ticket') private readonly ticketModel: Model<ITicket>,
+    private readonly transactionService: TransactionServiceService,
   ) {}
 
   private mapTravelersToPassengers(travelers: any[]) {
@@ -31,6 +37,34 @@ export class ArrangementService {
       luggage: t.luggage,
       return_luggage: t.return_luggage,
     }));
+  }
+
+  private async syncPaymentTransactions(
+    arrangement: IArrangement,
+    agencyId?: string,
+    employeeId?: string,
+  ): Promise<void> {
+    const ticketId = arrangement.plane_ticket_id?.toString();
+    if (!ticketId) return;
+
+    await this.transactionService.deleteByTicket(ticketId);
+
+    const paymentChunks = arrangement.payment_chunks || [];
+    for (let index = 0; index < paymentChunks.length; index++) {
+      const chunk = paymentChunks[index];
+      if (!chunk.amount || chunk.amount <= 0) continue;
+
+      await this.transactionService.create({
+        amount: chunk.amount,
+        currency: chunk.currency,
+        type: TransactionTypes.INCOME,
+        status: TransactionStatus.SETTLED,
+        ticket: ticketId,
+        agency: agencyId,
+        user: employeeId,
+        description: `Aranzhman: ${arrangement.name} (Pagesa ${index + 1})`,
+      });
+    }
   }
 
   async create(createDto: CreateArrangementDto) {
@@ -69,6 +103,12 @@ export class ArrangementService {
 
     savedTicket.arrangement_id = savedArrangement._id;
     await savedTicket.save();
+
+    await this.syncPaymentTransactions(
+      savedArrangement,
+      createDto.agency,
+      createDto.employee,
+    );
 
     return savedArrangement;
   }
@@ -146,7 +186,8 @@ export class ArrangementService {
     const arrangement = await this.arrangementModel.findById(id);
     if (!arrangement) throw new NotFoundException('Arrangement not found');
 
-    Object.assign(arrangement, updateDto);
+    const { agency, employee, ...arrangementUpdates } = updateDto;
+    Object.assign(arrangement, arrangementUpdates);
     const updatedArrangement = await arrangement.save();
 
     if (arrangement.plane_ticket_id) {
@@ -201,6 +242,12 @@ export class ArrangementService {
       }
     }
 
+    await this.syncPaymentTransactions(
+      updatedArrangement,
+      agency || arrangement.agency?.toString(),
+      employee || arrangement.employee?.toString(),
+    );
+
     return updatedArrangement;
   }
 
@@ -222,6 +269,10 @@ export class ArrangementService {
     await arrangement.save();
 
     if (arrangement.plane_ticket_id) {
+      await this.transactionService.deleteByTicket(
+        arrangement.plane_ticket_id.toString(),
+      );
+
       const ticket = await this.ticketModel.findById(
         arrangement.plane_ticket_id,
       );
