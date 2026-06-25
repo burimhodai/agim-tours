@@ -573,6 +573,46 @@ export class EventHotelService {
     }
   }
 
+  private async createPaymentChunkIncomeTransactions(
+    eventId: string,
+    travelerId: string,
+    traveler: any,
+    paymentChunks: TravelerPaymentChunk[],
+    paymentIndexOffset: number,
+    agencyId?: string,
+    eventName?: string,
+    employeeId?: string,
+  ): Promise<void> {
+    if (paymentChunks.length === 0) return;
+
+    let finalAgencyId = agencyId;
+
+    if (!finalAgencyId && employeeId && Types.ObjectId.isValid(employeeId)) {
+      const employee = await this.userModel.findById(employeeId).exec();
+      if (employee?.agency) {
+        finalAgencyId = employee.agency.toString();
+      }
+    }
+
+    const travelerName =
+      `${traveler.first_name || ''} ${traveler.last_name || ''}`.trim();
+
+    for (let index = 0; index < paymentChunks.length; index++) {
+      const chunk = paymentChunks[index];
+      await this.transactionService.create({
+        amount: chunk.amount,
+        currency: chunk.currency as any,
+        type: TransactionTypes.INCOME,
+        status: TransactionStatus.SETTLED,
+        event: eventId,
+        travelerId: travelerId,
+        agency: finalAgencyId,
+        user: employeeId,
+        description: `Ngjarje: ${eventName} - UdhÃ«tar: ${travelerName} (Pagesa ${paymentIndexOffset + index + 1})`,
+      });
+    }
+  }
+
   async updateTravelersGroup(
     eventId: string,
     roomGroupId: string,
@@ -590,6 +630,10 @@ export class EventHotelService {
       (t: any) => t.room_group_id === roomGroupId,
     );
     const processedTravelers = [];
+    const paymentChunkPlans: {
+      chunks: TravelerPaymentChunk[];
+      paymentIndexOffset: number;
+    }[] = [];
 
     for (const data of travelersData) {
       this.validateTravelerPassport(
@@ -600,6 +644,9 @@ export class EventHotelService {
       );
       const existing = existingGroupTravelers.find(
         (t: any) => t._id?.toString() === data._id,
+      );
+      const oldPaymentChunks = this.normalizePaymentChunks(
+        existing?.payment_chunks,
       );
 
       const travelerData: any = await this.normalizeTravelerPaymentFields(
@@ -622,8 +669,16 @@ export class EventHotelService {
         },
         event.currency,
       );
+      const newPaymentChunks = this.normalizePaymentChunks(
+        travelerData.payment_chunks,
+      );
+      const chunksToCreate = newPaymentChunks.slice(oldPaymentChunks.length);
 
       processedTravelers.push(travelerData);
+      paymentChunkPlans.push({
+        chunks: chunksToCreate,
+        paymentIndexOffset: oldPaymentChunks.length,
+      });
     }
 
     event.travelers = [...otherTravelers, ...processedTravelers];
@@ -640,7 +695,9 @@ export class EventHotelService {
       employeeId,
     );
 
-    for (const newTraveler of processedTravelers) {
+    for (let index = 0; index < processedTravelers.length; index++) {
+      const newTraveler = processedTravelers[index];
+      const paymentChunkPlan = paymentChunkPlans[index];
       const savedTraveler = newTraveler._id
         ? savedEvent.travelers.find(
             (t: any) => t._id?.toString() === newTraveler._id?.toString(),
@@ -652,11 +709,13 @@ export class EventHotelService {
               t.room_group_id === roomGroupId,
           );
 
-      if (savedTraveler) {
-        await this.syncTravelerTransactions(
+      if (savedTraveler && paymentChunkPlan.chunks.length > 0) {
+        await this.createPaymentChunkIncomeTransactions(
           eventId,
           savedTraveler._id.toString(),
           savedTraveler,
+          paymentChunkPlan.chunks,
+          paymentChunkPlan.paymentIndexOffset,
           performingAgencyId || event.agency?.toString(),
           event.name,
           employeeId,

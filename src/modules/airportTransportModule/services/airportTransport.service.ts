@@ -16,7 +16,6 @@ import {
 export class AirportTransportService {
   constructor(
     @InjectModel('AirportTransport') private airportTransportModel: Model<any>,
-    @InjectModel('User') private userModel: Model<any>,
     private transactionService: TransactionServiceService,
   ) {}
 
@@ -99,30 +98,13 @@ export class AirportTransportService {
 
     // Only create income transaction if paid
     if (transport.is_paid && transport.price && transport.price > 0) {
-      // Use employee's agency for the transaction, fallback to transport agency
-      let transactionAgency = transport.agency;
-      if (transport.employee) {
-        try {
-          const employee = await this.userModel
-            .findById(transport.employee)
-            .select('agency')
-            .lean()
-            .exec();
-          if (employee?.agency) {
-            transactionAgency = employee.agency;
-          }
-        } catch (error) {
-          console.error('Error fetching employee agency:', error);
-        }
-      }
-
       await this.transactionService.create({
         amount: transport.price,
         currency: transport.currency,
         type: TransactionTypes.INCOME,
         status: TransactionStatus.SETTLED,
         airportTransport: transport._id,
-        agency: transactionAgency,
+        agency: transport.agency,
         user: transport.employee,
         description: `Airport Transport: ${transport.name} (Paguar)`,
         to: transport.contact_person_name || transport.name,
