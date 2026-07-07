@@ -186,7 +186,7 @@ export class EventHotelService {
     page: number;
     totalPages: number;
   }> {
-    const { agency, search, page = 1, limit = 20 } = query;
+    const { agency, search, page = 1, limit = 100 } = query;
 
     const filter: any = {};
 
