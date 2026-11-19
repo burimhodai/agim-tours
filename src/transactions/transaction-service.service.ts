@@ -16,6 +16,7 @@ import {
   UpdateTransactionDto,
 } from 'src/shared/DTO/transaction.dto';
 import { CurrencyTypes } from 'src/shared/types/currency.types';
+import { requireTransactionWorkspace } from './transaction-workspace';
 
 @Injectable()
 export class TransactionServiceService {
@@ -23,6 +24,15 @@ export class TransactionServiceService {
     @InjectModel('Transaction') private transactionModel: Model<ITransaction>,
     @InjectModel('Agency') private agencyModel: Model<any>,
   ) {}
+
+  private workspaceAgency() {
+    return new Types.ObjectId(requireTransactionWorkspace().agency);
+  }
+
+  private workspaceUpdate(data: UpdateTransactionDto) {
+    const { agency, user } = requireTransactionWorkspace();
+    return { ...data, agency: new Types.ObjectId(agency), user: new Types.ObjectId(user) };
+  }
 
   private CURRENCY_MAP: Record<string, string> = {
     euro: 'EUR',
@@ -116,35 +126,19 @@ export class TransactionServiceService {
   async create(
     createTransactionDto: CreateTransactionDto,
   ): Promise<ITransaction> {
+    const { agency, user } = requireTransactionWorkspace();
     let description = createTransactionDto.description || '';
 
-    if (createTransactionDto.agency) {
-      try {
-        const agencyDoc = await this.agencyModel
-          .findById(createTransactionDto.agency)
-          .select('name')
-          .lean();
-        if (agencyDoc?.name && !description.includes(agencyDoc.name)) {
-          description = description
-            ? `${description} - ${agencyDoc.name}`
-            : agencyDoc.name;
-        }
-      } catch (e) {}
+    const agencyDoc = await this.agencyModel.findById(agency).select('name').lean();
+    if (agencyDoc?.name && !description.includes(agencyDoc.name)) {
+      description = description ? `${description} - ${agencyDoc.name}` : agencyDoc.name;
     }
 
     const transactionData = {
       ...createTransactionDto,
       description,
-      agency:
-        createTransactionDto.agency &&
-        Types.ObjectId.isValid(createTransactionDto.agency)
-          ? new Types.ObjectId(createTransactionDto.agency)
-          : undefined,
-      user:
-        createTransactionDto.user &&
-        Types.ObjectId.isValid(createTransactionDto.user)
-          ? new Types.ObjectId(createTransactionDto.user)
-          : undefined,
+      agency: new Types.ObjectId(agency),
+      user: new Types.ObjectId(user),
       ticket:
         createTransactionDto.ticket &&
         Types.ObjectId.isValid(createTransactionDto.ticket)
@@ -197,7 +191,11 @@ export class TransactionServiceService {
     }
 
     const transaction = await this.transactionModel
-      .findByIdAndUpdate(id, { $set: updateTransactionDto }, { new: true })
+      .findOneAndUpdate(
+        { _id: id, agency: this.workspaceAgency() },
+        { $set: this.workspaceUpdate(updateTransactionDto) },
+        { new: true },
+      )
       .populate('agency')
       .populate('user', 'email first_name last_name')
       .populate('ticket')
@@ -227,6 +225,7 @@ export class TransactionServiceService {
 
     return await this.transactionModel
       .findOne({
+        agency: this.workspaceAgency(),
         ticket: new Types.ObjectId(ticketId),
         type: TransactionTypes.DEBT,
         status: TransactionStatus.PENDING,
@@ -254,8 +253,8 @@ export class TransactionServiceService {
 
     return await this.transactionModel
       .findOneAndUpdate(
-        { ticket: new Types.ObjectId(ticketId) },
-        { $set: updateData },
+        { agency: this.workspaceAgency(), ticket: new Types.ObjectId(ticketId) },
+        { $set: this.workspaceUpdate(updateData) },
         { new: true },
       )
       .exec();
@@ -272,11 +271,12 @@ export class TransactionServiceService {
     return await this.transactionModel
       .findOneAndUpdate(
         {
+          agency: this.workspaceAgency(),
           ticket: new Types.ObjectId(ticketId),
           type: TransactionTypes.DEBT,
           status: TransactionStatus.PENDING,
         },
-        { $set: updateData },
+        { $set: this.workspaceUpdate(updateData) },
         { new: true },
       )
       .exec();
@@ -288,14 +288,14 @@ export class TransactionServiceService {
     }
 
     const result = await this.transactionModel
-      .deleteMany({ ticket: new Types.ObjectId(ticketId) })
+      .deleteMany({ agency: this.workspaceAgency(), ticket: new Types.ObjectId(ticketId) })
       .exec();
 
     return result.deletedCount > 0;
   }
 
   async settleDebt(ticketId: string): Promise<ITransaction | null> {
-    return await this.updateByTicket(ticketId, {
+    return await this.updateDebtByTicket(ticketId, {
       type: TransactionTypes.INCOME,
       status: TransactionStatus.SETTLED,
     });
@@ -305,8 +305,8 @@ export class TransactionServiceService {
     ticketId: string,
     paidAmount: number,
     paymentCurrency?: string,
-    agencyId?: string,
-    userId?: string,
+    _agencyId?: string,
+    _userId?: string,
   ): Promise<ITransaction | null> {
     if (!Types.ObjectId.isValid(ticketId)) {
       return null;
@@ -314,6 +314,7 @@ export class TransactionServiceService {
 
     const debtTransaction = await this.transactionModel
       .findOne({
+        agency: this.workspaceAgency(),
         ticket: new Types.ObjectId(ticketId),
         type: TransactionTypes.DEBT,
         status: TransactionStatus.PENDING,
@@ -324,8 +325,7 @@ export class TransactionServiceService {
       return null;
     }
 
-    if (agencyId) debtTransaction.agency = new Types.ObjectId(agencyId);
-    if (userId) debtTransaction.user = new Types.ObjectId(userId);
+    debtTransaction.user = new Types.ObjectId(requireTransactionWorkspace().user);
 
     let convertedAmount = paidAmount;
     if (
@@ -360,8 +360,8 @@ export class TransactionServiceService {
     reservationId: string,
     paidAmount: number,
     paymentCurrency?: string,
-    agencyId?: string,
-    userId?: string,
+    _agencyId?: string,
+    _userId?: string,
   ): Promise<ITransaction | null> {
     if (!Types.ObjectId.isValid(reservationId)) {
       return null;
@@ -369,6 +369,7 @@ export class TransactionServiceService {
 
     const debtTransaction = await this.transactionModel
       .findOne({
+        agency: this.workspaceAgency(),
         hotelReservation: new Types.ObjectId(reservationId),
         type: TransactionTypes.DEBT,
         status: TransactionStatus.PENDING,
@@ -379,8 +380,7 @@ export class TransactionServiceService {
       return null;
     }
 
-    if (agencyId) debtTransaction.agency = new Types.ObjectId(agencyId);
-    if (userId) debtTransaction.user = new Types.ObjectId(userId);
+    debtTransaction.user = new Types.ObjectId(requireTransactionWorkspace().user);
 
     let convertedAmount = paidAmount;
     if (
@@ -422,6 +422,7 @@ export class TransactionServiceService {
 
     const debtTransaction = await this.transactionModel
       .findOne({
+        agency: this.workspaceAgency(),
         event: new Types.ObjectId(eventId),
         travelerId: travelerId,
         type: TransactionTypes.DEBT,
@@ -433,6 +434,7 @@ export class TransactionServiceService {
       return null;
     }
 
+    debtTransaction.user = new Types.ObjectId(requireTransactionWorkspace().user);
     const newAmount = (debtTransaction.amount || 0) - paidAmount;
 
     if (newAmount <= 0) {
@@ -460,6 +462,7 @@ export class TransactionServiceService {
 
     const debtTransaction = await this.transactionModel
       .findOne({
+        agency: this.workspaceAgency(),
         organizedTravel: new Types.ObjectId(organizedTravelId),
         travelerId: travelerId,
         type: TransactionTypes.DEBT,
@@ -471,6 +474,7 @@ export class TransactionServiceService {
       return null;
     }
 
+    debtTransaction.user = new Types.ObjectId(requireTransactionWorkspace().user);
     const newAmount = (debtTransaction.amount || 0) - paidAmount;
 
     if (newAmount <= 0) {
@@ -534,10 +538,11 @@ export class TransactionServiceService {
     return await this.transactionModel
       .findOneAndUpdate(
         {
+          agency: this.workspaceAgency(),
           event: new Types.ObjectId(eventId),
           travelerId: travelerId,
         },
-        { $set: updateData },
+        { $set: this.workspaceUpdate(updateData) },
         { new: true },
       )
       .exec();
@@ -556,10 +561,11 @@ export class TransactionServiceService {
     return await this.transactionModel
       .findOneAndUpdate(
         {
+          agency: this.workspaceAgency(),
           organizedTravel: new Types.ObjectId(organizedTravelId),
           travelerId: travelerId,
         },
-        { $set: updateData },
+        { $set: this.workspaceUpdate(updateData) },
         { new: true },
       )
       .exec();
@@ -606,6 +612,7 @@ export class TransactionServiceService {
 
     const result = await this.transactionModel
       .deleteMany({
+        agency: this.workspaceAgency(),
         event: new Types.ObjectId(eventId),
         travelerId: travelerId,
       })
@@ -624,6 +631,7 @@ export class TransactionServiceService {
 
     const result = await this.transactionModel
       .deleteMany({
+        agency: this.workspaceAgency(),
         organizedTravel: new Types.ObjectId(organizedTravelId),
         travelerId: travelerId,
       })
@@ -638,7 +646,7 @@ export class TransactionServiceService {
     }
 
     const result = await this.transactionModel
-      .deleteMany({ event: new Types.ObjectId(eventId) })
+      .deleteMany({ agency: this.workspaceAgency(), event: new Types.ObjectId(eventId) })
       .exec();
 
     return result.deletedCount > 0;
@@ -650,7 +658,7 @@ export class TransactionServiceService {
     }
 
     const result = await this.transactionModel
-      .deleteMany({ organizedTravel: new Types.ObjectId(organizedTravelId) })
+      .deleteMany({ agency: this.workspaceAgency(), organizedTravel: new Types.ObjectId(organizedTravelId) })
       .exec();
 
     return result.deletedCount > 0;
@@ -662,7 +670,7 @@ export class TransactionServiceService {
     }
 
     const result = await this.transactionModel
-      .deleteMany({ airportTransport: new Types.ObjectId(airportTransportId) })
+      .deleteMany({ agency: this.workspaceAgency(), airportTransport: new Types.ObjectId(airportTransportId) })
       .exec();
 
     return result.deletedCount > 0;
@@ -674,7 +682,7 @@ export class TransactionServiceService {
     }
 
     const result = await this.transactionModel
-      .deleteMany({ driverReport: new Types.ObjectId(driverReportId) })
+      .deleteMany({ agency: this.workspaceAgency(), driverReport: new Types.ObjectId(driverReportId) })
       .exec();
 
     return result.deletedCount > 0;
@@ -686,7 +694,7 @@ export class TransactionServiceService {
     }
 
     const result = await this.transactionModel
-      .deleteMany({ hotelReservation: new Types.ObjectId(reservationId) })
+      .deleteMany({ agency: this.workspaceAgency(), hotelReservation: new Types.ObjectId(reservationId) })
       .exec();
 
     return result.deletedCount > 0;
@@ -701,6 +709,7 @@ export class TransactionServiceService {
 
     return await this.transactionModel
       .findOne({
+        agency: this.workspaceAgency(),
         hotelReservation: new Types.ObjectId(reservationId),
         type: TransactionTypes.DEBT,
         status: TransactionStatus.PENDING,
@@ -718,8 +727,8 @@ export class TransactionServiceService {
 
     return await this.transactionModel
       .findOneAndUpdate(
-        { driverReport: new Types.ObjectId(driverReportId) },
-        { $set: updateData },
+        { agency: this.workspaceAgency(), driverReport: new Types.ObjectId(driverReportId) },
+        { $set: this.workspaceUpdate(updateData) },
         { new: true },
       )
       .exec();
@@ -823,14 +832,14 @@ export class TransactionServiceService {
     if (diff === 0) return;
 
     const debtTx = await this.transactionModel.findOne({
+      agency: this.workspaceAgency(),
       ticket: new Types.ObjectId(ticketId),
       type: TransactionTypes.DEBT,
       status: TransactionStatus.PENDING,
     });
 
     if (debtTx) {
-      if (agencyId) debtTx.agency = new Types.ObjectId(agencyId);
-      if (userId) debtTx.user = new Types.ObjectId(userId);
+      debtTx.user = new Types.ObjectId(requireTransactionWorkspace().user);
 
       debtTx.amount += diff;
       if (debtTx.amount <= 0) {
@@ -861,7 +870,7 @@ export class TransactionServiceService {
       throw new BadRequestException('Invalid transaction ID');
     }
 
-    const result = await this.transactionModel.deleteOne({ _id: id }).exec();
+    const result = await this.transactionModel.deleteOne({ _id: id, agency: this.workspaceAgency() }).exec();
 
     if (result.deletedCount === 0) {
       throw new NotFoundException('Transaction not found');

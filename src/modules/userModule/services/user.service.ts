@@ -134,7 +134,7 @@ export class UserService {
       role: user.role,
       permissions: user.permissions,
     };
-    return this.jwtService.sign(payload);
+    return this.jwtService.sign(payload, { expiresIn: '1h' });
   }
 
   private sanitizeUser(user: any): Partial<IUser> {

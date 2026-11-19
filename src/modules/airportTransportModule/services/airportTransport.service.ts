@@ -1,11 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 import {
   CreateAirportTransportDto,
   UpdateAirportTransportDto,
   AirportTransportQueryDto,
 } from 'src/shared/DTO/airportTransport.dto';
+import { CurrencyTypes } from 'src/shared/types/currency.types';
+import { requireTransactionWorkspace } from 'src/transactions/transaction-workspace';
 import { TransactionServiceService } from 'src/transactions/transaction-service.service';
 import {
   TransactionTypes,
@@ -20,7 +22,12 @@ export class AirportTransportService {
   ) {}
 
   async create(createDto: CreateAirportTransportDto) {
-    const newTransport = new this.airportTransportModel(createDto);
+    const { agency, user } = requireTransactionWorkspace();
+    const newTransport = new this.airportTransportModel({
+      ...createDto,
+      agency,
+      employee: user,
+    });
     const saved = await newTransport.save();
 
     await this.handleTransaction(saved);
@@ -28,12 +35,8 @@ export class AirportTransportService {
   }
 
   async findAll(query: AirportTransportQueryDto) {
-    const { search, startDate, endDate, agency } = query;
+    const { search, startDate, endDate } = query;
     const filter: any = {};
-
-    // if (agency) {
-    //   filter.agency = new Types.ObjectId(agency);
-    // }
 
     if (search) {
       filter.$or = [
@@ -69,13 +72,15 @@ export class AirportTransportService {
   }
 
   async update(id: string, updateDto: UpdateAirportTransportDto) {
+    const previous = await this.findOne(id);
+    const { agency: _agency, employee: _employee, ...updates } = updateDto;
     const transport = await this.airportTransportModel
-      .findByIdAndUpdate(id, updateDto, { new: true })
+      .findByIdAndUpdate(id, updates, { new: true })
       .exec();
     if (!transport)
       throw new NotFoundException('Transporti i aeroportit nuk u gjet');
 
-    await this.handleTransaction(transport);
+    await this.handleTransaction(transport, previous);
     return transport;
   }
 
@@ -90,23 +95,28 @@ export class AirportTransportService {
     return { message: 'U fshi me sukses' };
   }
 
-  private async handleTransaction(transport: any) {
-    // Delete existing transactions for this transport
-    await this.transactionService.deleteByAirportTransport(
-      transport._id.toString(),
-    );
+  private async handleTransaction(
+    transport: { _id: { toString(): string }; name: string; contact_person_name?: string; is_paid?: boolean; price?: number; currency?: CurrencyTypes },
+    previous?: { is_paid?: boolean; price?: number; currency?: CurrencyTypes },
+  ) {
+    const amounts = new Map<CurrencyTypes, number>();
+    if (previous?.is_paid) {
+      amounts.set(previous.currency || CurrencyTypes.EURO, -(previous.price || 0));
+    }
+    if (transport.is_paid) {
+      const currency = transport.currency || CurrencyTypes.EURO;
+      amounts.set(currency, (amounts.get(currency) || 0) + (transport.price || 0));
+    }
 
-    // Only create income transaction if paid
-    if (transport.is_paid && transport.price && transport.price > 0) {
+    for (const [currency, amount] of amounts) {
+      if (amount === 0) continue;
       await this.transactionService.create({
-        amount: transport.price,
-        currency: transport.currency,
-        type: TransactionTypes.INCOME,
+        amount: Math.abs(amount),
+        currency,
+        type: amount > 0 ? TransactionTypes.INCOME : TransactionTypes.OUTCOME,
         status: TransactionStatus.SETTLED,
-        airportTransport: transport._id,
-        agency: transport.agency,
-        user: transport.employee,
-        description: `Airport Transport: ${transport.name} (Paguar)`,
+        airportTransport: transport._id.toString(),
+        description: `Airport Transport: ${transport.name}`,
         to: transport.contact_person_name || transport.name,
       });
     }

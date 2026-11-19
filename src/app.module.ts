@@ -1,4 +1,8 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { JwtModule } from '@nestjs/jwt';
+import { getJwtConfig } from './config/jwt.config';
+import { TransactionWorkspaceInterceptor } from './transactions/transaction-workspace.interceptor';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -50,6 +54,12 @@ import { DatabaseBackupModule } from './modules/databaseBackup/database-backup.m
     ]),
 
     ScheduleModule.forRoot(),
+    JwtModule.registerAsync({
+      global: true,
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: getJwtConfig,
+    }),
 
     ConfigModule.forRoot({
       isGlobal: true,
@@ -85,6 +95,10 @@ import { DatabaseBackupModule } from './modules/databaseBackup/database-backup.m
     DatabaseBackupModule,
   ],
   controllers: [AppController, TransactionControllerController],
-  providers: [AppService, TransactionServiceService],
+  providers: [
+    AppService,
+    TransactionServiceService,
+    { provide: APP_INTERCEPTOR, useClass: TransactionWorkspaceInterceptor },
+  ],
 })
 export class AppModule {}

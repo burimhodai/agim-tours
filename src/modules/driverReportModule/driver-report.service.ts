@@ -134,6 +134,7 @@ export class DriverReportService {
       data.date = d;
     }
 
+    const previous = await this.findOne(id);
     const report = await this.driverReportModel
       .findByIdAndUpdate(id, data, { new: true })
       .exec();
@@ -141,9 +142,15 @@ export class DriverReportService {
       throw new NotFoundException('Driver report not found');
     }
 
-    if (updateDriverReportDto.promet !== undefined) {
-      await this.transactionService.updateByDriverReport(id, {
-        amount: updateDriverReportDto.promet,
+    const difference = report.promet - previous.promet;
+    if (difference !== 0) {
+      await this.transactionService.create({
+        amount: Math.abs(difference),
+        currency: CurrencyTypes.MKD,
+        type: difference > 0 ? TransactionTypes.INCOME : TransactionTypes.OUTCOME,
+        status: TransactionStatus.SETTLED,
+        driverReport: id,
+        description: `Korrigjim i prometit - Bus: ${report.bus}`,
       });
     }
 

@@ -1,3 +1,4 @@
+import { requireTransactionWorkspace } from 'src/transactions/transaction-workspace';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -47,12 +48,21 @@ export class ArrangementService {
     const ticketId = arrangement.plane_ticket_id?.toString();
     if (!ticketId) return;
 
-    await this.transactionService.deleteByTicket(ticketId);
-
+    // Match already posted installments, including those taken in other workspaces.
+    const posted = (await this.transactionService.findAllByTicket(ticketId))
+      .filter(transaction => transaction.type === TransactionTypes.INCOME);
     const paymentChunks = arrangement.payment_chunks || [];
     for (let index = 0; index < paymentChunks.length; index++) {
       const chunk = paymentChunks[index];
       if (!chunk.amount || chunk.amount <= 0) continue;
+
+      const postedIndex = posted.findIndex(
+        transaction => transaction.amount === chunk.amount && transaction.currency === chunk.currency,
+      );
+      if (postedIndex !== -1) {
+        posted.splice(postedIndex, 1);
+        continue;
+      }
 
       await this.transactionService.create({
         amount: chunk.amount,
@@ -64,6 +74,13 @@ export class ArrangementService {
         user: employeeId,
         description: `Aranzhman: ${arrangement.name} (Pagesa ${index + 1})`,
       });
+    }
+
+    const { agency } = requireTransactionWorkspace();
+    for (const transaction of posted) {
+      if (transaction.agency?.toString() === agency) {
+        await this.transactionService.remove(transaction._id.toString());
+      }
     }
   }
 

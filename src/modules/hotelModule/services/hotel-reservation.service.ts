@@ -475,13 +475,9 @@ export class HotelReservationService {
 
       if (existingDebtTx) {
         if (remainingDebt > 0) {
-          existingDebtTx.amount = remainingDebt;
-          if (currentAgencyId)
-            existingDebtTx.agency = new Types.ObjectId(currentAgencyId);
-          if (employeeId) existingDebtTx.user = new Types.ObjectId(employeeId);
-          await existingDebtTx.save();
+          await this.transactionService.update(existingDebtTx._id.toString(), { amount: remainingDebt });
         } else {
-          await existingDebtTx.deleteOne();
+          await this.transactionService.remove(existingDebtTx._id.toString());
         }
       } else if (remainingDebt > 0) {
         await this.transactionService.create({

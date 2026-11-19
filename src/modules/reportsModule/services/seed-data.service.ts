@@ -1,3 +1,4 @@
+import { requireTransactionWorkspace } from 'src/transactions/transaction-workspace';
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -17,6 +18,7 @@ export class SeedDataService {
   ) {}
 
   async seedReportData() {
+    const { agency, user } = requireTransactionWorkspace();
     console.log('Starting to seed report data...');
 
     const currencies = [
@@ -78,6 +80,8 @@ export class SeedDataService {
       }
 
       const ticket = new this.ticketModel({
+        agency,
+        employee: user,
         ticket_type: ticketType,
         booking_reference: `${ticketType.toUpperCase()}${Date.now()}${i}`,
         price,
@@ -96,6 +100,8 @@ export class SeedDataService {
       createdTickets.push(savedTicket);
 
       const incomeTransaction = new this.transactionModel({
+        agency,
+        user,
         amount: price,
         currency,
         type: TransactionTypes.INCOME,
@@ -109,6 +115,8 @@ export class SeedDataService {
       if (Math.random() > 0.7) {
         const commission = price * 0.1;
         const outcomeTransaction = new this.transactionModel({
+          agency,
+          user,
           amount: commission,
           currency,
           type: TransactionTypes.OUTCOME,
@@ -123,6 +131,8 @@ export class SeedDataService {
       if (Math.random() > 0.8) {
         const fee = Math.random() * 20 + 5;
         const feeTransaction = new this.transactionModel({
+          agency,
+          user,
           amount: fee,
           currency,
           type: TransactionTypes.OUTCOME,
@@ -181,7 +191,7 @@ export class SeedDataService {
     ];
 
     for (const tx of standaloneTransactions) {
-      const transaction = new this.transactionModel(tx);
+      const transaction = new this.transactionModel({ ...tx, agency, user });
       await transaction.save();
     }
 
@@ -199,8 +209,9 @@ export class SeedDataService {
   async clearReportData() {
     console.log('🗑️  Clearing existing report data...');
 
-    await this.transactionModel.deleteMany({});
-    await this.ticketModel.deleteMany({});
+    const { agency } = requireTransactionWorkspace();
+    await this.transactionModel.deleteMany({ agency });
+    await this.ticketModel.deleteMany({ agency });
 
     console.log('✅ Cleared all tickets and transactions');
 

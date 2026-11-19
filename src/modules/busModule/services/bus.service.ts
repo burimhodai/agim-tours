@@ -519,16 +519,35 @@ export class BusService {
         currentTicket.payment_status === PaymentStatusTypes.NOT_PAID;
 
       if (isPaidNow && wasUnpaid) {
-        await this.transactionService.settleDebt(id);
+        const settled = await this.transactionService.settleDebt(id);
+        if (!settled) {
+          await this.transactionService.create({
+            amount: ticket.price,
+            currency: ticket.currency,
+            type: TransactionTypes.INCOME,
+            status: TransactionStatus.SETTLED,
+            ticket: id,
+            description: `Pagesë - Biletë autobusi (${ticket.uid})`,
+          });
+        }
       } else if (
         updateBusTicketDto.payment_status === PaymentStatusTypes.UNPAID ||
         updateBusTicketDto.payment_status === PaymentStatusTypes.NOT_PAID
       ) {
-        await this.transactionService.updateByTicket(id, {
+        const debt = {
           type: TransactionTypes.DEBT,
           status: TransactionStatus.PENDING,
           description: 'Borxh - Biletë autobusi e papaguar',
-        });
+        };
+        const updated = await this.transactionService.updateByTicket(id, debt);
+        if (!updated) {
+          await this.transactionService.create({
+            ...debt,
+            amount: ticket.price,
+            currency: ticket.currency,
+            ticket: id,
+          });
+        }
       }
     }
 
